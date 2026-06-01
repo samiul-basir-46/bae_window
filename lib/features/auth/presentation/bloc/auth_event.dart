@@ -1,6 +1,13 @@
 part of 'auth_bloc.dart';
 
-abstract class AuthEvent {}
+abstract class AuthEvent {
+  const AuthEvent();  // const add
+}
 
-/// Event triggered when the user requests to sign in or sign up with Google.
-class GoogleSignInRequestedEvent extends AuthEvent {}
+class GoogleSignInRequestedEvent extends AuthEvent {
+  const GoogleSignInRequestedEvent();
+}
+
+class AppleSignInRequestedEvent extends AuthEvent {
+  const AppleSignInRequestedEvent();
+}
