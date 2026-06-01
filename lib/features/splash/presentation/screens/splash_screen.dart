@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:bea_window_app/features/auth/presentation/screens/login_screen.dart';
+import 'package:bea_window_app/helpers/all_routes.dart';
 import '../bloc/splash_bloc.dart';
 import '../bloc/splash_event.dart';
 import '../bloc/splash_state.dart';
@@ -13,8 +13,8 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
-  // 1. Entrance Controller (runs once for a premium staggered intro)
+class _SplashScreenState extends State<SplashScreen>
+    with TickerProviderStateMixin {
   late AnimationController _entranceController;
   late Animation<double> _heartFadeAnimation;
   late Animation<double> _titleFadeAnimation;
@@ -22,7 +22,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   late Animation<double> _subtitleFadeAnimation;
   late Animation<double> _footerFadeAnimation;
 
-  // 2. Pulse Controller (runs infinitely for the organic lub-dub heartbeat)
   late AnimationController _pulseController;
   late Animation<double> _heartScaleAnimation;
   late Animation<double> _glowIntensityAnimation;
@@ -57,7 +56,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       ),
     );
 
-    // Subtitle ("just a glance away") fades in
     _subtitleFadeAnimation = Tween<double>(begin: 0.0, end: 0.75).animate(
       CurvedAnimation(
         parent: _entranceController,
@@ -65,7 +63,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       ),
     );
 
-    // Footer ("MADE FOR TWO") fades in last
     _footerFadeAnimation = Tween<double>(begin: 0.0, end: 0.45).animate(
       CurvedAnimation(
         parent: _entranceController,
@@ -73,20 +70,13 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       ),
     );
 
-    // Start entrance animations
     _entranceController.forward();
-
-    // ==========================================
-    // ORGANIC DOUBLE-PUMP HEARTBEAT ANIMATIONS
-    // ==========================================
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
     )..repeat();
 
-    // Mimics a real heartbeat (lub-dub... rest... lub-dub...)
     _heartScaleAnimation = TweenSequence<double>([
-      // First quick beat (lub)
       TweenSequenceItem(
         tween: Tween<double>(begin: 1.0, end: 1.08)
             .chain(CurveTween(curve: Curves.easeOutCubic)),
@@ -97,7 +87,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
             .chain(CurveTween(curve: Curves.easeInCubic)),
         weight: 10,
       ),
-      // Second stronger beat (dub)
       TweenSequenceItem(
         tween: Tween<double>(begin: 1.03, end: 1.15)
             .chain(CurveTween(curve: Curves.easeOutCubic)),
@@ -108,14 +97,12 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
             .chain(CurveTween(curve: Curves.easeInOutCubic)),
         weight: 24,
       ),
-      // Muted rest state (rest)
       TweenSequenceItem(
         tween: ConstantTween<double>(1.0),
         weight: 40,
       ),
     ]).animate(_pulseController);
 
-    // Sync glow intensity (blur/spread) in tandem with the double pump
     _glowIntensityAnimation = TweenSequence<double>([
       TweenSequenceItem(
         tween: Tween<double>(begin: 0.45, end: 0.75)
@@ -158,32 +145,14 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       child: BlocListener<SplashBloc, SplashState>(
         listener: (context, state) {
           if (state is UnauthenticatedState) {
-            // Push-replace to onboarding login flow smoothly
-            Navigator.pushReplacement(
-              context,
-              PageRouteBuilder(
-                transitionDuration: const Duration(milliseconds: 1000),
-                reverseTransitionDuration: const Duration(milliseconds: 800),
-                pageBuilder: (context, animation, secondaryAnimation) => const LoginScreen(),
-                transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                  return FadeTransition(
-                    opacity: CurvedAnimation(
-                      parent: animation,
-                      curve: Curves.easeInOutCubic,
-                    ),
-                    child: child,
-                  );
-                },
-              ),
-            );
+            Navigator.pushReplacementNamed(context, Routes.loginScreen);
           }
         },
         child: Scaffold(
-          backgroundColor: const Color(0xFF121212), // Deep premium aesthetic charcoal-black
+          backgroundColor: const Color(0xFF121212),
           body: Stack(
             alignment: Alignment.center,
             children: [
-              // Ambient faint background glow representing cozy space link
               Positioned(
                 child: Center(
                   child: AnimatedBuilder(
@@ -196,7 +165,8 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                           shape: BoxShape.circle,
                           gradient: RadialGradient(
                             colors: [
-                              const Color(0xFFFFB3C6).withValues(alpha: 0.08 * _glowIntensityAnimation.value),
+                              const Color(0xFFFFB3C6).withValues(
+                                  alpha: 0.08 * _glowIntensityAnimation.value),
                               Colors.transparent,
                             ],
                           ),
@@ -206,15 +176,10 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                   ),
                 ),
               ),
-
-              // Center Column: Heart & Brand Typography
               Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // ==========================================
-                    // GLOWING heart WITH DOUBLE-PUMP ANIMATION
-                    // ==========================================
                     FadeTransition(
                       opacity: _heartFadeAnimation,
                       child: ScaleTransition(
@@ -222,7 +187,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
-                            // 1. Soft radial shadow behind the heart
                             AnimatedBuilder(
                               animation: _pulseController,
                               builder: (context, child) {
@@ -233,23 +197,29 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                                     shape: BoxShape.circle,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(0xFFFFB3C6).withValues(alpha: 0.28 * _glowIntensityAnimation.value),
-                                        blurRadius: 42.r + (16.r * _glowIntensityAnimation.value),
-                                        spreadRadius: 2.w + (6.w * _glowIntensityAnimation.value),
+                                        color: const Color(0xFFFFB3C6)
+                                            .withValues(
+                                                alpha: 0.28 *
+                                                    _glowIntensityAnimation
+                                                        .value),
+                                        blurRadius: 42.r +
+                                            (16.r *
+                                                _glowIntensityAnimation.value),
+                                        spreadRadius: 2.w +
+                                            (6.w *
+                                                _glowIntensityAnimation.value),
                                       )
                                     ],
                                   ),
                                 );
                               },
                             ),
-
-                            // 2. Mathematically perfect, gorgeous gradient heart silhouette
                             ShaderMask(
                               shaderCallback: (Rect bounds) {
                                 return const LinearGradient(
                                   colors: [
-                                    Color(0xFFFFB3C6), // Sweet pastel warm pink
-                                    Color(0xFFFFC6FF), // Soft lavender pink
+                                    Color(0xFFFFB3C6),
+                                    Color(0xFFFFC6FF),
                                   ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
@@ -265,12 +235,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                         ),
                       ),
                     ),
-
                     SizedBox(height: 52.h),
-
-                    // ==========================================
-                    // BRAND TYPOGRAPHY & TAGLINE (FADE IN)
-                    // ==========================================
                     AnimatedBuilder(
                       animation: _entranceController,
                       builder: (context, child) {
@@ -296,7 +261,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                             ),
                           ),
                           SizedBox(height: 10.h),
-                          
+
                           // Tagline: Cursive/Italic warm gray
                           AnimatedBuilder(
                             animation: _entranceController,
@@ -311,7 +276,8 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                               style: TextStyle(
                                 fontFamily: 'serif',
                                 fontStyle: FontStyle.italic,
-                                color: const Color(0xFFCCCCCC), // Muted premium gray
+                                color: const Color(
+                                    0xFFCCCCCC), // Muted premium gray
                                 fontSize: 16.sp,
                                 letterSpacing: 0.2,
                               ),
@@ -323,10 +289,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                   ],
                 ),
               ),
-
-              // ==========================================
-              // FOOTER BRANDING: "MADE FOR TWO" (BOTTOM)
-              // ==========================================
               Positioned(
                 bottom: 50.h,
                 child: AnimatedBuilder(
@@ -341,7 +303,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                     "MADE FOR TWO",
                     style: TextStyle(
                       fontFamily: 'DMSans',
-                      color: const Color(0xFF888888), // Muted dark-charcoal gray
+                      color: const Color(0xFF888888),
                       fontSize: 10.sp,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 4.5.w,
@@ -356,4 +318,3 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     );
   }
 }
-
