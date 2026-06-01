@@ -1,0 +1,74 @@
+import 'dart:async';
+import 'package:bea_window_app/features/auth/presentation/screens/login_screen.dart';
+import 'package:bea_window_app/features/splash/presentation/splash_screen.dart';
+import 'package:flutter/material.dart';
+import 'constants/app_constants.dart';
+import 'helpers/di.dart';
+import 'helpers/helper_methods.dart';
+import 'helpers/post_login.dart';
+import 'networks/dio/dio.dart';
+
+final class Loading extends StatefulWidget {
+  const Loading({super.key});
+
+  @override
+  State<Loading> createState() => _LoadingState();
+}
+
+class _LoadingState extends State<Loading> {
+  bool _isLoading = true;
+  bool isFirstTime = true;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    loadInitialData();
+
+    super.initState();
+    _timer = Timer(const Duration(seconds: 35), () {
+      if (_isLoading) {
+        // Only log out if internet is connected but loading is taking too long
+        _handleLogout();
+      }
+    });
+  }
+
+  loadInitialData() async {
+    //AutoAppUpdateUtil.instance.checkAppUpdate();
+    await setInitValue();
+
+    if (appData.read(kKeyIsLoggedIn)) {
+      String token = appData.read(kKeyAccessToken);
+      DioSingleton.instance.update(token);
+     await performPostLoginActions();
+    } else {
+      //  NotificationService().cancelAllNotifications();
+    }
+    setState(() {
+      _timer!.cancel();
+      _isLoading = false;
+    });
+  }
+
+  void _handleLogout() {
+    appData.write(kKeyIsLoggedIn, false);
+
+    // Navigator.pushReplacement(
+    //   context,
+    //   MaterialPageRoute(builder: (context) => LogInScreen()),
+    // );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const SplashScreen();
+    } else {
+      return appData.read(kKeyIsLoggedIn)
+          ? const LoginScreen()
+          : appData.read(kKeyfirstTime)
+              ? const LoginScreen()
+              : const LoginScreen();
+    }
+  }
+}
