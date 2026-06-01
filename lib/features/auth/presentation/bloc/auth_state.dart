@@ -1,0 +1,19 @@
+part of 'auth_bloc.dart';
+
+abstract class AuthState {}
+
+/// Initial state of the authentication flow.
+class AuthInitial extends AuthState {}
+
+/// State emitted while the authentication process is in progress.
+class AuthLoading extends AuthState {}
+
+/// State emitted upon successful authentication.
+class AuthSuccess extends AuthState {}
+
+/// State emitted when authentication fails.
+class AuthFailure extends AuthState {
+  final String errorMessage;
+
+  AuthFailure(this.errorMessage);
+}

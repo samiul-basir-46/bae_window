@@ -10,10 +10,10 @@ class Slide1Artwork extends StatefulWidget {
   State<Slide1Artwork> createState() => _Slide1ArtworkState();
 }
 
-class _Slide1ArtworkState extends State<Slide1Artwork> with SingleTickerProviderStateMixin {
+class _Slide1ArtworkState extends State<Slide1Artwork>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
-  late Animation<double> _glowAnimation;
 
   @override
   void initState() {
@@ -24,10 +24,6 @@ class _Slide1ArtworkState extends State<Slide1Artwork> with SingleTickerProvider
     )..repeat(reverse: true);
 
     _scaleAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
-    );
-
-    _glowAnimation = Tween<double>(begin: 12.r, end: 32.r).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
     );
   }
@@ -79,13 +75,6 @@ class _Slide1ArtworkState extends State<Slide1Artwork> with SingleTickerProvider
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.cFFB7CE.withValues(alpha: 0.35),
-                          blurRadius: _glowAnimation.value,
-                          spreadRadius: 1.w,
-                        ),
-                      ],
                     ),
                     child: Center(
                       child: Column(
@@ -124,14 +113,16 @@ class _Slide1ArtworkState extends State<Slide1Artwork> with SingleTickerProvider
             const Spacer(),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: List.generate(4, (index) => Container(
-                width: 20.w,
-                height: 20.h,
-                decoration: const BoxDecoration(
-                  color: AppColors.c2C2C35,
-                  shape: BoxShape.circle,
-                ),
-              )),
+              children: List.generate(
+                  4,
+                  (index) => Container(
+                        width: 20.w,
+                        height: 20.h,
+                        decoration: const BoxDecoration(
+                          color: AppColors.c2C2C35,
+                          shape: BoxShape.circle,
+                        ),
+                      )),
             ),
           ],
         ),
@@ -147,7 +138,8 @@ class Slide2Artwork extends StatefulWidget {
   State<Slide2Artwork> createState() => _Slide2ArtworkState();
 }
 
-class _Slide2ArtworkState extends State<Slide2Artwork> with SingleTickerProviderStateMixin {
+class _Slide2ArtworkState extends State<Slide2Artwork>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _positionAnimation;
 
@@ -204,16 +196,9 @@ class _Slide2ArtworkState extends State<Slide2Artwork> with SingleTickerProvider
                     width: 14.w,
                     height: 14.h,
                     margin: EdgeInsets.symmetric(horizontal: 48.w),
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       color: AppColors.cFFB7CE,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.cFFB7CE.withValues(alpha: 0.8),
-                          blurRadius: 12.r,
-                          spreadRadius: 2.w,
-                        ),
-                      ],
                     ),
                   ),
                 );
@@ -256,12 +241,6 @@ class _Slide2ArtworkState extends State<Slide2Artwork> with SingleTickerProvider
             shape: BoxShape.circle,
             color: AppColors.c1C1C22,
             border: Border.all(color: borderColor, width: 2.w),
-            boxShadow: [
-              BoxShadow(
-                color: borderColor.withValues(alpha: 0.2),
-                blurRadius: 10.r,
-              ),
-            ],
           ),
           child: Icon(
             icon,
@@ -286,7 +265,8 @@ class Slide3Artwork extends StatefulWidget {
   State<Slide3Artwork> createState() => _Slide3ArtworkState();
 }
 
-class _Slide3ArtworkState extends State<Slide3Artwork> with SingleTickerProviderStateMixin {
+class _Slide3ArtworkState extends State<Slide3Artwork>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _glowPulse;
 
@@ -325,8 +305,10 @@ class _Slide3ArtworkState extends State<Slide3Artwork> with SingleTickerProvider
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      AppColors.cFFB7CE.withValues(alpha: 0.16 * _glowPulse.value),
-                      AppColors.cC8B3FF.withValues(alpha: 0.08 * _glowPulse.value),
+                      AppColors.cFFB7CE
+                          .withValues(alpha: 0.16 * _glowPulse.value),
+                      AppColors.cC8B3FF
+                          .withValues(alpha: 0.08 * _glowPulse.value),
                       Colors.transparent,
                     ],
                   ),
@@ -337,16 +319,9 @@ class _Slide3ArtworkState extends State<Slide3Artwork> with SingleTickerProvider
           Container(
             width: 110.w,
             height: 110.h,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.c1A1A22,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.cFFB7CE.withValues(alpha: 0.15),
-                  blurRadius: 20.r,
-                  spreadRadius: 2.w,
-                ),
-              ],
             ),
             child: Stack(
               alignment: Alignment.center,

@@ -23,14 +23,14 @@
     <color name="cFFC6FF">#FFFFC6FF</color>
     <color name="cCCCCCC">#FFCCCCCC</color>
     <color name="c888888">#FF888888</color>
-    <color name="c111113">#FF111113</color>
-    <color name="cFFB7CE">#FFFFB7CE</color>
-    <color name="c8E8E9F">#FF8E8E9F</color>
-    <color name="cC8B3FF">#FFC8B3FF</color>
-    <color name="c1C1C22">#FF1C1C22</color>
-    <color name="c2C2C35">#FF2C2C35</color>
-    <color name="c18181C">#FF18181C</color>
-    <color name="c1A1A22">#FF1A1A22</color>
-    <color name="c2C2C3A">#FF2C2C3A</color>
-    <color name="cE295B5">#FFE295B5</color>
+    <color name="c111113">#FF0D0B18</color>
+    <color name="cFFB7CE">#FFFFA3BC</color>
+    <color name="c8E8E9F">#FF9B98B0</color>
+    <color name="cC8B3FF">#FFD0C1FF</color>
+    <color name="c1C1C22">#FFFFC5C5</color>
+    <color name="c2C2C35">#FF26233B</color>
+    <color name="c18181C">#FF141226</color>
+    <color name="c1A1A22">#FF181530</color>
+    <color name="c2C2C3A">#FF2D284E</color>
+    <color name="cE295B5">#FFFF9EAA</color>
 </colors>

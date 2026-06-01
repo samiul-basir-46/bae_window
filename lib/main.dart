@@ -1,8 +1,11 @@
+import 'package:bea_window_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:auto_animated/auto_animated.dart';
 import 'package:bea_window_app/loading_screen.dart';
+import 'package:bea_window_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'constants/custome_theme.dart';
 import 'gen/colors.gen.dart';
 import 'helpers/all_routes.dart';
@@ -63,21 +66,32 @@ class UtillScreenMobile extends StatelessWidget {
           onPopInvokedWithResult: (bool didPop, _) async {
             showMaterialDialog(context);
           },
-          child: MaterialApp(
-              theme: ThemeData(
-                  unselectedWidgetColor: Colors.white,
-                  primarySwatch: CustomTheme.kToDark,
-                  useMaterial3: false,
-                  scaffoldBackgroundColor: AppColors.cFFFFFF,
-                  appBarTheme: const AppBarTheme(
-                      backgroundColor: AppColors.cFFFFFF, elevation: 0)),
-              debugShowCheckedModeBanner: false,
-              builder: (context, widget) {
-                return MediaQuery(data: MediaQuery.of(context), child: widget!);
-              },
-              navigatorKey: NavigationService.navigatorKey,
-              onGenerateRoute: RouteGenerator.generateRoute,
-              home: const Loading()),
+          child: MultiBlocProvider(
+            providers: [
+              BlocProvider<AuthBloc>(
+                create: (_) => AuthBloc(),
+              ),
+              BlocProvider<OnboardingBloc>(
+                create: (_) => OnboardingBloc(),
+              ),
+            ],
+            child: MaterialApp(
+                theme: ThemeData(
+                    unselectedWidgetColor: Colors.white,
+                    primarySwatch: CustomTheme.kToDark,
+                    useMaterial3: false,
+                    scaffoldBackgroundColor: AppColors.cFFFFFF,
+                    appBarTheme: const AppBarTheme(
+                        backgroundColor: AppColors.cFFFFFF, elevation: 0)),
+                debugShowCheckedModeBanner: false,
+                builder: (context, widget) {
+                  return MediaQuery(
+                      data: MediaQuery.of(context), child: widget!);
+                },
+                navigatorKey: NavigationService.navigatorKey,
+                onGenerateRoute: RouteGenerator.generateRoute,
+                home: const Loading()),
+          ),
         );
       },
     );
