@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
+import 'package:bea_window_app/constants/text_font_style.dart';
+import '../widgets/glowing_heart_widget.dart';
 import '../bloc/splash_bloc.dart';
 import '../bloc/splash_event.dart';
 import '../bloc/splash_state.dart';
@@ -180,60 +182,11 @@ class _SplashScreenState extends State<SplashScreen>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    FadeTransition(
-                      opacity: _heartFadeAnimation,
-                      child: ScaleTransition(
-                        scale: _heartScaleAnimation,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            AnimatedBuilder(
-                              animation: _pulseController,
-                              builder: (context, child) {
-                                return Container(
-                                  width: 140.w,
-                                  height: 140.h,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFFFFB3C6)
-                                            .withValues(
-                                                alpha: 0.28 *
-                                                    _glowIntensityAnimation
-                                                        .value),
-                                        blurRadius: 42.r +
-                                            (16.r *
-                                                _glowIntensityAnimation.value),
-                                        spreadRadius: 2.w +
-                                            (6.w *
-                                                _glowIntensityAnimation.value),
-                                      )
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
-                            ShaderMask(
-                              shaderCallback: (Rect bounds) {
-                                return const LinearGradient(
-                                  colors: [
-                                    Color(0xFFFFB3C6),
-                                    Color(0xFFFFC6FF),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ).createShader(bounds);
-                              },
-                              blendMode: BlendMode.srcIn,
-                              child: Icon(
-                                Icons.favorite_rounded,
-                                size: 120.sp,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    GlowingHeartWidget(
+                      fadeAnimation: _heartFadeAnimation,
+                      scaleAnimation: _heartScaleAnimation,
+                      glowIntensityAnimation: _glowIntensityAnimation,
+                      pulseController: _pulseController,
                     ),
                     SizedBox(height: 52.h),
                     AnimatedBuilder(
@@ -249,20 +202,11 @@ class _SplashScreenState extends State<SplashScreen>
                       },
                       child: Column(
                         children: [
-                          // Brand Name: Serif, sleek, tightly spaced
                           Text(
                             "BaeWindow",
-                            style: TextStyle(
-                              fontFamily: 'serif', // Aesthetic serif font
-                              color: Colors.white,
-                              fontSize: 38.sp,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: -0.6,
-                            ),
+                            style: TextFontStyle.textStyle38cFFFFFFSerif700,
                           ),
                           SizedBox(height: 10.h),
-
-                          // Tagline: Cursive/Italic warm gray
                           AnimatedBuilder(
                             animation: _entranceController,
                             builder: (context, child) {
@@ -273,14 +217,7 @@ class _SplashScreenState extends State<SplashScreen>
                             },
                             child: Text(
                               "just a glance away",
-                              style: TextStyle(
-                                fontFamily: 'serif',
-                                fontStyle: FontStyle.italic,
-                                color: const Color(
-                                    0xFFCCCCCC), // Muted premium gray
-                                fontSize: 16.sp,
-                                letterSpacing: 0.2,
-                              ),
+                              style: TextFontStyle.textStyle16cCCCCCCSerifItalic,
                             ),
                           ),
                         ],
@@ -301,13 +238,7 @@ class _SplashScreenState extends State<SplashScreen>
                   },
                   child: Text(
                     "MADE FOR TWO",
-                    style: TextStyle(
-                      fontFamily: 'DMSans',
-                      color: const Color(0xFF888888),
-                      fontSize: 10.sp,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 4.5.w,
-                    ),
+                    style: TextFontStyle.textStyle10c888888DMSans600,
                   ),
                 ),
               ),
