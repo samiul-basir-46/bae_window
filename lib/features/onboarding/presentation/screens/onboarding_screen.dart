@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
+import 'package:bea_window_app/constants/text_font_style.dart';
 import '../bloc/onboarding_bloc.dart';
 import '../bloc/onboarding_event.dart';
 import '../bloc/onboarding_state.dart';
@@ -78,12 +79,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           },
                           child: Text(
                             "Skip",
-                            style: TextStyle(
-                              color: AppColors.c8E8E9F,
-                              fontSize: 15.sp,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.5,
-                            ),
+                            style: TextFontStyle.textStyle15c8E8E9FDMSans600,
                           ),
                         ),
                       ),
@@ -112,24 +108,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               Text(
                                 slide.title,
                                 textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontFamily: 'serif',
-                                  color: Colors.white,
-                                  fontSize: 26.sp,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: -0.4,
-                                ),
+                                style: TextFontStyle.textStyle26cFFFFFFSerif700,
                               ),
                               SizedBox(height: 14.h),
                               Text(
                                 slide.subtitle,
                                 textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: const Color(0xFF8E8E9F),
-                                  fontSize: 14.sp,
-                                  fontWeight: FontWeight.w400,
-                                  height: 1.5.h,
-                                ),
+                                style: TextFontStyle.textStyle14c8E8E9FDMSans400,
                               ),
                               const Spacer(flex: 1),
                             ],
@@ -203,11 +188,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               ),
                               secondChild: Text(
                                 "Create Our Window",
-                                style: TextStyle(
-                                  color: AppColors.cFF3A1222,
-                                  fontSize: 15.sp,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                                style: TextFontStyle.textStyle15cFF3A1222DMSans700,
                               ),
                             ),
                           ),

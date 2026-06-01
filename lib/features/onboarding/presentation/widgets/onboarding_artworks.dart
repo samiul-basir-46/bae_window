@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:bea_window_app/gen/colors.gen.dart';
+import 'package:bea_window_app/constants/text_font_style.dart';
 
 class Slide1Artwork extends StatefulWidget {
   const Slide1Artwork({super.key});
@@ -44,8 +46,8 @@ class _Slide1ArtworkState extends State<Slide1Artwork> with SingleTickerProvider
         height: 310.h,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(32.r),
-          border: Border.all(color: const Color(0xFF2C2C35), width: 4.w),
-          color: const Color(0xFF18181C),
+          border: Border.all(color: AppColors.c2C2C35, width: 4.w),
+          color: AppColors.c18181C,
         ),
         padding: EdgeInsets.symmetric(vertical: 24.h, horizontal: 16.w),
         child: Column(
@@ -54,7 +56,7 @@ class _Slide1ArtworkState extends State<Slide1Artwork> with SingleTickerProvider
               width: 50.w,
               height: 12.h,
               decoration: BoxDecoration(
-                color: const Color(0xFF2C2C35),
+                color: AppColors.c2C2C35,
                 borderRadius: BorderRadius.circular(6.r),
               ),
             ),
@@ -71,15 +73,15 @@ class _Slide1ArtworkState extends State<Slide1Artwork> with SingleTickerProvider
                       borderRadius: BorderRadius.circular(24.r),
                       gradient: const LinearGradient(
                         colors: [
-                          Color(0xFFFFB7CE),
-                          Color(0xFFE295B5),
+                          AppColors.cFFB7CE,
+                          AppColors.cE295B5,
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFFFFB7CE).withValues(alpha: 0.35),
+                          color: AppColors.cFFB7CE.withValues(alpha: 0.35),
                           blurRadius: _glowAnimation.value,
                           spreadRadius: 1.w,
                         ),
@@ -126,7 +128,7 @@ class _Slide1ArtworkState extends State<Slide1Artwork> with SingleTickerProvider
                 width: 20.w,
                 height: 20.h,
                 decoration: const BoxDecoration(
-                  color: Color(0xFF2C2C35),
+                  color: AppColors.c2C2C35,
                   shape: BoxShape.circle,
                 ),
               )),
@@ -185,9 +187,9 @@ class _Slide2ArtworkState extends State<Slide2Artwork> with SingleTickerProvider
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      const Color(0xFFFFB7CE).withValues(alpha: 0.2),
-                      const Color(0xFFFFB7CE).withValues(alpha: 0.5),
-                      const Color(0xFFFFB7CE).withValues(alpha: 0.2),
+                      AppColors.cFFB7CE.withValues(alpha: 0.2),
+                      AppColors.cFFB7CE.withValues(alpha: 0.5),
+                      AppColors.cFFB7CE.withValues(alpha: 0.2),
                     ],
                   ),
                 ),
@@ -204,10 +206,10 @@ class _Slide2ArtworkState extends State<Slide2Artwork> with SingleTickerProvider
                     margin: EdgeInsets.symmetric(horizontal: 48.w),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: const Color(0xFFFFB7CE),
+                      color: AppColors.cFFB7CE,
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFFFFB7CE).withValues(alpha: 0.8),
+                          color: AppColors.cFFB7CE.withValues(alpha: 0.8),
                           blurRadius: 12.r,
                           spreadRadius: 2.w,
                         ),
@@ -221,7 +223,7 @@ class _Slide2ArtworkState extends State<Slide2Artwork> with SingleTickerProvider
               left: 0,
               child: _buildAvatar(
                 icon: Icons.person_rounded,
-                borderColor: const Color(0xFFFFB7CE),
+                borderColor: AppColors.cFFB7CE,
                 label: "Bae 1",
               ),
             ),
@@ -229,7 +231,7 @@ class _Slide2ArtworkState extends State<Slide2Artwork> with SingleTickerProvider
               right: 0,
               child: _buildAvatar(
                 icon: Icons.person_3_rounded,
-                borderColor: const Color(0xFFC8B3FF),
+                borderColor: AppColors.cC8B3FF,
                 label: "Bae 2",
               ),
             ),
@@ -252,7 +254,7 @@ class _Slide2ArtworkState extends State<Slide2Artwork> with SingleTickerProvider
           height: 60.h,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: const Color(0xFF1C1C22),
+            color: AppColors.c1C1C22,
             border: Border.all(color: borderColor, width: 2.w),
             boxShadow: [
               BoxShadow(
@@ -270,11 +272,7 @@ class _Slide2ArtworkState extends State<Slide2Artwork> with SingleTickerProvider
         SizedBox(height: 8.h),
         Text(
           label,
-          style: TextStyle(
-            color: const Color(0xFF8E8E9F),
-            fontSize: 12.sp,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextFontStyle.textStyle12c8E8E9FDMSans600,
         ),
       ],
     );
@@ -327,8 +325,8 @@ class _Slide3ArtworkState extends State<Slide3Artwork> with SingleTickerProvider
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      const Color(0xFFFFB7CE).withValues(alpha: 0.16 * _glowPulse.value),
-                      const Color(0xFFC8B3FF).withValues(alpha: 0.08 * _glowPulse.value),
+                      AppColors.cFFB7CE.withValues(alpha: 0.16 * _glowPulse.value),
+                      AppColors.cC8B3FF.withValues(alpha: 0.08 * _glowPulse.value),
                       Colors.transparent,
                     ],
                   ),
@@ -341,10 +339,10 @@ class _Slide3ArtworkState extends State<Slide3Artwork> with SingleTickerProvider
             height: 110.h,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: const Color(0xFF1A1A22),
+              color: AppColors.c1A1A22,
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFFFB7CE).withValues(alpha: 0.15),
+                  color: AppColors.cFFB7CE.withValues(alpha: 0.15),
                   blurRadius: 20.r,
                   spreadRadius: 2.w,
                 ),
@@ -355,15 +353,15 @@ class _Slide3ArtworkState extends State<Slide3Artwork> with SingleTickerProvider
               children: [
                 Icon(
                   Icons.shield_rounded,
-                  color: const Color(0xFF2C2C3A),
+                  color: AppColors.c2C2C3A,
                   size: 68.sp,
                 ),
                 ShaderMask(
                   shaderCallback: (Rect bounds) {
                     return const LinearGradient(
                       colors: [
-                        Color(0xFFFFB7CE),
-                        Color(0xFFC8B3FF),
+                        AppColors.cFFB7CE,
+                        AppColors.cC8B3FF,
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
