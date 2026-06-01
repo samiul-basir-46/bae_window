@@ -214,4 +214,42 @@ class TextFontStyle {
     fontWeight: FontWeight.w600,
     letterSpacing: 4.5.w,
   );
+
+  static final textStyle15c8E8E9FDMSans600 = TextStyle(
+    fontFamily: "DMSans",
+    color: AppColors.c8E8E9F,
+    fontSize: 15.sp,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 0.5,
+  );
+
+  static final textStyle26cFFFFFFSerif700 = TextStyle(
+    fontFamily: "serif",
+    color: Colors.white,
+    fontSize: 26.sp,
+    fontWeight: FontWeight.w700,
+    letterSpacing: -0.4,
+  );
+
+  static final textStyle14c8E8E9FDMSans400 = TextStyle(
+    fontFamily: "DMSans",
+    color: AppColors.c8E8E9F,
+    fontSize: 14.sp,
+    fontWeight: FontWeight.w400,
+    height: 1.5.h,
+  );
+
+  static final textStyle15cFF3A1222DMSans700 = TextStyle(
+    fontFamily: "DMSans",
+    color: AppColors.cFF3A1222,
+    fontSize: 15.sp,
+    fontWeight: FontWeight.w700,
+  );
+
+  static final textStyle12c8E8E9FDMSans600 = TextStyle(
+    fontFamily: "DMSans",
+    color: AppColors.c8E8E9F,
+    fontSize: 12.sp,
+    fontWeight: FontWeight.w600,
+  );
 }

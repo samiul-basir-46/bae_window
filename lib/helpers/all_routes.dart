@@ -1,6 +1,7 @@
 // ignore_for_file: unused_element
 
 import 'package:bea_window_app/features/auth/presentation/screens/login_screen.dart';
+import 'package:bea_window_app/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 
@@ -12,6 +13,7 @@ final class Routes {
   // Auth Routes
   static const String loginScreen = '/logIn';
   static const String signUpScreen = '/signUp';
+  static const String onboardingScreen = '/onboarding';
 }
 
 final class RouteGenerator {
@@ -27,6 +29,12 @@ final class RouteGenerator {
             ? CupertinoPageRoute(builder: (context) => const LoginScreen())
             : _FadedTransitionRoute(
                 widget: const LoginScreen(), settings: settings);
+
+      case Routes.onboardingScreen:
+        return defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(builder: (context) => const OnboardingScreen())
+            : _FadedTransitionRoute(
+                widget: const OnboardingScreen(), settings: settings);
 
       // case Routes.signUpScreen:
       //   return defaultTargetPlatform == TargetPlatform.iOS

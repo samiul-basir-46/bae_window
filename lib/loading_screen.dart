@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:bea_window_app/features/auth/presentation/screens/login_screen.dart';
+import 'package:bea_window_app/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:bea_window_app/features/splash/presentation/screens/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'constants/app_constants.dart';
@@ -40,7 +41,7 @@ class _LoadingState extends State<Loading> {
     if (appData.read(kKeyIsLoggedIn)) {
       String token = appData.read(kKeyAccessToken);
       DioSingleton.instance.update(token);
-     await performPostLoginActions();
+      await performPostLoginActions();
     } else {
       //  NotificationService().cancelAllNotifications();
     }
@@ -67,7 +68,7 @@ class _LoadingState extends State<Loading> {
       return appData.read(kKeyIsLoggedIn)
           ? const LoginScreen()
           : appData.read(kKeyfirstTime)
-              ? const LoginScreen()
+              ? const OnboardingScreen()
               : const LoginScreen();
     }
   }
