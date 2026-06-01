@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:bea_window_app/features/auth/presentation/screens/login_screen.dart';
-import 'package:bea_window_app/features/splash/presentation/splash_screen.dart';
+import 'package:bea_window_app/features/splash/presentation/screens/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'constants/app_constants.dart';
 import 'helpers/di.dart';
