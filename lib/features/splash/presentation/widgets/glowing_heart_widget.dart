@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:bea_window_app/gen/colors.gen.dart';
 
-/// ============================================================================
-/// GLOWING HEART WIDGET WITH DUAL-PUMP PULSE & BACK-GLOW
-/// Dedicated feature-specific presentation widget for the BaeWindow Splash Screen.
-/// ============================================================================
 class GlowingHeartWidget extends StatelessWidget {
   final Animation<double> fadeAnimation;
   final Animation<double> scaleAnimation;
@@ -28,7 +25,6 @@ class GlowingHeartWidget extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // 1. Soft pulsing radial glow shadow behind the heart
             AnimatedBuilder(
               animation: pulseController,
               builder: (context, child) {
@@ -39,25 +35,25 @@ class GlowingHeartWidget extends StatelessWidget {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFFFFB3C6).withValues(
+                        color: AppColors.cFFB3C6.withValues(
                           alpha: 0.28 * glowIntensityAnimation.value,
                         ),
-                        blurRadius: 42.r + (16.r * glowIntensityAnimation.value),
-                        spreadRadius: 2.w + (6.w * glowIntensityAnimation.value),
+                        blurRadius:
+                            42.r + (16.r * glowIntensityAnimation.value),
+                        spreadRadius:
+                            2.w + (6.w * glowIntensityAnimation.value),
                       )
                     ],
                   ),
                 );
               },
             ),
-
-            // 2. Mathematically perfect, sweet gradient heart silhouette
             ShaderMask(
               shaderCallback: (Rect bounds) {
                 return const LinearGradient(
                   colors: [
-                    Color(0xFFFFB3C6), // Sweet warm pastel pink
-                    Color(0xFFFFC6FF), // Soft lavender pink
+                    AppColors.cFFB3C6,
+                    AppColors.cFFC6FF,
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,

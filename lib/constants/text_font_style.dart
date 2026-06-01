@@ -193,7 +193,7 @@ class TextFontStyle {
   // Splash Screen Premium Text Styles
   static final textStyle38cFFFFFFSerif700 = TextStyle(
     fontFamily: "serif",
-    color: const Color(0xFFFFFFFF),
+    color: AppColors.cFFFFFF,
     fontSize: 38.sp,
     fontWeight: FontWeight.w700,
     letterSpacing: -0.6,
@@ -202,14 +202,14 @@ class TextFontStyle {
   static final textStyle16cCCCCCCSerifItalic = TextStyle(
     fontFamily: "serif",
     fontStyle: FontStyle.italic,
-    color: const Color(0xFFCCCCCC),
+    color: AppColors.cCCCCCC,
     fontSize: 16.sp,
     letterSpacing: 0.2,
   );
 
   static final textStyle10c888888DMSans600 = TextStyle(
     fontFamily: "DMSans",
-    color: const Color(0xFF888888),
+    color: AppColors.c888888,
     fontSize: 10.sp,
     fontWeight: FontWeight.w600,
     letterSpacing: 4.5.w,

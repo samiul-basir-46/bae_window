@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
 import 'package:bea_window_app/constants/text_font_style.dart';
+import 'package:bea_window_app/gen/colors.gen.dart';
 import '../widgets/glowing_heart_widget.dart';
 import '../bloc/splash_bloc.dart';
 import '../bloc/splash_event.dart';
@@ -151,7 +152,7 @@ class _SplashScreenState extends State<SplashScreen>
           }
         },
         child: Scaffold(
-          backgroundColor: const Color(0xFF121212),
+          backgroundColor: AppColors.c121212,
           body: Stack(
             alignment: Alignment.center,
             children: [
@@ -167,7 +168,7 @@ class _SplashScreenState extends State<SplashScreen>
                           shape: BoxShape.circle,
                           gradient: RadialGradient(
                             colors: [
-                              const Color(0xFFFFB3C6).withValues(
+                              AppColors.cFFB3C6.withValues(
                                   alpha: 0.08 * _glowIntensityAnimation.value),
                               Colors.transparent,
                             ],
