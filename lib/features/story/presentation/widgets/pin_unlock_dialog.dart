@@ -8,8 +8,15 @@ import 'package:local_auth/local_auth.dart';
 
 class PINUnlockDialog extends StatefulWidget {
   final VoidCallback onSuccess;
+  final String correctPin;
+  final bool isBiometricsEnabled;
 
-  const PINUnlockDialog({super.key, required this.onSuccess});
+  const PINUnlockDialog({
+    super.key,
+    required this.onSuccess,
+    required this.correctPin,
+    required this.isBiometricsEnabled,
+  });
 
   @override
   State<PINUnlockDialog> createState() => _PINUnlockDialogState();
@@ -22,10 +29,12 @@ class _PINUnlockDialogState extends State<PINUnlockDialog> {
   @override
   void initState() {
     super.initState();
-    // Auto-trigger biometric prompt on dialog open
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _authenticateWithBiometrics();
-    });
+    // Auto-trigger biometric prompt on dialog open only if enabled
+    if (widget.isBiometricsEnabled) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _authenticateWithBiometrics();
+      });
+    }
   }
 
   Future<void> _authenticateWithBiometrics() async {
@@ -66,13 +75,13 @@ class _PINUnlockDialogState extends State<PINUnlockDialog> {
         _pin += val;
       });
       if (_pin.length == 4) {
-        if (_pin == "1234") {
+        if (_pin == widget.correctPin) {
           widget.onSuccess();
           Navigator.pop(context);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text("Incorrect PIN! Try '1234'"),
+              content: Text("Incorrect PIN! Please try again"),
               backgroundColor: Colors.redAccent,
             ),
           );
@@ -232,6 +241,9 @@ class _PINUnlockDialogState extends State<PINUnlockDialog> {
   }
 
   Widget _buildBiometricKey() {
+    if (!widget.isBiometricsEnabled) {
+      return SizedBox(width: 60.w, height: 60.h);
+    }
     return GestureDetector(
       onTap: _authenticateWithBiometrics,
       child: Container(

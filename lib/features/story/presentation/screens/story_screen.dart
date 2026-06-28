@@ -9,6 +9,7 @@ import '../bloc/story_bloc.dart';
 import '../bloc/story_event.dart';
 import '../bloc/story_state.dart';
 import '../widgets/new_memory_sheet.dart';
+import '../widgets/vault_setup_sheet.dart';
 import '../widgets/pin_unlock_dialog.dart';
 import '../widgets/memory_card.dart';
 import '../widgets/month_group_feed.dart';
@@ -60,13 +61,31 @@ class _StoryScreenViewState extends State<StoryScreenView> {
     );
   }
 
-  void _showPINDialog(BuildContext context) {
+  void _showPINDialog(BuildContext context, String correctPin, bool isBiometricsEnabled) {
     showDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.8),
       builder: (dialogContext) => PINUnlockDialog(
+        correctPin: correctPin,
+        isBiometricsEnabled: isBiometricsEnabled,
         onSuccess: () {
           context.read<StoryBloc>().add(const UnlockVaultEvent());
+        },
+      ),
+    );
+  }
+
+  void _showSetupSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => VaultSetupSheet(
+        onSetup: (pin, enableBiometrics) {
+          context.read<StoryBloc>().add(SetupVaultPinEvent(
+                pin: pin,
+                enableBiometrics: enableBiometrics,
+              ));
         },
       ),
     );
@@ -362,11 +381,40 @@ class _StoryScreenViewState extends State<StoryScreenView> {
                           ),
                         ),
                       ),
+                      // Biometrics Toggle Setting when Vault is Unlocked
+                      if (state.selectedFilter == StoryFilter.vault && state.isVaultUnlocked) ...[
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.fingerprint_rounded, color: AppColors.primaryPink, size: 16.sp),
+                                  SizedBox(width: 8.w),
+                                  Text(
+                                    "Biometric Unlock",
+                                    style: GoogleFonts.dmSans(color: Colors.white70, fontSize: 13.sp, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                              Switch(
+                                value: state.isBiometricsEnabled,
+                                onChanged: (val) {
+                                  context.read<StoryBloc>().add(ToggleBiometricsEvent(val));
+                                },
+                                activeThumbColor: AppColors.primaryPink,
+                                activeTrackColor: AppColors.primaryPink.withValues(alpha: 0.3),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                       // Memory Feed Scroll Area
                       Expanded(
                         child: state.selectedFilter == StoryFilter.vault &&
                                 !state.isVaultUnlocked
-                            ? _buildLockedVaultPrompt(context)
+                            ? _buildLockedVaultPrompt(context, state)
                             : filteredMemories.isEmpty
                                 ? _buildEmptyState()
                                 : ListView.builder(
@@ -385,8 +433,10 @@ class _StoryScreenViewState extends State<StoryScreenView> {
                                         return PrivateVaultEntryCard(
                                           isUnlocked: state.isVaultUnlocked,
                                           onTap: () {
-                                            if (!state.isVaultUnlocked) {
-                                              _showPINDialog(context);
+                                            if (state.vaultPin == null) {
+                                              _showSetupSheet(context);
+                                            } else if (!state.isVaultUnlocked) {
+                                              _showPINDialog(context, state.vaultPin!, state.isBiometricsEnabled);
                                             } else {
                                               context.read<StoryBloc>().add(
                                                   const ChangeFilterEvent(
@@ -511,7 +561,8 @@ class _StoryScreenViewState extends State<StoryScreenView> {
     );
   }
 
-  Widget _buildLockedVaultPrompt(BuildContext context) {
+  Widget _buildLockedVaultPrompt(BuildContext context, StoryLoaded state) {
+    final isSetup = state.vaultPin != null;
     return Center(
       child: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
@@ -530,14 +581,14 @@ class _StoryScreenViewState extends State<StoryScreenView> {
                 ),
               ),
               child: Icon(
-                Icons.lock_rounded,
+                isSetup ? Icons.lock_rounded : Icons.lock_open_outlined,
                 color: AppColors.primaryPurple,
                 size: 48.sp,
               ),
             ),
             UIHelper.verticalSpace(24.h),
             Text(
-              "Private Vault Locked",
+              isSetup ? "Private Vault Locked" : "Setup Private Vault",
               style: GoogleFonts.dmSans(
                 color: Colors.white,
                 fontSize: 18.sp,
@@ -546,7 +597,9 @@ class _StoryScreenViewState extends State<StoryScreenView> {
             ),
             UIHelper.verticalSpace(8.h),
             Text(
-              "Access requires biometric or PIN authentication to protect your private memories.",
+              isSetup
+                  ? "Access requires biometric or PIN authentication to protect your private memories."
+                  : "Secure your private memories with a custom 4-digit PIN.",
               textAlign: TextAlign.center,
               style: GoogleFonts.dmSans(
                 color: Colors.white38,
@@ -565,9 +618,15 @@ class _StoryScreenViewState extends State<StoryScreenView> {
                     borderRadius: BorderRadius.circular(16.r),
                   ),
                 ),
-                onPressed: () => _showPINDialog(context),
+                onPressed: () {
+                  if (isSetup) {
+                    _showPINDialog(context, state.vaultPin!, state.isBiometricsEnabled);
+                  } else {
+                    _showSetupSheet(context);
+                  }
+                },
                 child: Text(
-                  "Unlock Vault",
+                  isSetup ? "Unlock Vault" : "Setup Secure PIN",
                   style: GoogleFonts.dmSans(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.bold,

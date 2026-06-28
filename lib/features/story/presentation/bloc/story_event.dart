@@ -57,3 +57,15 @@ class MoveToVaultEvent extends StoryEvent {
   final bool isPrivate;
   const MoveToVaultEvent({required this.id, required this.isPrivate});
 }
+
+class SetupVaultPinEvent extends StoryEvent {
+  final String pin;
+  final bool enableBiometrics;
+  const SetupVaultPinEvent({required this.pin, required this.enableBiometrics});
+}
+
+class ToggleBiometricsEvent extends StoryEvent {
+  final bool enabled;
+  const ToggleBiometricsEvent(this.enabled);
+}
+

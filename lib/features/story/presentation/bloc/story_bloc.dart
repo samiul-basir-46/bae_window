@@ -10,6 +10,8 @@ class StoryBloc extends Bloc<StoryEvent, StoryState> {
         memories: _mockMemories,
         selectedFilter: StoryFilter.all,
         isVaultUnlocked: false,
+        vaultPin: null, // initially null / not configured
+        isBiometricsEnabled: false,
       ));
     });
 
@@ -56,6 +58,24 @@ class StoryBloc extends Bloc<StoryEvent, StoryState> {
       if (state is StoryLoaded) {
         final loadedState = state as StoryLoaded;
         emit(loadedState.copyWith(isVaultUnlocked: false));
+      }
+    });
+
+    on<SetupVaultPinEvent>((event, emit) {
+      if (state is StoryLoaded) {
+        final loadedState = state as StoryLoaded;
+        emit(loadedState.copyWith(
+          vaultPin: event.pin,
+          isBiometricsEnabled: event.enableBiometrics,
+          isVaultUnlocked: true, // Auto unlock after setting up
+        ));
+      }
+    });
+
+    on<ToggleBiometricsEvent>((event, emit) {
+      if (state is StoryLoaded) {
+        final loadedState = state as StoryLoaded;
+        emit(loadedState.copyWith(isBiometricsEnabled: event.enabled));
       }
     });
 

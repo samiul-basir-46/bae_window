@@ -19,22 +19,30 @@ class StoryLoaded extends StoryState {
   final List<MemoryItem> memories;
   final StoryFilter selectedFilter;
   final bool isVaultUnlocked;
+  final String? vaultPin;
+  final bool isBiometricsEnabled;
 
   const StoryLoaded({
     required this.memories,
     required this.selectedFilter,
     required this.isVaultUnlocked,
+    this.vaultPin,
+    this.isBiometricsEnabled = false,
   });
 
   StoryLoaded copyWith({
     List<MemoryItem>? memories,
     StoryFilter? selectedFilter,
     bool? isVaultUnlocked,
+    String? vaultPin,
+    bool? isBiometricsEnabled,
   }) {
     return StoryLoaded(
       memories: memories ?? this.memories,
       selectedFilter: selectedFilter ?? this.selectedFilter,
       isVaultUnlocked: isVaultUnlocked ?? this.isVaultUnlocked,
+      vaultPin: vaultPin ?? this.vaultPin,
+      isBiometricsEnabled: isBiometricsEnabled ?? this.isBiometricsEnabled,
     );
   }
 }
