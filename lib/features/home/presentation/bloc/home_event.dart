@@ -18,3 +18,13 @@ class UpdateUserMoodEvent extends HomeEvent {
     required this.text,
   });
 }
+
+class UpdateAwarenessEvent extends HomeEvent {
+  final String? message;
+  final String? icon;
+
+  const UpdateAwarenessEvent({
+    this.message,
+    this.icon,
+  });
+}

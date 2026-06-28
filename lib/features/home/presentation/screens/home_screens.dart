@@ -10,6 +10,11 @@ import '../bloc/home_state.dart';
 import '../widgets/home_top_header.dart';
 import '../widgets/mood_card.dart';
 import '../widgets/live_peek_card.dart';
+import '../widgets/quick_action_dock.dart';
+import '../widgets/relationship_pulse_card.dart';
+import '../widgets/question_of_the_day_card.dart';
+import '../widgets/check_in_log_card.dart';
+import '../widgets/next_special_day_card.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -69,7 +74,7 @@ class HomeScreenView extends StatelessWidget {
           SafeArea(
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+              padding: EdgeInsets.only(left: 24.w, right: 24.w, top: 16.h, bottom: 120.h),
               child: BlocBuilder<HomeBloc, HomeState>(
                 builder: (context, state) {
                   if (state is HomeLoading) {
@@ -104,6 +109,20 @@ class HomeScreenView extends StatelessWidget {
                             const SwitchTabNotification(1).dispatch(context);
                           },
                         ),
+                        UIHelper.verticalSpace(24.h),
+                        const QuickActionDock(),
+                        UIHelper.verticalSpace(24.h),
+                        RelationshipPulseCard(data: state.relationshipPulse),
+                        if (state.questionOfTheDay != null) ...[
+                          UIHelper.verticalSpace(24.h),
+                          QuestionOfTheDayCard(question: state.questionOfTheDay!),
+                        ],
+                        UIHelper.verticalSpace(24.h),
+                        CheckInLogCard(logs: state.checkInLogs),
+                        if (state.nextSpecialDay != null) ...[
+                          UIHelper.verticalSpace(24.h),
+                          NextSpecialDayCard(specialDay: state.nextSpecialDay!),
+                        ],
                       ],
                     );
                   } else if (state is HomeError) {
