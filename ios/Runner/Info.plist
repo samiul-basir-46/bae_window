@@ -72,5 +72,7 @@
 	<string>This app requires microphone access to record audio messages.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>This app requires photo library access to choose images.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>We need access to Face ID to secure your private vault memories.</string>
 </dict>
 </plist>

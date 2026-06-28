@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
+import 'package:local_auth/local_auth.dart';
 
 class PINUnlockDialog extends StatefulWidget {
   final VoidCallback onSuccess;
@@ -15,7 +16,49 @@ class PINUnlockDialog extends StatefulWidget {
 }
 
 class _PINUnlockDialogState extends State<PINUnlockDialog> {
+  final LocalAuthentication auth = LocalAuthentication();
   String _pin = "";
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-trigger biometric prompt on dialog open
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _authenticateWithBiometrics();
+    });
+  }
+
+  Future<void> _authenticateWithBiometrics() async {
+    try {
+      final bool canAuthenticateWithBiometrics = await auth.canCheckBiometrics;
+      final bool canAuthenticate = canAuthenticateWithBiometrics || await auth.isDeviceSupported();
+
+      if (canAuthenticate) {
+        final bool didAuthenticate = await auth.authenticate(
+          localizedReason: 'Unlock your private story vault',
+          options: const AuthenticationOptions(
+            biometricOnly: true,
+            stickyAuth: true,
+          ),
+        );
+
+        if (didAuthenticate) {
+          widget.onSuccess();
+          if (mounted) {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Vault Unlocked!"),
+                backgroundColor: AppColors.primaryPink,
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Biometric Auth Error: $e");
+    }
+  }
 
   void _onKeyPress(String val) {
     if (_pin.length < 4) {
@@ -190,16 +233,7 @@ class _PINUnlockDialogState extends State<PINUnlockDialog> {
 
   Widget _buildBiometricKey() {
     return GestureDetector(
-      onTap: () {
-        widget.onSuccess();
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Vault Unlocked via Touch ID!"),
-            backgroundColor: AppColors.primaryPink,
-          ),
-        );
-      },
+      onTap: _authenticateWithBiometrics,
       child: Container(
         width: 60.w,
         height: 60.h,
