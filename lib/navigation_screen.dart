@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/features/home/presentation/screens/home_screens.dart';
+import 'package:bea_window_app/features/story/presentation/screens/story_screen.dart';
 import 'helpers/helper_methods.dart';
 
 class SwitchTabNotification extends Notification {
@@ -31,7 +32,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
     super.initState();
     _screens = [
       const HomeScreen(),
-      _buildPlaceholderTab("Our Story - Private Memory Vault"),
+      const StoryScreen(),
       _buildPlaceholderTab("Spaces - Future Together"),
       _buildPlaceholderTab("Nest - Private Control Center"),
     ];
