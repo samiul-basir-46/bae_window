@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:bea_window_app/helpers/all_routes.dart';
 import '../bloc/auth_bloc.dart';
-import 'login_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -152,15 +152,14 @@ class _SignUpScreenState extends State<SignUpScreen>
                           SizedBox(height: 16.h),
                           _buildTerms(),
                           SizedBox(height: 16.h),
-                          _buildBottomLink(
-                            prefix: 'Already have an account? ',
-                            action: 'Sign In →',
-                            onTap: () => Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => const LoginScreen()),
+                            _buildBottomLink(
+                              prefix: 'Already have an account? ',
+                              action: 'Sign In →',
+                              onTap: () => Navigator.pushReplacementNamed(
+                                context,
+                                Routes.loginScreen,
+                              ),
                             ),
-                          ),
                           SizedBox(height: 28.h),
                         ],
                       ),
