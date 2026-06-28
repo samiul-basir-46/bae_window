@@ -107,9 +107,21 @@ class AppColors {
   /// Color: #FFFFFFFF
   static const Color cFFFFFF = Color(0xFFFFFFFF);
 
+  /// Color: #CC1A1A22
+  static const Color navBgColor = Color(0xCC1A1A22);
+
+  /// Color: #FFFF5C8A
+  static const Color primaryPink = Color(0xFFFF5C8A);
+
+  /// Color: #FF9B7BFF
+  static const Color primaryPurple = Color(0xFF9B7BFF);
+
   /// Color: #FFfbfbfb
   static const Color scaffoldColor = Color(0xFFFBFBFB);
 
   /// Color: #FFFFFF
   static const Color secondaryColor = Color(0xFFFFFFFF);
+
+  /// Color: #FF111115
+  static const Color softBlack = Color(0xFF111115);
 }

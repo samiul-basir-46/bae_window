@@ -206,18 +206,38 @@ class _Slide2ArtworkState extends State<Slide2Artwork>
             ),
             Positioned(
               left: 0,
-              child: _buildAvatar(
+              child: _buildAvatarCircle(
                 icon: Icons.person_rounded,
                 borderColor: AppColors.cFFB7CE,
-                label: "Bae 1",
               ),
             ),
             Positioned(
               right: 0,
-              child: _buildAvatar(
+              child: _buildAvatarCircle(
                 icon: Icons.person_3_rounded,
                 borderColor: AppColors.cC8B3FF,
-                label: "Bae 2",
+              ),
+            ),
+            Positioned(
+              left: 0,
+              width: 60.w,
+              top: 128.h,
+              child: Center(
+                child: Text(
+                  "Bae 1",
+                  style: TextFontStyle.textStyle12c8E8E9FDMSans600,
+                ),
+              ),
+            ),
+            Positioned(
+              right: 0,
+              width: 60.w,
+              top: 128.h,
+              child: Center(
+                child: Text(
+                  "Bae 2",
+                  style: TextFontStyle.textStyle12c8E8E9FDMSans600,
+                ),
               ),
             ),
           ],
@@ -226,34 +246,23 @@ class _Slide2ArtworkState extends State<Slide2Artwork>
     );
   }
 
-  Widget _buildAvatar({
+  Widget _buildAvatarCircle({
     required IconData icon,
     required Color borderColor,
-    required String label,
   }) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 60.w,
-          height: 60.h,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.c1C1C22,
-            border: Border.all(color: borderColor, width: 2.w),
-          ),
-          child: Icon(
-            icon,
-            color: Colors.white.withValues(alpha: 0.9),
-            size: 26.sp,
-          ),
-        ),
-        SizedBox(height: 8.h),
-        Text(
-          label,
-          style: TextFontStyle.textStyle12c8E8E9FDMSans600,
-        ),
-      ],
+    return Container(
+      width: 60.w,
+      height: 60.h,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.c1C1C22,
+        border: Border.all(color: borderColor, width: 2.w),
+      ),
+      child: Icon(
+        icon,
+        color: Colors.white.withValues(alpha: 0.9),
+        size: 26.sp,
+      ),
     );
   }
 }

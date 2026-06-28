@@ -1,10 +1,11 @@
 import 'dart:io';
+import 'package:bea_window_app/helpers/navigation_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:bea_window_app/helpers/all_routes.dart';
 import '../bloc/auth_bloc.dart';
-import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -104,7 +105,8 @@ class _LoginScreenState extends State<LoginScreen>
                             label: 'Sign In',
                             isLoading: isLoading,
                             onTap: () {
-                              // TODO: add email/password sign in logic
+                              NavigationService.navigateToUntilReplacement(
+                                  Routes.navigationScreen);
                             },
                           ),
                           SizedBox(height: 20.h),
@@ -119,10 +121,9 @@ class _LoginScreenState extends State<LoginScreen>
                           _buildBottomLink(
                             prefix: "New here? ",
                             action: "Create your window →",
-                            onTap: () => Navigator.pushReplacement(
+                            onTap: () => Navigator.pushReplacementNamed(
                               context,
-                              MaterialPageRoute(
-                                  builder: (_) => const SignUpScreen()),
+                              Routes.signUpScreen,
                             ),
                           ),
                           SizedBox(height: 24.h),
@@ -139,7 +140,6 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  // ─── Blobs ───────────────────────────────────────────────────────────────
   Widget _buildBlobs() {
     return Stack(children: [
       Positioned(
@@ -153,7 +153,7 @@ class _LoginScreenState extends State<LoginScreen>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: RadialGradient(colors: [
-                const Color(0xFFFF8FB8).withOpacity(0.15),
+                const Color(0xFFFF8FB8).withValues(alpha: 0.15),
                 Colors.transparent,
               ]),
             ),
@@ -169,7 +169,7 @@ class _LoginScreenState extends State<LoginScreen>
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: RadialGradient(colors: [
-              const Color(0xFF8250DC).withOpacity(0.1),
+              const Color(0xFF8250DC).withValues(alpha: 0.1),
               Colors.transparent,
             ]),
           ),
@@ -192,15 +192,14 @@ class _LoginScreenState extends State<LoginScreen>
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFB03085).withOpacity(0.4),
+            color: const Color(0xFFB03085).withValues(alpha: 0.4),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Center(
-        child: Icon(Icons.favorite_rounded,
-            color: Colors.white, size: 26.sp),
+        child: Icon(Icons.favorite_rounded, color: Colors.white, size: 26.sp),
       ),
     );
   }
@@ -253,9 +252,9 @@ class _LoginScreenState extends State<LoginScreen>
     return Container(
       height: 52.h,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.04),
+        color: Colors.white.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: TextField(
         controller: controller,
@@ -263,10 +262,10 @@ class _LoginScreenState extends State<LoginScreen>
         style: GoogleFonts.dmSans(color: Colors.white, fontSize: 14.sp),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle:
-              GoogleFonts.dmSans(color: const Color(0xFF555568), fontSize: 14.sp),
+          hintStyle: GoogleFonts.dmSans(
+              color: const Color(0xFF555568), fontSize: 14.sp),
           prefixIcon: Icon(icon,
-              color: Colors.white.withOpacity(0.3), size: 18.sp),
+              color: Colors.white.withValues(alpha: 0.3), size: 18.sp),
           border: InputBorder.none,
           contentPadding:
               EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
@@ -279,9 +278,9 @@ class _LoginScreenState extends State<LoginScreen>
     return Container(
       height: 52.h,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.04),
+        color: Colors.white.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: TextField(
         controller: _passwordController,
@@ -289,17 +288,17 @@ class _LoginScreenState extends State<LoginScreen>
         style: GoogleFonts.dmSans(color: Colors.white, fontSize: 14.sp),
         decoration: InputDecoration(
           hintText: 'Password',
-          hintStyle:
-              GoogleFonts.dmSans(color: const Color(0xFF555568), fontSize: 14.sp),
+          hintStyle: GoogleFonts.dmSans(
+              color: const Color(0xFF555568), fontSize: 14.sp),
           prefixIcon: Icon(Icons.lock_outline_rounded,
-              color: Colors.white.withOpacity(0.3), size: 18.sp),
+              color: Colors.white.withValues(alpha: 0.3), size: 18.sp),
           suffixIcon: GestureDetector(
             onTap: () => setState(() => _obscurePassword = !_obscurePassword),
             child: Icon(
               _obscurePassword
                   ? Icons.visibility_off_outlined
                   : Icons.visibility_outlined,
-              color: Colors.white.withOpacity(0.3),
+              color: Colors.white.withValues(alpha: 0.3),
               size: 18.sp,
             ),
           ),
@@ -315,9 +314,7 @@ class _LoginScreenState extends State<LoginScreen>
     return Align(
       alignment: Alignment.centerRight,
       child: GestureDetector(
-        onTap: () {
-          // TODO: forgot password
-        },
+        onTap: () {},
         child: Text(
           'Forgot password?',
           style: GoogleFonts.dmSans(
@@ -349,7 +346,7 @@ class _LoginScreenState extends State<LoginScreen>
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFB03085).withOpacity(0.4),
+              color: const Color(0xFFB03085).withValues(alpha: 0.4),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -380,7 +377,8 @@ class _LoginScreenState extends State<LoginScreen>
   Widget _buildOrDivider() {
     return Row(children: [
       Expanded(
-          child: Divider(color: Colors.white.withOpacity(0.06), thickness: 1)),
+          child: Divider(
+              color: Colors.white.withValues(alpha: 0.06), thickness: 1)),
       Padding(
         padding: EdgeInsets.symmetric(horizontal: 12.w),
         child: Text('or continue with',
@@ -388,7 +386,8 @@ class _LoginScreenState extends State<LoginScreen>
                 fontSize: 11.sp, color: const Color(0xFF3A3A4A))),
       ),
       Expanded(
-          child: Divider(color: Colors.white.withOpacity(0.06), thickness: 1)),
+          child: Divider(
+              color: Colors.white.withValues(alpha: 0.06), thickness: 1)),
     ]);
   }
 
@@ -396,7 +395,8 @@ class _LoginScreenState extends State<LoginScreen>
     return GestureDetector(
       onTap: isLoading
           ? null
-          : () => context.read<AuthBloc>().add(GoogleSignInRequestedEvent()),
+          : () =>
+              context.read<AuthBloc>().add(const GoogleSignInRequestedEvent()),
       child: _socialButton(
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -418,7 +418,8 @@ class _LoginScreenState extends State<LoginScreen>
     return GestureDetector(
       onTap: isLoading
           ? null
-          : () => context.read<AuthBloc>().add(AppleSignInRequestedEvent()),
+          : () =>
+              context.read<AuthBloc>().add(const AppleSignInRequestedEvent()),
       child: _socialButton(
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -441,9 +442,9 @@ class _LoginScreenState extends State<LoginScreen>
       height: 48.h,
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.04),
+        color: Colors.white.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: child,
     );
@@ -486,7 +487,6 @@ class _LoginScreenState extends State<LoginScreen>
   }
 }
 
-// ─── Google Logo Painter ──────────────────────────────────────────────────────
 class _GoogleLogoPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {

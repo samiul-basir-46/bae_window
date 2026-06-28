@@ -1,10 +1,10 @@
 import 'package:bea_window_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
+import 'package:bea_window_app/navigation_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:auto_animated/auto_animated.dart';
-import 'package:bea_window_app/loading_screen.dart';
 import 'package:bea_window_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'constants/custome_theme.dart';
 import 'gen/colors.gen.dart';
@@ -90,7 +90,7 @@ class UtillScreenMobile extends StatelessWidget {
                 },
                 navigatorKey: NavigationService.navigatorKey,
                 onGenerateRoute: RouteGenerator.generateRoute,
-                home: const Loading()),
+                home: const NavigationScreen()),
           ),
         );
       },

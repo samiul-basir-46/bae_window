@@ -33,4 +33,8 @@
     <color name="c1A1A22">#FF181530</color>
     <color name="c2C2C3A">#FF2D284E</color>
     <color name="cE295B5">#FFFF9EAA</color>
+    <color name="primaryPink">#FFFF5C8A</color>
+    <color name="primaryPurple">#FF9B7BFF</color>
+    <color name="softBlack">#FF111115</color>
+    <color name="navBgColor">#CC1A1A22</color>
 </colors>

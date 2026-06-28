@@ -1,7 +1,7 @@
-// ignore_for_file: unused_element
-
 import 'package:bea_window_app/features/auth/presentation/screens/login_screen.dart';
+import 'package:bea_window_app/features/auth/presentation/screens/signup_screen.dart';
 import 'package:bea_window_app/features/onboarding/presentation/screens/onboarding_screen.dart';
+import 'package:bea_window_app/navigation_screen.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 
@@ -14,6 +14,7 @@ final class Routes {
   static const String loginScreen = '/logIn';
   static const String signUpScreen = '/signUp';
   static const String onboardingScreen = '/onboarding';
+  static const String navigationScreen = '/navigation';
 }
 
 final class RouteGenerator {
@@ -36,68 +37,17 @@ final class RouteGenerator {
             : _FadedTransitionRoute(
                 widget: const OnboardingScreen(), settings: settings);
 
-      // case Routes.signUpScreen:
-      //   return defaultTargetPlatform == TargetPlatform.iOS
-      //       ? CupertinoPageRoute(builder: (context) => const SignUpScreen())
-      //       : _FadedTransitionRoute(
-      //           widget: const SignUpScreen(), settings: settings);
+      case Routes.signUpScreen:
+        return defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(builder: (context) => const SignUpScreen())
+            : _FadedTransitionRoute(
+                widget: const SignUpScreen(), settings: settings);
 
-      // case Routes.productsWithPagination:
-      //   return defaultTargetPlatform == TargetPlatform.iOS
-      //       ? CupertinoPageRoute(
-      //           builder: (context) =>
-      //               const products_pagination.ProductsScreen())
-      //       : _FadedTransitionRoute(
-      //           widget: const products_pagination.ProductsScreen(),
-      //           settings: settings);
-      // case Routes.productsScreen:
-      //   return defaultTargetPlatform == TargetPlatform.iOS
-      //       ? CupertinoPageRoute(builder: (context) => const ProductsScreen())
-      //       : _FadedTransitionRoute(
-      //           widget: const ProductsScreen(), settings: settings);
-      // case Routes.productDetailsScreen:
-      //   final args = settings.arguments as Map;
-      //   return defaultTargetPlatform == TargetPlatform.iOS
-      //       ? CupertinoPageRoute(
-      //           builder: (context) =>
-      //               ProductDetailsScreen(productId: args['productId']))
-      //       : _FadedTransitionRoute(
-      //           widget: ProductDetailsScreen(productId: args['productId']),
-      //           settings: settings);
-
-      // case Routes.forgotPWScreen:
-      //   return defaultTargetPlatform == TargetPlatform.iOS
-      //       ? CupertinoPageRoute(builder: (context) => const ForgotPWScreen())
-      //       : _FadedTransitionRoute(widget: const ForgotPWScreen(), settings: settings);
-
-      // case Routes.otpScreen:
-      //   final args = settings.arguments as Map;
-      //   return defaultTargetPlatform == TargetPlatform.iOS
-      //       ? CupertinoPageRoute(builder: (context) => OtpScreen(isFromLogin: args['isFromLogin']))
-      //       : _FadedTransitionRoute(
-      //           widget: OtpScreen(isFromLogin: args['isFromLogin']),
-      //           settings: settings
-      //         );
-
-      // case Routes.setPassword:
-      //   final args = settings.arguments as Map;
-      //   return defaultTargetPlatform == TargetPlatform.iOS
-      //       ? CupertinoPageRoute(builder: (context) => SetPasswordScreen(name: args['name'], email: args['email']))
-      //       : _FadedTransitionRoute(
-      //           widget: SetPasswordScreen(name: args['name'], email: args['email']),
-      //           settings: settings
-      //         );
-
-      // // Main App Routes
-      // case Routes.homeScreen:
-      //   return defaultTargetPlatform == TargetPlatform.iOS
-      //       ? CupertinoPageRoute(builder: (context) => const HomeScreen())
-      //       : _FadedTransitionRoute(widget: const HomeScreen(), settings: settings);
-
-      // case Routes.navigationScreen:
-      //   return defaultTargetPlatform == TargetPlatform.iOS
-      //       ? CupertinoPageRoute(builder: (context) => const NavigationScreen())
-      //       : _FadedTransitionRoute(widget: const NavigationScreen(), settings: settings);
+      case Routes.navigationScreen:
+        return defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(builder: (context) => const NavigationScreen())
+            : _FadedTransitionRoute(
+                widget: const NavigationScreen(), settings: settings);
 
       default:
         return null;
@@ -113,12 +63,12 @@ class _FadedTransitionRoute extends PageRouteBuilder {
   _FadedTransitionRoute({required this.widget, required this.settings})
       : super(
           settings: settings,
-          reverseTransitionDuration: const Duration(milliseconds: 1),
+          reverseTransitionDuration: const Duration(milliseconds: 250),
           pageBuilder: (BuildContext context, Animation<double> animation,
               Animation<double> secondaryAnimation) {
             return widget;
           },
-          transitionDuration: const Duration(milliseconds: 1),
+          transitionDuration: const Duration(milliseconds: 300),
           transitionsBuilder: (BuildContext context,
               Animation<double> animation,
               Animation<double> secondaryAnimation,
@@ -126,9 +76,20 @@ class _FadedTransitionRoute extends PageRouteBuilder {
             return FadeTransition(
               opacity: CurvedAnimation(
                 parent: animation,
-                curve: Curves.ease,
+                curve: Curves.easeInOut,
               ),
-              child: child,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0.0, 0.02),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutCubic,
+                  ),
+                ),
+                child: child,
+              ),
             );
           },
         );
