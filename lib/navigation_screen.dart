@@ -4,7 +4,13 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
+import 'package:bea_window_app/features/home/presentation/screens/home_screens.dart';
 import 'helpers/helper_methods.dart';
+
+class SwitchTabNotification extends Notification {
+  final int index;
+  const SwitchTabNotification(this.index);
+}
 
 class NavigationScreen extends StatefulWidget {
   const NavigationScreen({super.key});
@@ -24,7 +30,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
   void initState() {
     super.initState();
     _screens = [
-      _buildPlaceholderTab("Home - The Emotional Hub"),
+      const HomeScreen(),
       _buildPlaceholderTab("Our Story - Private Memory Vault"),
       _buildPlaceholderTab("Spaces - Future Together"),
       _buildPlaceholderTab("Nest - Private Control Center"),
@@ -81,8 +87,16 @@ class _NavigationScreenState extends State<NavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
+    return NotificationListener<SwitchTabNotification>(
+      onNotification: (notification) {
+        setState(() {
+          _currentIndex = notification.index;
+          _isNavbarVisible = true;
+        });
+        return true;
+      },
+      child: PopScope(
+        canPop: false,
       onPopInvokedWithResult: (bool didPop, _) async {
         showMaterialDialog(context);
       },
@@ -162,8 +176,9 @@ class _NavigationScreenState extends State<NavigationScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildCustomNavBar() {
     return ClipRRect(
