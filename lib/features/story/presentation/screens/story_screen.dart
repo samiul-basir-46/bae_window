@@ -410,7 +410,6 @@ class _StoryScreenViewState extends State<StoryScreenView> {
                           ),
                         ),
                       ],
-                      // Memory Feed Scroll Area
                       Expanded(
                         child: state.selectedFilter == StoryFilter.vault &&
                                 !state.isVaultUnlocked
