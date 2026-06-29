@@ -23,8 +23,11 @@ class SettingsGroup extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24.r),
-        child: Column(
-          children: children,
+        child: Material(
+          type: MaterialType.transparency,
+          child: Column(
+            children: children,
+          ),
         ),
       ),
     );
