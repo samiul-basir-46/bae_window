@@ -169,8 +169,10 @@ class NestScreen extends StatelessWidget {
                                 iconColor: Colors.yellow,
                                 title: "Notification Settings",
                                 subtitle: "Snap, Pulse, Tasks, Quiet Hours",
-                                onTap: () => _showSnackbar(
-                                    context, "Notification settings tapped"),
+                                onTap: () {
+                                  Navigator.pushNamed(
+                                      context, Routes.notificationSettingsScreen);
+                                },
                               ),
                             ],
                           ),

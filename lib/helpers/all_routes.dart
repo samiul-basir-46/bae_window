@@ -18,6 +18,7 @@ import 'package:bea_window_app/features/nest/presentation/screens/export_memorie
 import 'package:bea_window_app/features/nest/presentation/screens/account_pairing_screen.dart';
 import 'package:bea_window_app/features/change_password/presentation/screens/change_password_screen.dart';
 import 'package:bea_window_app/features/change_vault_passcode/presentation/screens/change_vault_passcode_screen.dart';
+import 'package:bea_window_app/features/notification_settings/presentation/screens/notification_settings_screen.dart';
 
 final class Routes {
   static final Routes _routes = Routes._internal();
@@ -42,6 +43,7 @@ final class Routes {
   static const String accountPairingScreen = '/accountPairing';
   static const String changePasswordScreen = '/changePassword';
   static const String changeVaultPasscodeScreen = '/changeVaultPasscode';
+  static const String notificationSettingsScreen = '/notificationSettings';
 }
 
 final class RouteGenerator {
@@ -138,6 +140,13 @@ final class RouteGenerator {
                 builder: (context) => const ChangeVaultPasscodeScreen())
             : _FadedTransitionRoute(
                 widget: const ChangeVaultPasscodeScreen(), settings: settings);
+
+      case Routes.notificationSettingsScreen:
+        return defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(
+                builder: (context) => const NotificationSettingsScreen())
+            : _FadedTransitionRoute(
+                widget: const NotificationSettingsScreen(), settings: settings);
 
       default:
         return null;
