@@ -8,6 +8,7 @@ class NestBloc extends Bloc<NestEvent, NestState> {
     on<ToggleVaultLockEvent>(_onToggleVaultLock);
     on<ToggleFocusModeEvent>(_onToggleFocusMode);
     on<ChangeThemeEvent>(_onChangeTheme);
+    on<SwapConnectionAvatarsEvent>(_onSwapConnectionAvatars);
   }
 
   void _onLoadNest(LoadNestEvent event, Emitter<NestState> emit) {
@@ -17,6 +18,7 @@ class NestBloc extends Bloc<NestEvent, NestState> {
       isFocusMode: false,
       selectedTheme: "Dark",
       partnerName: "Bae",
+      isLeftAvatarOnTop: true,
     ));
   }
 
@@ -38,6 +40,13 @@ class NestBloc extends Bloc<NestEvent, NestState> {
     final currentState = state;
     if (currentState is NestLoaded) {
       emit(currentState.copyWith(selectedTheme: event.theme));
+    }
+  }
+
+  void _onSwapConnectionAvatars(SwapConnectionAvatarsEvent event, Emitter<NestState> emit) {
+    final currentState = state;
+    if (currentState is NestLoaded) {
+      emit(currentState.copyWith(isLeftAvatarOnTop: !currentState.isLeftAvatarOnTop));
     }
   }
 }

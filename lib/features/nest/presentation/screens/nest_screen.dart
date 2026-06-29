@@ -101,6 +101,7 @@ class NestScreen extends StatelessWidget {
                           // Connection Card
                           ConnectionCard(
                             partnerName: state.partnerName,
+                            isLeftAvatarOnTop: state.isLeftAvatarOnTop,
                             onTap: () {
                               Navigator.pushNamed(context, Routes.myProfileScreen);
                             },

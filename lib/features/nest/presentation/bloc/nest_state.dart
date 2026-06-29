@@ -16,14 +16,16 @@ class NestLoading extends NestState {
 class NestLoaded extends NestState {
   final bool isVaultLocked;
   final bool isFocusMode;
-  final String selectedTheme; // "Light", "Dark", "Auto"
+  final String selectedTheme;
   final String partnerName;
+  final bool isLeftAvatarOnTop;
 
   const NestLoaded({
     required this.isVaultLocked,
     required this.isFocusMode,
     required this.selectedTheme,
     required this.partnerName,
+    required this.isLeftAvatarOnTop,
   });
 
   NestLoaded copyWith({
@@ -31,12 +33,14 @@ class NestLoaded extends NestState {
     bool? isFocusMode,
     String? selectedTheme,
     String? partnerName,
+    bool? isLeftAvatarOnTop,
   }) {
     return NestLoaded(
       isVaultLocked: isVaultLocked ?? this.isVaultLocked,
       isFocusMode: isFocusMode ?? this.isFocusMode,
       selectedTheme: selectedTheme ?? this.selectedTheme,
       partnerName: partnerName ?? this.partnerName,
+      isLeftAvatarOnTop: isLeftAvatarOnTop ?? this.isLeftAvatarOnTop,
     );
   }
 }

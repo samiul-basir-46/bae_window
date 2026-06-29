@@ -23,3 +23,7 @@ class ChangeThemeEvent extends NestEvent {
   final String theme; // "Light", "Dark", "Auto"
   const ChangeThemeEvent(this.theme);
 }
+
+class SwapConnectionAvatarsEvent extends NestEvent {
+  const SwapConnectionAvatarsEvent();
+}
