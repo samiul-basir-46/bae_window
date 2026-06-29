@@ -16,6 +16,7 @@ import 'package:bea_window_app/features/space/presentation/screens/love_note_scr
 import 'package:bea_window_app/features/nest/presentation/screens/my_profile_screen.dart';
 import 'package:bea_window_app/features/nest/presentation/screens/export_memories_screen.dart';
 import 'package:bea_window_app/features/nest/presentation/screens/account_pairing_screen.dart';
+import 'package:bea_window_app/features/change_password/presentation/screens/change_password_screen.dart';
 
 final class Routes {
   static final Routes _routes = Routes._internal();
@@ -38,6 +39,7 @@ final class Routes {
   static const String myProfileScreen = '/myProfile';
   static const String exportMemoriesScreen = '/exportMemories';
   static const String accountPairingScreen = '/accountPairing';
+  static const String changePasswordScreen = '/changePassword';
 }
 
 final class RouteGenerator {
@@ -116,6 +118,12 @@ final class RouteGenerator {
             ? CupertinoPageRoute(builder: (context) => const AccountPairingScreen())
             : _FadedTransitionRoute(
                 widget: const AccountPairingScreen(), settings: settings);
+
+      case Routes.changePasswordScreen:
+        return defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(builder: (context) => const ChangePasswordScreen())
+            : _FadedTransitionRoute(
+                widget: const ChangePasswordScreen(), settings: settings);
 
       default:
         return null;

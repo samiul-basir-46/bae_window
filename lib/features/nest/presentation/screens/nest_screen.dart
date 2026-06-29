@@ -148,8 +148,9 @@ class NestScreen extends StatelessWidget {
                                 iconColor: Colors.blueAccent,
                                 title: "Change Password",
                                 subtitle: "Update account sign-in password",
-                                onTap: () => _showSnackbar(
-                                    context, "Change Password triggered"),
+                                onTap: () {
+                                  Navigator.pushNamed(context, Routes.changePasswordScreen);
+                                },
                               ),
                             ],
                           ),
