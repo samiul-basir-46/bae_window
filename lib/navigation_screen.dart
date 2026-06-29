@@ -6,6 +6,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/features/home/presentation/screens/home_screens.dart';
 import 'package:bea_window_app/features/story/presentation/screens/story_screen.dart';
+import 'package:bea_window_app/features/space/presentation/screens/space_screen.dart';
+import 'package:bea_window_app/features/nest/presentation/screens/nest_screen.dart';
 import 'helpers/helper_methods.dart';
 
 class SwitchTabNotification extends Notification {
@@ -33,58 +35,11 @@ class _NavigationScreenState extends State<NavigationScreen> {
     _screens = [
       const HomeScreen(),
       const StoryScreen(),
-      _buildPlaceholderTab("Spaces - Future Together"),
-      _buildPlaceholderTab("Nest - Private Control Center"),
+      const SpaceScreen(),
+      const NestScreen(),
     ];
   }
 
-  Widget _buildPlaceholderTab(String title) {
-    return ListView.builder(
-      physics: const BouncingScrollPhysics(),
-      padding:
-          EdgeInsets.only(top: 20.h, left: 24.w, right: 24.w, bottom: 120.h),
-      itemCount: 30,
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return Padding(
-            padding: EdgeInsets.only(bottom: 20.h),
-            child: Text(
-              title,
-              style: GoogleFonts.dmSans(
-                fontSize: 20.sp,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          );
-        }
-        return Container(
-          margin: EdgeInsets.only(bottom: 12.h),
-          padding: EdgeInsets.all(20.r),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.03),
-            borderRadius: BorderRadius.circular(16.r),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.05),
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.favorite_rounded,
-                  color: AppColors.primaryPink.withValues(alpha: 0.6),
-                  size: 20.sp),
-              SizedBox(width: 12.w),
-              Text(
-                "Memory/Activity $index",
-                style:
-                    GoogleFonts.dmSans(color: Colors.white70, fontSize: 14.sp),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -98,88 +53,88 @@ class _NavigationScreenState extends State<NavigationScreen> {
       },
       child: PopScope(
         canPop: false,
-      onPopInvokedWithResult: (bool didPop, _) async {
-        showMaterialDialog(context);
-      },
-      child: Scaffold(
-        backgroundColor: AppColors.softBlack,
-        body: Stack(
-          children: [
-            Positioned(
-              top: -100.h,
-              left: -50.w,
-              child: Container(
-                width: 300.w,
-                height: 300.h,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppColors.primaryPink.withValues(alpha: 0.12),
-                      Colors.transparent,
-                    ],
+        onPopInvokedWithResult: (bool didPop, _) async {
+          showMaterialDialog(context);
+        },
+        child: Scaffold(
+          backgroundColor: AppColors.softBlack,
+          body: Stack(
+            children: [
+              Positioned(
+                top: -100.h,
+                left: -50.w,
+                child: Container(
+                  width: 300.w,
+                  height: 300.h,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        AppColors.primaryPink.withValues(alpha: 0.12),
+                        Colors.transparent,
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-            Positioned(
-              bottom: 50.h,
-              right: -100.w,
-              child: Container(
-                width: 350.w,
-                height: 350.h,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppColors.primaryPurple.withValues(alpha: 0.08),
-                      Colors.transparent,
-                    ],
+              Positioned(
+                bottom: 50.h,
+                right: -100.w,
+                child: Container(
+                  width: 350.w,
+                  height: 350.h,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        AppColors.primaryPurple.withValues(alpha: 0.08),
+                        Colors.transparent,
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-            // Current Screen Content with Scroll Listener
-            SafeArea(
-              child: NotificationListener<UserScrollNotification>(
-                onNotification: (notification) {
-                  final ScrollDirection direction = notification.direction;
-                  if (direction == ScrollDirection.reverse) {
-                    if (_isNavbarVisible) {
-                      setState(() {
-                        _isNavbarVisible = false;
-                      });
+              // Current Screen Content with Scroll Listener
+              SafeArea(
+                child: NotificationListener<UserScrollNotification>(
+                  onNotification: (notification) {
+                    final ScrollDirection direction = notification.direction;
+                    if (direction == ScrollDirection.reverse) {
+                      if (_isNavbarVisible) {
+                        setState(() {
+                          _isNavbarVisible = false;
+                        });
+                      }
+                    } else if (direction == ScrollDirection.forward) {
+                      if (!_isNavbarVisible) {
+                        setState(() {
+                          _isNavbarVisible = true;
+                        });
+                      }
                     }
-                  } else if (direction == ScrollDirection.forward) {
-                    if (!_isNavbarVisible) {
-                      setState(() {
-                        _isNavbarVisible = true;
-                      });
-                    }
-                  }
-                  return true;
-                },
-                child: IndexedStack(
-                  index: _currentIndex,
-                  children: _screens,
+                    return true;
+                  },
+                  child: IndexedStack(
+                    index: _currentIndex,
+                    children: _screens,
+                  ),
                 ),
               ),
-            ),
-            // Floating Premium Bottom Navigation Bar (Animated Show/Hide on Scroll)
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 350),
-              curve: Curves.easeInOutCubic,
-              left: 24.w,
-              right: 24.w,
-              bottom: _isNavbarVisible ? 30.h : -90.h,
-              child: _buildCustomNavBar(),
-            ),
-          ],
+              // Floating Premium Bottom Navigation Bar (Animated Show/Hide on Scroll)
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 350),
+                curve: Curves.easeInOutCubic,
+                left: 24.w,
+                right: 24.w,
+                bottom: _isNavbarVisible ? 30.h : -90.h,
+                child: _buildCustomNavBar(),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildCustomNavBar() {
     return ClipRRect(
