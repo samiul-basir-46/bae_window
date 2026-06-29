@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -39,11 +38,11 @@ class _LoveConnectionCardState extends State<LoveConnectionCard> with TickerProv
       duration: const Duration(seconds: 3),
     )..repeat(reverse: true);
 
-    _floatAnimation = Tween<double>(begin: -5.h, end: 5.h).animate(
+    _floatAnimation = Tween<double>(begin: -4.h, end: 4.h).animate(
       CurvedAnimation(parent: _floatController, curve: Curves.easeInOut),
     );
 
-    // 2. Heartbeat Animation
+    // 2. Heartbeat Animation (Double-pulse)
     _heartController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
@@ -74,7 +73,7 @@ class _LoveConnectionCardState extends State<LoveConnectionCard> with TickerProv
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
 
-    _pulseGlow = Tween<double>(begin: 8.r, end: 20.r).animate(
+    _pulseGlow = Tween<double>(begin: 6.r, end: 16.r).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
   }
@@ -89,110 +88,104 @@ class _LoveConnectionCardState extends State<LoveConnectionCard> with TickerProv
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _floatAnimation,
-      builder: (context, child) {
-        return Transform.translate(
-          offset: Offset(0, _floatAnimation.value),
-          child: Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(28.r),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.08),
-                width: 1.w,
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _floatAnimation,
+        builder: (context, child) {
+          return Transform.translate(
+            offset: Offset(0, _floatAnimation.value),
+            child: Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(24.w),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.03),
+                borderRadius: BorderRadius.circular(28.r),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.06),
+                  width: 1.w,
+                ),
               ),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(28.r),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                child: Container(
-                  padding: EdgeInsets.all(24.w),
-                  color: Colors.white.withValues(alpha: 0.02),
-                  child: Row(
+              child: Row(
+                children: [
+                  // Heart & Glow Ring
+                  Stack(
+                    alignment: Alignment.center,
                     children: [
-                      // Heart & Glow Ring
-                      Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          AnimatedBuilder(
-                            animation: _pulseGlow,
-                            builder: (context, child) {
-                              return Container(
-                                width: 84.w,
-                                height: 84.h,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: AppColors.primaryPink.withValues(alpha: 0.25),
-                                    width: 3.w,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppColors.primaryPink.withValues(alpha: 0.15),
-                                      blurRadius: _pulseGlow.value,
-                                      spreadRadius: 2.r,
-                                    )
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                          ScaleTransition(
-                            scale: _heartScale,
-                            child: Icon(
-                              Icons.favorite_rounded,
-                              color: AppColors.primaryPink,
-                              size: 38.sp,
+                      AnimatedBuilder(
+                        animation: _pulseGlow,
+                        builder: (context, child) {
+                          return Container(
+                            width: 84.w,
+                            height: 84.h,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.primaryPink.withValues(alpha: 0.25),
+                                width: 3.w,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primaryPink.withValues(alpha: 0.15),
+                                  blurRadius: _pulseGlow.value,
+                                  spreadRadius: 2.r,
+                                )
+                              ],
                             ),
-                          ),
-                        ],
+                          );
+                        },
                       ),
-                      SizedBox(width: 24.w),
-
-                      // Anniversary info
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Anniversary Countdown",
-                              style: GoogleFonts.dmSans(
-                                color: Colors.white38,
-                                fontSize: 10.sp,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            UIHelper.verticalSpace(4.h),
-                            Text(
-                              "${widget.daysTogether} Days Together",
-                              style: GoogleFonts.dmSans(
-                                color: Colors.white,
-                                fontSize: 20.sp,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            UIHelper.verticalSpace(4.h),
-                            Text(
-                              "Mood: ${widget.mood}",
-                              style: GoogleFonts.dmSans(
-                                color: AppColors.primaryPurple,
-                                fontSize: 12.sp,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                      ScaleTransition(
+                        scale: _heartScale,
+                        child: Icon(
+                          Icons.favorite_rounded,
+                          color: AppColors.primaryPink,
+                          size: 38.sp,
                         ),
                       ),
                     ],
                   ),
-                ),
+                  SizedBox(width: 24.w),
+
+                  // Anniversary info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Anniversary Countdown",
+                          style: GoogleFonts.dmSans(
+                            color: Colors.white38,
+                            fontSize: 10.sp,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        UIHelper.verticalSpace(4.h),
+                        Text(
+                          "${widget.daysTogether} Days Together",
+                          style: GoogleFonts.dmSans(
+                            color: Colors.white,
+                            fontSize: 20.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        UIHelper.verticalSpace(4.h),
+                        Text(
+                          "Mood: ${widget.mood}",
+                          style: GoogleFonts.dmSans(
+                            color: AppColors.primaryPurple,
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
