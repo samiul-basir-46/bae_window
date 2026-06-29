@@ -4,10 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
 
-import '../screens/vault_screen.dart';
-import '../screens/bucket_list_screen.dart';
-import '../screens/tasks_screen.dart';
-import '../screens/love_note_screen.dart';
+import 'package:bea_window_app/helpers/all_routes.dart';
 import 'springy_card.dart';
 
 class QuickActionGrid extends StatelessWidget {
@@ -22,36 +19,6 @@ class QuickActionGrid extends StatelessWidget {
     required this.onSendLoveNote,
   });
 
-  Route _createSlideRoute(Widget page) {
-    return PageRouteBuilder(
-      pageBuilder: (context, animation, secondaryAnimation) => page,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        const begin = Offset(1.0, 0.0);
-        const end = Offset.zero;
-        const curve = Curves.easeInOutCubic;
-        var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-        return SlideTransition(
-          position: animation.drive(tween),
-          child: child,
-        );
-      },
-    );
-  }
-
-  Route _createFadeRoute(Widget page) {
-    return PageRouteBuilder(
-      opaque: false,
-      barrierDismissible: true,
-      pageBuilder: (context, animation, secondaryAnimation) => page,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(
-          opacity: animation,
-          child: child,
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return RepaintBoundary(
@@ -62,7 +29,7 @@ class QuickActionGrid extends StatelessWidget {
               Expanded(
                 child: SpringyCard(
                   onTap: () {
-                    Navigator.push(context, _createSlideRoute(const VaultScreen()));
+                    Navigator.pushNamed(context, Routes.vaultScreen);
                   },
                   child: _buildGridItem(
                     iconWidget: Hero(
@@ -79,7 +46,7 @@ class QuickActionGrid extends StatelessWidget {
               Expanded(
                 child: SpringyCard(
                   onTap: () {
-                    Navigator.push(context, _createSlideRoute(const BucketListScreen()));
+                    Navigator.pushNamed(context, Routes.bucketListScreen);
                   },
                   child: _buildGridItem(
                     iconWidget: Hero(
@@ -100,7 +67,7 @@ class QuickActionGrid extends StatelessWidget {
               Expanded(
                 child: SpringyCard(
                   onTap: () {
-                    Navigator.push(context, _createSlideRoute(const TasksScreen()));
+                    Navigator.pushNamed(context, Routes.tasksScreen);
                   },
                   child: _buildGridItem(
                     iconWidget: Hero(
@@ -118,13 +85,10 @@ class QuickActionGrid extends StatelessWidget {
               Expanded(
                 child: SpringyCard(
                   onTap: () {
-                    Navigator.push(
+                    Navigator.pushNamed(
                       context,
-                      _createFadeRoute(
-                        LoveNoteScreen(
-                          onSend: (note) => onSendLoveNote(note),
-                        ),
-                      ),
+                      Routes.loveNoteScreen,
+                      arguments: (note) => onSendLoveNote(note),
                     );
                   },
                   child: _buildGridItem(

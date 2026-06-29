@@ -11,7 +11,7 @@ import '../bloc/nest_state.dart';
 import '../widgets/connection_card.dart';
 import '../widgets/theme_selector.dart';
 import '../widgets/settings_group.dart';
-import 'export_memories_screen.dart';
+import 'package:bea_window_app/helpers/all_routes.dart';
 
 class NestScreen extends StatelessWidget {
   const NestScreen({super.key});
@@ -66,7 +66,8 @@ class NestScreen extends StatelessWidget {
                   if (state is NestLoading || state is NestInitial) {
                     return const Center(
                       child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryPurple),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            AppColors.primaryPurple),
                       ),
                     );
                   }
@@ -74,7 +75,8 @@ class NestScreen extends StatelessWidget {
                   if (state is NestLoaded) {
                     return SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),
-                      padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 24.w, vertical: 16.h),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -99,7 +101,9 @@ class NestScreen extends StatelessWidget {
                           // Connection Card
                           ConnectionCard(
                             partnerName: state.partnerName,
-                            onTap: () => _showSnackbar(context, "Connection Profile tapped"),
+                            onTap: () {
+                              Navigator.pushNamed(context, Routes.myProfileScreen);
+                            },
                           ),
                           UIHelper.verticalSpace(28.h),
 
@@ -113,8 +117,9 @@ class NestScreen extends StatelessWidget {
                                 title: "Vault Lock",
                                 subtitle: "Face ID / Fingerprint required",
                                 value: state.isVaultLocked,
-                                onChanged: (val) =>
-                                    context.read<NestBloc>().add(ToggleVaultLockEvent(val)),
+                                onChanged: (val) => context
+                                    .read<NestBloc>()
+                                    .add(ToggleVaultLockEvent(val)),
                               ),
                               const SettingsDivider(),
                               SettingsSwitchTile(
@@ -123,8 +128,9 @@ class NestScreen extends StatelessWidget {
                                 title: "Focus Mode",
                                 subtitle: "Silence distractions together",
                                 value: state.isFocusMode,
-                                onChanged: (val) =>
-                                    context.read<NestBloc>().add(ToggleFocusModeEvent(val)),
+                                onChanged: (val) => context
+                                    .read<NestBloc>()
+                                    .add(ToggleFocusModeEvent(val)),
                               ),
                               const SettingsDivider(),
                               SettingsMenuTile(
@@ -132,7 +138,8 @@ class NestScreen extends StatelessWidget {
                                 iconColor: AppColors.primaryPurple,
                                 title: "Change Vault Passcode",
                                 subtitle: "Update your vault lock PIN",
-                                onTap: () => _showSnackbar(context, "Change Passcode triggered"),
+                                onTap: () => _showSnackbar(
+                                    context, "Change Passcode triggered"),
                               ),
                               const SettingsDivider(),
                               SettingsMenuTile(
@@ -140,7 +147,8 @@ class NestScreen extends StatelessWidget {
                                 iconColor: Colors.blueAccent,
                                 title: "Change Password",
                                 subtitle: "Update account sign-in password",
-                                onTap: () => _showSnackbar(context, "Change Password triggered"),
+                                onTap: () => _showSnackbar(
+                                    context, "Change Password triggered"),
                               ),
                             ],
                           ),
@@ -155,7 +163,8 @@ class NestScreen extends StatelessWidget {
                                 iconColor: Colors.yellow,
                                 title: "Notification Settings",
                                 subtitle: "Snap, Pulse, Tasks, Quiet Hours",
-                                onTap: () => _showSnackbar(context, "Notification settings tapped"),
+                                onTap: () => _showSnackbar(
+                                    context, "Notification settings tapped"),
                               ),
                             ],
                           ),
@@ -165,8 +174,9 @@ class NestScreen extends StatelessWidget {
                           _buildSectionHeader("DISPLAY"),
                           ThemeSelector(
                             selectedTheme: state.selectedTheme,
-                            onThemeChanged: (theme) =>
-                                context.read<NestBloc>().add(ChangeThemeEvent(theme)),
+                            onThemeChanged: (theme) => context
+                                .read<NestBloc>()
+                                .add(ChangeThemeEvent(theme)),
                           ),
                           UIHelper.verticalSpace(24.h),
 
@@ -180,12 +190,7 @@ class NestScreen extends StatelessWidget {
                                 title: "Export My Memories",
                                 subtitle: "Download photos & timeline",
                                 onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const ExportMemoriesScreen(),
-                                    ),
-                                  );
+                                  Navigator.pushNamed(context, Routes.exportMemoriesScreen);
                                 },
                               ),
                             ],
@@ -200,9 +205,11 @@ class NestScreen extends StatelessWidget {
                                 icon: Icons.logout_rounded,
                                 iconColor: Colors.redAccent,
                                 title: "Log Out",
-                                subtitle: "Sign out of your account on this device",
+                                subtitle:
+                                    "Sign out of your account on this device",
                                 textColor: Colors.redAccent,
-                                onTap: () => _showSnackbar(context, "Log Out tapped"),
+                                onTap: () =>
+                                    _showSnackbar(context, "Log Out tapped"),
                               ),
                             ],
                           ),
@@ -244,7 +251,8 @@ class NestScreen extends StatelessWidget {
         content: Text(msg),
         backgroundColor: AppColors.primaryPink,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
       ),
     );
   }
