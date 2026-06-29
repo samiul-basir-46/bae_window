@@ -1,5 +1,7 @@
 import 'package:bea_window_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
 import 'package:bea_window_app/navigation_screen.dart';
+import 'package:bea_window_app/features/story/presentation/bloc/story_bloc.dart';
+import 'package:bea_window_app/features/story/presentation/bloc/story_event.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -73,6 +75,9 @@ class UtillScreenMobile extends StatelessWidget {
               ),
               BlocProvider<OnboardingBloc>(
                 create: (_) => OnboardingBloc(),
+              ),
+              BlocProvider<StoryBloc>(
+                create: (_) => StoryBloc()..add(const LoadMemoriesEvent()),
               ),
             ],
             child: MaterialApp(

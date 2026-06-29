@@ -19,10 +19,7 @@ class StoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<StoryBloc>(
-      create: (context) => StoryBloc()..add(const LoadMemoriesEvent()),
-      child: const StoryScreenView(),
-    );
+    return const StoryScreenView();
   }
 }
 
