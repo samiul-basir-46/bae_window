@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
 import 'package:bea_window_app/common_widgets/custom_auth_text_field.dart';
+import 'package:bea_window_app/common_widgets/custom_auth_button.dart';
 import '../../../../gen/assets.gen.dart';
 import '../bloc/auth_bloc.dart';
 
@@ -108,9 +109,10 @@ class _LoginScreenState extends State<LoginScreen>
                           SizedBox(height: 8.h),
                           _buildForgotPassword(),
                           SizedBox(height: 20.h),
-                          _buildPrimaryButton(
+                          CustomAuthButton(
                             label: 'Sign In',
                             isLoading: isLoading,
+                            showArrow: true,
                             onTap: () {
                               NavigationService.navigateToUntilReplacement(
                                   Routes.navigationScreen);
@@ -266,51 +268,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _buildPrimaryButton({
-    required String label,
-    required bool isLoading,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: isLoading ? null : onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        height: 52.h,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16.r),
-          gradient: const LinearGradient(
-            colors: [Color(0xFFFF8FB8), Color(0xFFD94E98), Color(0xFFB03085)],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFB03085).withValues(alpha: 0.4),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Center(
-          child: isLoading
-              ? SizedBox(
-                  width: 22.w,
-                  height: 22.w,
-                  child: const CircularProgressIndicator(
-                      color: Colors.white, strokeWidth: 2.5),
-                )
-              : Text(
-                  '$label →',
-                  style: GoogleFonts.dmSans(
-                    color: Colors.white,
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildOrDivider() {
     return Row(children: [
