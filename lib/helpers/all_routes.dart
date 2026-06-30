@@ -17,6 +17,8 @@ import 'package:bea_window_app/features/nest/presentation/screens/my_profile_scr
 import 'package:bea_window_app/features/nest/presentation/screens/export_memories_screen.dart';
 import 'package:bea_window_app/features/nest/presentation/screens/account_pairing_screen.dart';
 import 'package:bea_window_app/features/change_password/presentation/screens/change_password_screen.dart';
+import 'package:bea_window_app/features/change_vault_passcode/presentation/screens/change_vault_passcode_screen.dart';
+import 'package:bea_window_app/features/notification_settings/presentation/screens/notification_settings_screen.dart';
 
 final class Routes {
   static final Routes _routes = Routes._internal();
@@ -40,6 +42,8 @@ final class Routes {
   static const String exportMemoriesScreen = '/exportMemories';
   static const String accountPairingScreen = '/accountPairing';
   static const String changePasswordScreen = '/changePassword';
+  static const String changeVaultPasscodeScreen = '/changeVaultPasscode';
+  static const String notificationSettingsScreen = '/notificationSettings';
 }
 
 final class RouteGenerator {
@@ -96,9 +100,11 @@ final class RouteGenerator {
       case Routes.loveNoteScreen:
         final onSendCallback = settings.arguments as Function(String)?;
         return defaultTargetPlatform == TargetPlatform.iOS
-            ? CupertinoPageRoute(builder: (context) => LoveNoteScreen(onSend: onSendCallback))
+            ? CupertinoPageRoute(
+                builder: (context) => LoveNoteScreen(onSend: onSendCallback))
             : _FadedTransitionRoute(
-                widget: LoveNoteScreen(onSend: onSendCallback), settings: settings);
+                widget: LoveNoteScreen(onSend: onSendCallback),
+                settings: settings);
 
       // Nest Routes
       case Routes.myProfileScreen:
@@ -109,21 +115,38 @@ final class RouteGenerator {
 
       case Routes.exportMemoriesScreen:
         return defaultTargetPlatform == TargetPlatform.iOS
-            ? CupertinoPageRoute(builder: (context) => const ExportMemoriesScreen())
+            ? CupertinoPageRoute(
+                builder: (context) => const ExportMemoriesScreen())
             : _FadedTransitionRoute(
                 widget: const ExportMemoriesScreen(), settings: settings);
 
       case Routes.accountPairingScreen:
         return defaultTargetPlatform == TargetPlatform.iOS
-            ? CupertinoPageRoute(builder: (context) => const AccountPairingScreen())
+            ? CupertinoPageRoute(
+                builder: (context) => const AccountPairingScreen())
             : _FadedTransitionRoute(
                 widget: const AccountPairingScreen(), settings: settings);
 
       case Routes.changePasswordScreen:
         return defaultTargetPlatform == TargetPlatform.iOS
-            ? CupertinoPageRoute(builder: (context) => const ChangePasswordScreen())
+            ? CupertinoPageRoute(
+                builder: (context) => const ChangePasswordScreen())
             : _FadedTransitionRoute(
                 widget: const ChangePasswordScreen(), settings: settings);
+
+      case Routes.changeVaultPasscodeScreen:
+        return defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(
+                builder: (context) => const ChangeVaultPasscodeScreen())
+            : _FadedTransitionRoute(
+                widget: const ChangeVaultPasscodeScreen(), settings: settings);
+
+      case Routes.notificationSettingsScreen:
+        return defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(
+                builder: (context) => const NotificationSettingsScreen())
+            : _FadedTransitionRoute(
+                widget: const NotificationSettingsScreen(), settings: settings);
 
       default:
         return null;

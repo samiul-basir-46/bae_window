@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
+import '../../../../gen/assets.gen.dart';
 import '../bloc/auth_bloc.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -401,7 +402,11 @@ class _LoginScreenState extends State<LoginScreen>
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _googleLogo(),
+            Image.asset(
+              Assets.icons.google.path,
+              height: 24.h,
+              width: 24.w,
+            ),
             SizedBox(width: 10.w),
             Text('Continue with Google',
                 style: GoogleFonts.dmSans(
@@ -450,14 +455,6 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _googleLogo() {
-    return SizedBox(
-      width: 18.w,
-      height: 18.w,
-      child: CustomPaint(painter: _GoogleLogoPainter()),
-    );
-  }
-
   Widget _appleLogo() {
     return Icon(Icons.apple, color: Colors.white, size: 20.sp);
   }
@@ -485,32 +482,4 @@ class _LoginScreenState extends State<LoginScreen>
       ),
     );
   }
-}
-
-class _GoogleLogoPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final s = size.width;
-    final paint = Paint()..style = PaintingStyle.fill;
-
-    // Blue
-    paint.color = const Color(0xFF4285F4);
-    canvas.drawArc(Rect.fromLTWH(0, 0, s, s), -1.4, 2.2, true, paint);
-    // Green
-    paint.color = const Color(0xFF34A853);
-    canvas.drawArc(Rect.fromLTWH(0, 0, s, s), 0.8, 1.2, true, paint);
-    // Yellow
-    paint.color = const Color(0xFFFBBC05);
-    canvas.drawArc(Rect.fromLTWH(0, 0, s, s), 2.0, 1.1, true, paint);
-    // Red
-    paint.color = const Color(0xFFEA4335);
-    canvas.drawArc(Rect.fromLTWH(0, 0, s, s), 3.1, 1.0, true, paint);
-
-    // White center
-    paint.color = const Color(0xFF0D0D10);
-    canvas.drawCircle(Offset(s / 2, s / 2), s * 0.3, paint);
-  }
-
-  @override
-  bool shouldRepaint(_) => false;
 }

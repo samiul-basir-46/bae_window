@@ -103,7 +103,8 @@ class NestScreen extends StatelessWidget {
                             partnerName: state.partnerName,
                             isLeftAvatarOnTop: state.isLeftAvatarOnTop,
                             onTap: () {
-                              Navigator.pushNamed(context, Routes.myProfileScreen);
+                              Navigator.pushNamed(
+                                  context, Routes.myProfileScreen);
                             },
                           ),
                           UIHelper.verticalSpace(28.h),
@@ -139,8 +140,10 @@ class NestScreen extends StatelessWidget {
                                 iconColor: AppColors.primaryPurple,
                                 title: "Change Vault Passcode",
                                 subtitle: "Update your vault lock PIN",
-                                onTap: () => _showSnackbar(
-                                    context, "Change Passcode triggered"),
+                                onTap: () {
+                                  Navigator.pushNamed(
+                                      context, Routes.changeVaultPasscodeScreen);
+                                },
                               ),
                               const SettingsDivider(),
                               SettingsMenuTile(
@@ -149,7 +152,8 @@ class NestScreen extends StatelessWidget {
                                 title: "Change Password",
                                 subtitle: "Update account sign-in password",
                                 onTap: () {
-                                  Navigator.pushNamed(context, Routes.changePasswordScreen);
+                                  Navigator.pushNamed(
+                                      context, Routes.changePasswordScreen);
                                 },
                               ),
                             ],
@@ -165,8 +169,10 @@ class NestScreen extends StatelessWidget {
                                 iconColor: Colors.yellow,
                                 title: "Notification Settings",
                                 subtitle: "Snap, Pulse, Tasks, Quiet Hours",
-                                onTap: () => _showSnackbar(
-                                    context, "Notification settings tapped"),
+                                onTap: () {
+                                  Navigator.pushNamed(
+                                      context, Routes.notificationSettingsScreen);
+                                },
                               ),
                             ],
                           ),
@@ -192,7 +198,8 @@ class NestScreen extends StatelessWidget {
                                 title: "Export My Memories",
                                 subtitle: "Download photos & timeline",
                                 onTap: () {
-                                  Navigator.pushNamed(context, Routes.exportMemoriesScreen);
+                                  Navigator.pushNamed(
+                                      context, Routes.exportMemoriesScreen);
                                 },
                               ),
                             ],
