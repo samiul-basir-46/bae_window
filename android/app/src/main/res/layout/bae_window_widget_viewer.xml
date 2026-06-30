@@ -1,8 +1,9 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    style="@style/Widget.BaeWindow.AppWidgetContainer"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="12dp">
+    android:background="@drawable/widget_background"
+    android:padding="12dp"
+    android:clipToOutline="true">
 
     <!-- Header Row -->
     <RelativeLayout
@@ -55,15 +56,15 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@+id/footer_layout"
-        android:layout_below="@+id/header_layout"
-        android:background="#15FFFFFF">
+        android:layout_below="@+id/header_layout">
 
         <!-- Snap Image -->
         <ImageView
             android:id="@+id/widget_image"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:scaleType="centerCrop" />
+            android:scaleType="centerCrop"
+            android:visibility="gone" />
 
         <!-- Placeholder (No snaps yet) -->
         <LinearLayout

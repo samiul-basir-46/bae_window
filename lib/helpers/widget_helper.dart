@@ -13,10 +13,9 @@ class WidgetHelper {
     required String? partnerName,
     required int? daysTogether,
     required String? latestSnapUrl,
-    String? latestSnapType, // "Image" or "Draw" etc.
+    String? latestSnapType,
     String? avatarLetter,
   }) async {
-    // 1. Determine status text — must match keys read by BaeWindowWidgetProvider.kt
     final String status = isPaired
         ? (daysTogether != null
             ? "$daysTogether Days Together ❤️"
@@ -31,26 +30,23 @@ class WidgetHelper {
             : "Awaiting first snap")
         : "Connect with partner";
 
-    // Timestamp
     final String timestamp = DateFormat('h:mm a').format(DateTime.now());
 
-    // Avatar letter — first letter of partner name
     final String avatar = avatarLetter ??
         (partnerName != null && partnerName.isNotEmpty
             ? partnerName[0].toUpperCase()
             : "B");
 
-    // Dock widget data
     final String dockPartnerStatus =
         isPaired ? "${partnerName ?? 'Bae'}'s Phone" : "Bae Window";
     final String dockSubtitle =
         isPaired ? "Tap to send something ✨" : "Pair with your partner first";
 
-    // --- Write all keys that BaeWindowWidgetProvider.kt reads ---
     await HomeWidget.saveWidgetData<bool>('isPaired', isPaired);
     await HomeWidget.saveWidgetData<String>('status', status);
     await HomeWidget.saveWidgetData<String>('senderName', senderName);
-    await HomeWidget.saveWidgetData<String>('footerDescription', footerDescription);
+    await HomeWidget.saveWidgetData<String>(
+        'footerDescription', footerDescription);
     await HomeWidget.saveWidgetData<String>('timestamp', timestamp);
     await HomeWidget.saveWidgetData<String>('avatarLetter', avatar);
 
@@ -60,34 +56,49 @@ class WidgetHelper {
       await HomeWidget.saveWidgetData<String>('badgeText', null);
     }
 
-    // --- Write keys that BaeWindowWidgetDockProvider.kt reads ---
-    await HomeWidget.saveWidgetData<String>('dockPartnerStatus', dockPartnerStatus);
+    await HomeWidget.saveWidgetData<String>(
+        'dockPartnerStatus', dockPartnerStatus);
     await HomeWidget.saveWidgetData<String>('dockSubtitle', dockSubtitle);
 
-    // 2. Save snap image using public application directory so Widget can read it
+    // Save snap image using app's local storage so Widget can read it
     if (latestSnapUrl != null && latestSnapUrl.isNotEmpty) {
       try {
-        final directory = await getApplicationSupportDirectory();
+        final directory = await getApplicationDocumentsDirectory();
         final filePath = '${directory.path}/latest_snap.png';
 
-        final response = await http.get(Uri.parse(latestSnapUrl));
-        if (response.statusCode == 200) {
-          final file = File(filePath);
-          await file.writeAsBytes(response.bodyBytes);
+        // ignore: avoid_print
+        print('WidgetHelper: downloading snap from $latestSnapUrl');
+        // ignore: avoid_print
+        print('WidgetHelper: saving to $filePath');
 
-          // Ensure it's readable by other processes (Widget)
-          await Process.run('chmod', ['644', filePath]);
+        final response = await http
+            .get(Uri.parse(latestSnapUrl))
+            .timeout(const Duration(seconds: 15));
+        if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
+          final file = File(filePath);
+          await file.writeAsBytes(response.bodyBytes, flush: true);
+
+          // ignore: avoid_print
+          print(
+              'WidgetHelper: snap saved, size=${response.bodyBytes.length} bytes');
 
           await HomeWidget.saveWidgetData<String>('imagePath', filePath);
+        } else {
+          // ignore: avoid_print
+          print(
+              'WidgetHelper: snap download failed, status ${response.statusCode}, bodyLen=${response.bodyBytes.length}');
+          await HomeWidget.saveWidgetData<String>('imagePath', null);
         }
-      } catch (_) {
+      } catch (e) {
+        // ignore: avoid_print
+        print('WidgetHelper: error downloading/saving snap image — $e');
         await HomeWidget.saveWidgetData<String>('imagePath', null);
       }
     } else {
       await HomeWidget.saveWidgetData<String>('imagePath', null);
     }
 
-    // 3. Trigger Widget Updates on Android
+    // Trigger Widget Updates on Android
     await HomeWidget.updateWidget(
       name: _androidWidgetName,
       androidName: _androidWidgetName,
