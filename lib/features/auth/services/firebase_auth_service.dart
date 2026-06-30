@@ -109,8 +109,8 @@ class FirebaseAuthService {
     // If local file is selected, upload to Firebase Storage
     if (avatarFile != null) {
       final ref = _storage.ref().child('avatars').child('${user.uid}.jpg');
-      final uploadTask = await ref.putFile(avatarFile);
-      finalAvatarUrl = await uploadTask.ref.getDownloadURL();
+      await ref.putFile(avatarFile);
+      finalAvatarUrl = await ref.getDownloadURL();
     }
 
     await _firestore.collection('users').doc(user.uid).set({
@@ -119,7 +119,9 @@ class FirebaseAuthService {
       'profileComplete': true,
     }, SetOptions(merge: true));
 
-    await user.updatePhotoURL(finalAvatarUrl);
+    if (finalAvatarUrl.isNotEmpty) {
+      await user.updatePhotoURL(finalAvatarUrl);
+    }
   }
 
   /// Generate a unique 6-character invite code
