@@ -28,3 +28,13 @@ class ForgotPasswordFailure extends AuthState {
   ForgotPasswordFailure(this.errorMessage);
 }
 
+class VerifyOtpLoading extends AuthState {}
+
+class VerifyOtpSuccess extends AuthState {}
+
+class VerifyOtpFailure extends AuthState {
+  final String errorMessage;
+
+  VerifyOtpFailure(this.errorMessage);
+}
+

@@ -50,8 +50,9 @@ class _SignUpScreenState extends State<SignUpScreen>
     int strength = 0;
     if (pw.length >= 6) strength++;
     if (pw.length >= 10) strength++;
-    if (pw.contains(RegExp(r'[A-Z]')) && pw.contains(RegExp(r'[0-9]')))
+    if (pw.contains(RegExp(r'[A-Z]')) && pw.contains(RegExp(r'[0-9]'))) {
       strength++;
+    }
     if (pw.contains(RegExp(r'[!@#\$&*~]'))) strength++;
     setState(() => _passwordStrength = strength);
   }

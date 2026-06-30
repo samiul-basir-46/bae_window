@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/common_widgets/custom_auth_button.dart';
@@ -8,6 +9,7 @@ import 'package:bea_window_app/helpers/all_routes.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
 import '../widgets/auth_background_blobs.dart';
 import '../widgets/auth_header.dart';
+import '../bloc/auth_bloc.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String email;
@@ -34,7 +36,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
   Timer? _timer;
   int _secondsRemaining = 59;
   bool _canResend = false;
-  bool _isLoading = false;
 
   @override
   void initState() {
@@ -95,8 +96,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
     }
   }
 
-  void _onKeyDown(int index, RawKeyEvent event) {
-    if (event is RawKeyDownEvent &&
+  void _onKeyDown(int index, KeyEvent event) {
+    if (event is KeyDownEvent &&
         event.logicalKey == LogicalKeyboardKey.backspace &&
         _controllers[index].text.isEmpty &&
         index > 0) {
@@ -105,7 +106,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
     }
   }
 
-  void _verifyOtp() async {
+  void _verifyOtp() {
     final otp = _controllers.map((c) => c.text).join();
     if (otp.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -119,97 +120,102 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
-    await Future.delayed(const Duration(seconds: 2));
-
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
-
-      // Show success dialog or toast and go to reset password screen
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Code verified successfully!'),
-          backgroundColor: const Color(0xFF4CD964),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-
-      Navigator.pushReplacementNamed(
-        context,
-        Routes.resetPasswordScreen,
-      );
-    }
+    context.read<AuthBloc>().add(VerifyOtpRequestedEvent(otp));
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0D0D10),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      extendBodyBehindAppBar: true,
-      body: Stack(
-        children: [
-          const AuthBackgroundBlobs(),
-          SafeArea(
-            child: FadeTransition(
-              opacity: _fadeAnim,
-              child: SlideTransition(
-                position: _slideAnim,
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(horizontal: 28.w),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      UIHelper.verticalSpace(36.h),
-                      AuthHeader(
-                        logoIcon: Icons.shield_outlined,
-                        eyebrow: 'Security Check',
-                        headline: 'Verify Code ✦',
-                        subtitle: 'We\'ve sent a 6-digit verification code to:\n${widget.email}',
+    return BlocConsumer<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is VerifyOtpSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Code verified successfully!'),
+              backgroundColor: const Color(0xFF4CD964),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          );
+          Navigator.pushReplacementNamed(
+            context,
+            Routes.resetPasswordScreen,
+          );
+        } else if (state is VerifyOtpFailure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.errorMessage),
+              backgroundColor: const Color(0xFFB03085),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          );
+        }
+      },
+      builder: (context, state) {
+        final isLoading = state is VerifyOtpLoading;
+
+        return Scaffold(
+          backgroundColor: const Color(0xFF0D0D10),
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+          extendBodyBehindAppBar: true,
+          body: Stack(
+            children: [
+              const AuthBackgroundBlobs(),
+              SafeArea(
+                child: FadeTransition(
+                  opacity: _fadeAnim,
+                  child: SlideTransition(
+                    position: _slideAnim,
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.symmetric(horizontal: 28.w),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          UIHelper.verticalSpace(36.h),
+                          AuthHeader(
+                            logoIcon: Icons.shield_outlined,
+                            eyebrow: 'Security Check',
+                            headline: 'Verify Code ✦',
+                            subtitle: 'We\'ve sent a 6-digit verification code to:\n${widget.email}',
+                          ),
+                          UIHelper.verticalSpace(36.h),
+                          _buildOtpRow(),
+                          UIHelper.verticalSpace(36.h),
+                          CustomAuthButton(
+                            label: 'Verify Code',
+                            isLoading: isLoading,
+                            onTap: _verifyOtp,
+                          ),
+                          UIHelper.verticalSpace(32.h),
+                          _buildResendRow(),
+                          UIHelper.verticalSpace(24.h),
+                        ],
                       ),
-                      UIHelper.verticalSpace(36.h),
-                      _buildOtpRow(),
-                      UIHelper.verticalSpace(36.h),
-                      CustomAuthButton(
-                        label: 'Verify Code',
-                        isLoading: _isLoading,
-                        onTap: _verifyOtp,
-                      ),
-                      UIHelper.verticalSpace(32.h),
-                      _buildResendRow(),
-                      UIHelper.verticalSpace(24.h),
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
-
-
 
   Widget _buildOtpRow() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: List.generate(6, (index) {
-        return RawKeyboardListener(
-          focusNode: FocusNode(), // Dummy focus node for listener key intercept
-          onKey: (event) => _onKeyDown(index, event),
+        return KeyboardListener(
+          focusNode: FocusNode(), 
+          onKeyEvent: (event) => _onKeyDown(index, event),
           child: Container(
             width: 44.w,
             height: 52.h,

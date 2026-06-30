@@ -58,9 +58,9 @@ class _BucketListScreenState extends State<BucketListScreen> {
               decoration: InputDecoration(
                 labelText: "Goal Name",
                 labelStyle: GoogleFonts.dmSans(color: Colors.white38),
-                enabledBorder: UnderlineInputBorder(
+                enabledBorder:const UnderlineInputBorder(
                     borderSide: BorderSide(color: Colors.white12)),
-                focusedBorder: UnderlineInputBorder(
+                focusedBorder:const UnderlineInputBorder(
                     borderSide: BorderSide(color: AppColors.primaryPink)),
               ),
             ),
@@ -71,9 +71,9 @@ class _BucketListScreenState extends State<BucketListScreen> {
               decoration: InputDecoration(
                 labelText: "Target Date (e.g. Dec 2026)",
                 labelStyle: GoogleFonts.dmSans(color: Colors.white38),
-                enabledBorder: UnderlineInputBorder(
+                enabledBorder: const UnderlineInputBorder(
                     borderSide: BorderSide(color: Colors.white12)),
-                focusedBorder: UnderlineInputBorder(
+                focusedBorder: const UnderlineInputBorder(
                     borderSide: BorderSide(color: AppColors.primaryPink)),
               ),
             ),
