@@ -7,12 +7,9 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.net.Uri
 import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
-import java.io.File
-import java.io.FileOutputStream
 
 class BaeWindowWidgetProvider : AppWidgetProvider() {
 
@@ -42,7 +39,7 @@ class BaeWindowWidgetProvider : AppWidgetProvider() {
                 val avatarLetter = prefs.getString("avatarLetter", "B") ?: "B"
                 val badgeText = prefs.getString("badgeText", null)
 
-                Log.d(TAG, "isPaired=$isPaired, imagePath=$imagePath")
+                Log.d(TAG, "isPaired=$isPaired, imagePath=$imagePath, sender=$senderName")
 
                 // Set text views
                 views.setTextViewText(R.id.status_text, if (isPaired) "Paired" else "Solo")
@@ -62,64 +59,28 @@ class BaeWindowWidgetProvider : AppWidgetProvider() {
                     views.setViewVisibility(R.id.badge_text, View.GONE)
                 }
 
-                // Handle image
+                // Handle image - use setImageViewBitmap with small bitmap
                 var imageSet = false
                 if (!imagePath.isNullOrEmpty()) {
-                    val imgFile = File(imagePath)
-                    Log.d(TAG, "Image file: $imagePath, exists=${imgFile.exists()}, size=${if (imgFile.exists()) imgFile.length() else 0}")
+                    val imgFile = java.io.File(imagePath)
+                    Log.d(TAG, "Image file: exists=${imgFile.exists()}, size=${if (imgFile.exists()) imgFile.length() else 0}")
 
                     if (imgFile.exists() && imgFile.length() > 0) {
-                        // Create a resized widget bitmap file and load it
-                        val result = createWidgetBitmap(context, imgFile)
-                        if (result != null) {
-                            val (widgetFile, bitmap) = result
-                            // Try FileProvider content:// URI approach first
-                            try {
-                                val authority = "${context.packageName}.fileprovider"
-                                val uri = androidx.core.content.FileProvider.getUriForFile(context, authority, widgetFile)
-                                Log.d(TAG, "Trying setImageViewUri: $uri")
-                                
-                                // Grant temporary permission to all apps that can handle the widget intent
-                                context.grantUriPermission("com.android.systemui", uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                context.grantUriPermission("com.android.launcher3", uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                // Also try standard package manager query if needed, but manual systemUI/launcher usually covers it.
-                                
-                                views.setImageViewUri(R.id.widget_image, uri)
-                                imageSet = true
-                                Log.d(TAG, "Image set via content:// URI")
-                            } catch (e: Exception) {
-                                Log.e(TAG, "setImageViewUri content provider failed: ${e.message}", e)
-                            }
-
-                            // If URI fails, fall back to resized Bitmap
-                            if (!imageSet) {
-                                try {
-                                    Log.d(TAG, "Trying setImageViewBitmap: ${bitmap.width}x${bitmap.height}")
-                                    views.setImageViewBitmap(R.id.widget_image, bitmap)
-                                    imageSet = true
-                                    Log.d(TAG, "Image set via Bitmap")
-                                } catch (e: Exception) {
-                                    Log.e(TAG, "setImageViewBitmap failed: ${e.message}")
-                                }
-                            }
-
-                            if (imageSet) {
-                                views.setViewVisibility(R.id.widget_image, View.VISIBLE)
-                                views.setViewVisibility(R.id.widget_placeholder, View.GONE)
-                            }
-
-                            // Recycle since we saved to file and/or already passed it to RemoteViews
-                            bitmap.recycle()
+                        val bitmap = loadSmallBitmap(imgFile.absolutePath)
+                        if (bitmap != null) {
+                            Log.d(TAG, "Setting bitmap: ${bitmap.width}x${bitmap.height}, bytes=${bitmap.byteCount}")
+                            views.setImageViewBitmap(R.id.widget_image, bitmap)
+                            views.setViewVisibility(R.id.widget_image, View.VISIBLE)
+                            views.setViewVisibility(R.id.widget_placeholder, View.GONE)
+                            imageSet = true
+                            Log.d(TAG, "Bitmap set successfully")
                         } else {
-                            Log.e(TAG, "Failed to create widget bitmap")
+                            Log.e(TAG, "Failed to decode bitmap")
                         }
-                    } else {
-                        Log.d(TAG, "Image file missing or empty")
                     }
                 }
 
                 if (!imageSet) {
-                    Log.d(TAG, "Showing placeholder")
                     views.setViewVisibility(R.id.widget_image, View.GONE)
                     views.setViewVisibility(R.id.widget_placeholder, View.VISIBLE)
                 }
@@ -136,68 +97,38 @@ class BaeWindowWidgetProvider : AppWidgetProvider() {
                         views.setOnClickPendingIntent(R.id.center_container, pendingIntent)
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error setting click handler: ${e.message}")
+                    Log.e(TAG, "Click handler error: ${e.message}")
                 }
 
                 appWidgetManager.updateAppWidget(appWidgetId, views)
-                Log.d(TAG, "Widget $appWidgetId updated successfully")
+                Log.d(TAG, "Widget $appWidgetId updated OK")
             } catch (e: Exception) {
-                Log.e(TAG, "Error updating widget $appWidgetId: ${e.message}", e)
+                Log.e(TAG, "FATAL widget update error for $appWidgetId: ${e.message}", e)
             }
         }
     }
 
     /**
-     * Resize the source image and save as a widget-optimized bitmap file.
-     * Returns Pair(savedFile, bitmap) or null on failure.
+     * Load a small bitmap suitable for RemoteViews (max 150px, RGB_565)
      */
-    private fun createWidgetBitmap(context: Context, sourceFile: File): Pair<File, Bitmap>? {
+    private fun loadSmallBitmap(path: String): Bitmap? {
         return try {
-            // First, get image dimensions
-            val boundsOpts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            BitmapFactory.decodeFile(sourceFile.absolutePath, boundsOpts)
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(path, bounds)
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
 
-            if (boundsOpts.outWidth <= 0 || boundsOpts.outHeight <= 0) {
-                Log.e(TAG, "Invalid image: w=${boundsOpts.outWidth}, h=${boundsOpts.outHeight}")
-                return null
+            // Target ~150px on longest side to keep bitmap tiny
+            val maxDim = maxOf(bounds.outWidth, bounds.outHeight)
+            var sample = 1
+            while (maxDim / (sample * 2) >= 150) sample *= 2
+
+            val opts = BitmapFactory.Options().apply {
+                inSampleSize = sample
+                inPreferredConfig = Bitmap.Config.RGB_565 // Half the memory
             }
-
-            Log.d(TAG, "Source image: ${boundsOpts.outWidth}x${boundsOpts.outHeight}")
-
-            // Calculate sample size to get roughly 300px on longest side
-            val maxDim = maxOf(boundsOpts.outWidth, boundsOpts.outHeight)
-            var sampleSize = 1
-            while (maxDim / (sampleSize * 2) >= 300) {
-                sampleSize *= 2
-            }
-
-            // Decode with sample size using ARGB_8888 for best compatibility
-            val decodeOpts = BitmapFactory.Options().apply {
-                inSampleSize = sampleSize
-                inPreferredConfig = Bitmap.Config.ARGB_8888
-            }
-            val bitmap = BitmapFactory.decodeFile(sourceFile.absolutePath, decodeOpts)
-            if (bitmap == null) {
-                Log.e(TAG, "Failed to decode bitmap")
-                return null
-            }
-
-            Log.d(TAG, "Decoded: ${bitmap.width}x${bitmap.height}, sampleSize=$sampleSize, byteCount=${bitmap.byteCount}")
-
-            // Save as JPEG to widget-specific file in filesDir (accessible by widget)
-            val outputFile = File(context.filesDir, "widget_image.jpg")
-            FileOutputStream(outputFile).use { fos ->
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 85, fos)
-                fos.flush()
-            }
-
-            Log.d(TAG, "Widget bitmap saved: ${outputFile.absolutePath}, size=${outputFile.length()} bytes")
-            Pair(outputFile, bitmap)
+            BitmapFactory.decodeFile(path, opts)
         } catch (e: Exception) {
-            Log.e(TAG, "createWidgetBitmap error: ${e.message}", e)
-            null
-        } catch (e: OutOfMemoryError) {
-            Log.e(TAG, "OOM in createWidgetBitmap", e)
+            Log.e(TAG, "loadSmallBitmap error: ${e.message}")
             null
         }
     }

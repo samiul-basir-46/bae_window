@@ -1,18 +1,17 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/widget_background"
+    android:background="#1A151A"
     android:orientation="horizontal"
     android:gravity="center_vertical"
     android:paddingHorizontal="16dp"
-    android:paddingVertical="12dp"
-    android:clipToOutline="true">
+    android:paddingVertical="12dp">
 
     <!-- Left Side: Status Info -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1.2"
+        android:layout_weight="1"
         android:orientation="vertical"
         android:layout_marginRight="8dp">
 
@@ -36,7 +35,7 @@
     </LinearLayout>
 
     <!-- Divider line -->
-    <View
+    <TextView
         android:layout_width="1dp"
         android:layout_height="32dp"
         android:background="#15FFFFFF"
@@ -54,42 +53,46 @@
             android:id="@+id/btn_camera"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:background="@drawable/dock_button_background"
+            android:background="#20FFFFFF"
             android:src="@android:drawable/ic_menu_camera"
             android:padding="8dp"
             android:scaleType="fitCenter"
-            android:layout_marginRight="6dp" />
+            android:layout_marginRight="6dp"
+            android:contentDescription="Camera" />
 
         <!-- Button 2: Draw -->
         <ImageButton
             android:id="@+id/btn_draw"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:background="@drawable/dock_button_background"
+            android:background="#20FFFFFF"
             android:src="@android:drawable/ic_menu_edit"
             android:padding="8dp"
             android:scaleType="fitCenter"
-            android:layout_marginRight="6dp" />
+            android:layout_marginRight="6dp"
+            android:contentDescription="Draw" />
 
         <!-- Button 3: Pulse -->
         <ImageButton
             android:id="@+id/btn_pulse"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:background="@drawable/dock_button_background"
+            android:background="#20FFFFFF"
             android:src="@android:drawable/ic_popup_sync"
             android:padding="8dp"
             android:scaleType="fitCenter"
-            android:layout_marginRight="6dp" />
+            android:layout_marginRight="6dp"
+            android:contentDescription="Pulse" />
 
         <!-- Button 4: Voice -->
         <ImageButton
             android:id="@+id/btn_voice"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:background="@drawable/dock_button_background"
+            android:background="#20FFFFFF"
             android:src="@android:drawable/ic_btn_speak_now"
             android:padding="8dp"
-            android:scaleType="fitCenter" />
+            android:scaleType="fitCenter"
+            android:contentDescription="Voice" />
     </LinearLayout>
 </LinearLayout>

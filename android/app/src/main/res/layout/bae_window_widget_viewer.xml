@@ -1,9 +1,8 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/widget_background"
-    android:padding="12dp"
-    android:clipToOutline="true">
+    android:background="#1A151A"
+    android:padding="12dp">
 
     <!-- Header Row -->
     <RelativeLayout
@@ -20,14 +19,15 @@
             android:layout_alignParentLeft="true"
             android:gravity="center_vertical"
             android:orientation="horizontal">
-            
-            <View
+
+            <!-- Green dot replaced with small TextView for compatibility -->
+            <TextView
                 android:id="@+id/status_dot"
-                android:layout_width="6dp"
-                android:layout_height="6dp"
-                android:background="@android:color/holo_green_light"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:background="#4CAF50"
                 android:visibility="visible" />
-                
+
             <TextView
                 android:id="@+id/status_text"
                 android:layout_width="wrap_content"
@@ -74,13 +74,13 @@
             android:layout_gravity="center"
             android:gravity="center"
             android:orientation="vertical">
-            
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="📷"
                 android:textSize="28sp" />
-                
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
