@@ -6,18 +6,20 @@ import 'package:bea_window_app/helpers/ui_helpers.dart';
 
 class HomeTopHeader extends StatelessWidget {
   final String userAvatarUrl;
-  final String partnerAvatarUrl;
-  final String partnerName;
-  final bool isPartnerOnline;
-  final int daysTogether;
+  final String? partnerAvatarUrl;
+  final String? partnerName;
+  final bool? isPartnerOnline;
+  final int? daysTogether;
+  final bool isPaired;
 
   const HomeTopHeader({
     super.key,
     required this.userAvatarUrl,
-    required this.partnerAvatarUrl,
-    required this.partnerName,
-    required this.isPartnerOnline,
-    required this.daysTogether,
+    required this.isPaired,
+    this.partnerAvatarUrl,
+    this.partnerName,
+    this.isPartnerOnline,
+    this.daysTogether,
   });
 
   @override
@@ -28,25 +30,35 @@ class HomeTopHeader extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // User Avatar (64px)
-            _buildAvatar(userAvatarUrl),
+            // User Avatar
+            _buildAvatar(
+              url: userAvatarUrl,
+              fallbackIcon: Icons.person_rounded,
+            ),
 
             UIHelper.horizontalSpace(16.w),
 
             const PulseHeartWidget(),
 
             UIHelper.horizontalSpace(16.w),
-            BreathingGlowAvatar(
-              avatarUrl: partnerAvatarUrl,
-              isOnline: isPartnerOnline,
-            ),
+
+            // Partner Avatar or Invite CTA
+            if (isPaired && partnerAvatarUrl != null)
+              BreathingGlowAvatar(
+                avatarUrl: partnerAvatarUrl!,
+                isOnline: isPartnerOnline ?? false,
+              )
+            else
+              _buildInviteAvatar(),
           ],
         ),
         UIHelper.verticalSpace(12.h),
         Opacity(
           opacity: 0.6,
           child: Text(
-            "$daysTogether Days Together ❤️",
+            isPaired && daysTogether != null
+                ? "$daysTogether Days Together ❤️"
+                : "Solo Mode ✦ Invite your partner",
             style: GoogleFonts.dmSans(
               fontSize: 13.sp,
               fontWeight: FontWeight.w500,
@@ -59,7 +71,7 @@ class HomeTopHeader extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatar(String url) {
+  Widget _buildAvatar({required String url, required IconData fallbackIcon}) {
     return Container(
       width: 64.w,
       height: 64.h,
@@ -79,18 +91,54 @@ class HomeTopHeader extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(32.r),
-        child: Image.network(
-          url,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => Container(
-            color: AppColors.navBgColor,
-            child: Icon(
-              Icons.person_rounded,
-              color: Colors.white.withValues(alpha: 0.5),
-              size: 28.sp,
-            ),
-          ),
+        child: url.isNotEmpty
+            ? Image.network(
+                url,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: AppColors.navBgColor,
+                  child: Icon(
+                    fallbackIcon,
+                    color: Colors.white.withValues(alpha: 0.5),
+                    size: 28.sp,
+                  ),
+                ),
+              )
+            : Container(
+                color: AppColors.navBgColor,
+                child: Icon(
+                  fallbackIcon,
+                  color: Colors.white.withValues(alpha: 0.5),
+                  size: 28.sp,
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildInviteAvatar() {
+    return Container(
+      width: 64.w,
+      height: 64.h,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: AppColors.primaryPink.withValues(alpha: 0.3),
+          width: 2.w,
         ),
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primaryPink.withValues(alpha: 0.08),
+            AppColors.primaryPurple.withValues(alpha: 0.08),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Icon(
+        Icons.person_add_rounded,
+        color: AppColors.primaryPink.withValues(alpha: 0.6),
+        size: 26.sp,
       ),
     );
   }
@@ -183,18 +231,27 @@ class _BreathingGlowAvatarState extends State<BreathingGlowAvatar>
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(32.r),
-              child: Image.network(
-                widget.avatarUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  color: AppColors.navBgColor,
-                  child: Icon(
-                    Icons.person_3_rounded,
-                    color: Colors.white.withValues(alpha: 0.5),
-                    size: 28.sp,
-                  ),
-                ),
-              ),
+              child: widget.avatarUrl.isNotEmpty
+                  ? Image.network(
+                      widget.avatarUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        color: AppColors.navBgColor,
+                        child: Icon(
+                          Icons.person_3_rounded,
+                          color: Colors.white.withValues(alpha: 0.5),
+                          size: 28.sp,
+                        ),
+                      ),
+                    )
+                  : Container(
+                      color: AppColors.navBgColor,
+                      child: Icon(
+                        Icons.person_3_rounded,
+                        color: Colors.white.withValues(alpha: 0.5),
+                        size: 28.sp,
+                      ),
+                    ),
             ),
           ),
         );

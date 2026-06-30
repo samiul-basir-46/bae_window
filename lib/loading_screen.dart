@@ -44,18 +44,14 @@ class _LoadingState extends State<Loading> {
 
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      // Reload user to get latest emailVerified status
       try {
         await user.reload().timeout(const Duration(seconds: 5));
-      } catch (_) {
-        // If reload fails (offline), continue with cached user state
-      }
+      } catch (_) {}
 
       final refreshedUser = FirebaseAuth.instance.currentUser;
       if (refreshedUser != null && !refreshedUser.emailVerified) {
         _initialScreen = const EmailVerificationScreen();
       } else if (refreshedUser != null) {
-        // Try to get user profile — cache first, then server
         Map<String, dynamic>? data;
         try {
           final doc = await FirebaseFirestore.instance
@@ -65,11 +61,8 @@ class _LoadingState extends State<Loading> {
           if (doc.exists && doc.data() != null) {
             data = doc.data()!;
           }
-        } catch (_) {
-          // Cache miss — try server
-        }
+        } catch (_) {}
 
-        // If cache miss, try server with timeout
         if (data == null) {
           try {
             final doc = await FirebaseFirestore.instance
@@ -80,9 +73,7 @@ class _LoadingState extends State<Loading> {
             if (doc.exists && doc.data() != null) {
               data = doc.data()!;
             }
-          } catch (_) {
-            // Server also failed
-          }
+          } catch (_) {}
         }
 
         if (data != null) {
@@ -98,7 +89,6 @@ class _LoadingState extends State<Loading> {
             }
           }
         } else {
-
           if (appData.read(kKeyIsLoggedIn) == true) {
             _initialScreen = const NavigationScreen();
           } else {

@@ -239,4 +239,42 @@ class FirebaseAuthService {
       _firestore.collection('users').doc(uid).set(updates, SetOptions(merge: true));
     }
   }
+
+  /// Returns a real-time stream of a user's Firestore document
+  Stream<DocumentSnapshot<Map<String, dynamic>>> userStream(String uid) {
+    return _firestore.collection('users').doc(uid).snapshots();
+  }
+
+  /// Get partner's UID from a couple document
+  /// The coupleId format is "{user1Uid}_{user2Uid}"
+  Future<String?> getPartnerUid(String coupleId) async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+
+    try {
+      final doc = await _firestore.collection('couples').doc(coupleId).get();
+      if (!doc.exists || doc.data() == null) return null;
+
+      final data = doc.data()!;
+      final user1 = data['user1Uid'] as String?;
+      final user2 = data['user2Uid'] as String?;
+
+      // Return the UID that is NOT the current user
+      if (user1 == user.uid) return user2;
+      if (user2 == user.uid) return user1;
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Update current user's mood in Firestore
+  void updateMood({required String emoji, required String text}) {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    _firestore.collection('users').doc(user.uid).set({
+      'mood': {'emoji': emoji, 'text': text},
+    }, SetOptions(merge: true));
+  }
 }

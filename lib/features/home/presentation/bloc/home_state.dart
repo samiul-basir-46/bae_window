@@ -14,13 +14,23 @@ class HomeLoading extends HomeState {
 }
 
 class HomeLoaded extends HomeState {
+  final bool isPaired;
+
+  // User's own data
   final String userAvatarUrl;
-  final String partnerAvatarUrl;
-  final String partnerName;
-  final bool isPartnerOnline;
-  final int daysTogether;
   final String userMoodEmoji;
   final String userMoodText;
+  final String userName;
+
+  final String? partnerAvatarUrl;
+  final String? partnerName;
+  final bool? isPartnerOnline;
+  final int? daysTogether;
+  final String? partnerMoodEmoji;
+  final String? partnerMoodText;
+
+  final String? inviteCode;
+
   final String livePeekImageUrl;
   final String? awarenessMessage;
   final String? awarenessIcon;
@@ -30,30 +40,40 @@ class HomeLoaded extends HomeState {
   final SpecialDay? nextSpecialDay;
 
   const HomeLoaded({
+    required this.isPaired,
     required this.userAvatarUrl,
-    required this.partnerAvatarUrl,
-    required this.partnerName,
-    required this.isPartnerOnline,
-    required this.daysTogether,
     required this.userMoodEmoji,
     required this.userMoodText,
-    required this.livePeekImageUrl,
+    required this.userName,
+    this.partnerAvatarUrl,
+    this.partnerName,
+    this.isPartnerOnline,
+    this.daysTogether,
+    this.partnerMoodEmoji,
+    this.partnerMoodText,
+    this.inviteCode,
+    this.livePeekImageUrl = '',
     this.awarenessMessage,
     this.awarenessIcon,
-    required this.relationshipPulse,
+    this.relationshipPulse = const [],
     this.questionOfTheDay,
-    required this.checkInLogs,
+    this.checkInLogs = const [],
     this.nextSpecialDay,
   });
 
   HomeLoaded copyWith({
+    bool? isPaired,
     String? userAvatarUrl,
+    String? userMoodEmoji,
+    String? userMoodText,
+    String? userName,
     String? partnerAvatarUrl,
     String? partnerName,
     bool? isPartnerOnline,
     int? daysTogether,
-    String? userMoodEmoji,
-    String? userMoodText,
+    String? partnerMoodEmoji,
+    String? partnerMoodText,
+    String? inviteCode,
     String? livePeekImageUrl,
     String? awarenessMessage,
     String? awarenessIcon,
@@ -63,13 +83,18 @@ class HomeLoaded extends HomeState {
     SpecialDay? nextSpecialDay,
   }) {
     return HomeLoaded(
+      isPaired: isPaired ?? this.isPaired,
       userAvatarUrl: userAvatarUrl ?? this.userAvatarUrl,
+      userMoodEmoji: userMoodEmoji ?? this.userMoodEmoji,
+      userMoodText: userMoodText ?? this.userMoodText,
+      userName: userName ?? this.userName,
       partnerAvatarUrl: partnerAvatarUrl ?? this.partnerAvatarUrl,
       partnerName: partnerName ?? this.partnerName,
       isPartnerOnline: isPartnerOnline ?? this.isPartnerOnline,
       daysTogether: daysTogether ?? this.daysTogether,
-      userMoodEmoji: userMoodEmoji ?? this.userMoodEmoji,
-      userMoodText: userMoodText ?? this.userMoodText,
+      partnerMoodEmoji: partnerMoodEmoji ?? this.partnerMoodEmoji,
+      partnerMoodText: partnerMoodText ?? this.partnerMoodText,
+      inviteCode: inviteCode ?? this.inviteCode,
       livePeekImageUrl: livePeekImageUrl ?? this.livePeekImageUrl,
       awarenessMessage: awarenessMessage ?? this.awarenessMessage,
       awarenessIcon: awarenessIcon ?? this.awarenessIcon,
