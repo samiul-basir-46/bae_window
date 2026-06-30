@@ -1,14 +1,12 @@
-import 'dart:io';
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:email_otp/email_otp.dart';
 
 class FirebaseAuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+
   final EmailOTP _emailOtp = EmailOTP();
 
   /// Send OTP code to user's email
@@ -95,32 +93,24 @@ class FirebaseAuthService {
     }, SetOptions(merge: true));
   }
 
-  /// Complete profile setup (nickname + avatar selection/upload)
+  /// Complete profile setup (nickname + avatar URL)
+  /// Avatar upload is handled externally (e.g., via CloudinaryService)
+  /// and the resulting URL is passed here.
   Future<void> saveProfileSetup({
     required String nickname,
-    String? avatarUrl,
-    File? avatarFile,
+    required String avatarUrl,
   }) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception('No authenticated user found.');
 
-    String finalAvatarUrl = avatarUrl ?? '';
-
-    // If local file is selected, upload to Firebase Storage
-    if (avatarFile != null) {
-      final ref = _storage.ref().child('avatars').child('${user.uid}.jpg');
-      await ref.putFile(avatarFile);
-      finalAvatarUrl = await ref.getDownloadURL();
-    }
-
     await _firestore.collection('users').doc(user.uid).set({
       'nickname': nickname,
-      'profilePicture': finalAvatarUrl,
+      'profilePicture': avatarUrl,
       'profileComplete': true,
     }, SetOptions(merge: true));
 
-    if (finalAvatarUrl.isNotEmpty) {
-      await user.updatePhotoURL(finalAvatarUrl);
+    if (avatarUrl.isNotEmpty) {
+      await user.updatePhotoURL(avatarUrl);
     }
   }
 
@@ -134,7 +124,6 @@ class FirebaseAuthService {
     String code;
     bool codeExists = true;
 
-    // Keep generating until a unique one is found
     do {
       code = List.generate(6, (index) => chars[random.nextInt(chars.length)]).join();
       final doc = await _firestore.collection('pairing_codes').doc(code).get();
@@ -176,19 +165,16 @@ class FirebaseAuthService {
 
     final coupleId = '${partnerUid}_${user.uid}';
 
-    // Create couple document
     await _firestore.collection('couples').doc(coupleId).set({
       'user1Uid': partnerUid,
       'user2Uid': user.uid,
       'createdAt': FieldValue.serverTimestamp(),
     });
 
-    // Mark code as used
     await _firestore.collection('pairing_codes').doc(code).set({
       'used': true,
     }, SetOptions(merge: true));
 
-    // Update both users
     await _firestore.collection('users').doc(user.uid).set({
       'pairId': coupleId,
       'pairStatus': 'paired',
@@ -222,6 +208,7 @@ class FirebaseAuthService {
     String? name,
     String? nickname,
     String? relationshipStartDate,
+    String? avatarUrl,
   }) async {
     final updates = <String, dynamic>{};
     if (name != null) {
@@ -237,9 +224,19 @@ class FirebaseAuthService {
     if (relationshipStartDate != null) {
       updates['relationshipStartDate'] = relationshipStartDate;
     }
+    if (avatarUrl != null) {
+      updates['profilePicture'] = avatarUrl;
+      final user = _auth.currentUser;
+      if (user != null) {
+        await user.updatePhotoURL(avatarUrl);
+      }
+    }
 
     if (updates.isNotEmpty) {
-      await _firestore.collection('users').doc(uid).set(updates, SetOptions(merge: true));
+      // Fire-and-forget: Firestore offline persistence writes to local cache
+      // immediately, so we don't need to await the server confirmation.
+      // Awaiting can hang indefinitely if the device is offline.
+      _firestore.collection('users').doc(uid).set(updates, SetOptions(merge: true));
     }
   }
 }

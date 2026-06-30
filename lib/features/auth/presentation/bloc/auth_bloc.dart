@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:bea_window_app/features/auth/services/firebase_auth_service.dart';
+import 'package:bea_window_app/features/auth/services/cloudinary_service.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
@@ -103,24 +104,28 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         }
 
         // Check if profile setup or pairing is pending
-        final userDoc = await _authService.getUserProfile(credential.user!.uid);
-        if (userDoc != null) {
-          final isProfileComplete = userDoc['profileComplete'] as bool? ?? false;
-          if (!isProfileComplete) {
-            dev.log('User logged in but profile is not completed.', name: 'AuthBloc');
+        try {
+          final userDoc = await _authService.getUserProfile(credential.user!.uid);
+          if (userDoc != null) {
+            final isProfileComplete = userDoc['profileComplete'] as bool? ?? false;
+            if (!isProfileComplete) {
+              dev.log('User logged in but profile is not completed.', name: 'AuthBloc');
+              emit(ProfileSetupPendingState());
+              return;
+            }
+            final pairStatus = userDoc['pairStatus'] as String? ?? 'none';
+            if (pairStatus != 'paired' && pairStatus != 'unpaired') {
+              dev.log('User logged in but pairing is pending.', name: 'AuthBloc');
+              emit(PairingPendingState());
+              return;
+            }
+          } else {
+            dev.log('User logged in but Firestore document does not exist.', name: 'AuthBloc');
             emit(ProfileSetupPendingState());
             return;
           }
-          final pairStatus = userDoc['pairStatus'] as String? ?? 'none';
-          if (pairStatus != 'paired' && pairStatus != 'unpaired') {
-            dev.log('User logged in but pairing is pending.', name: 'AuthBloc');
-            emit(PairingPendingState());
-            return;
-          }
-        } else {
-          dev.log('User logged in but Firestore document does not exist.', name: 'AuthBloc');
-          emit(ProfileSetupPendingState());
-          return;
+        } catch (firestoreError) {
+          dev.log('Firestore unavailable during login gating check, skipping: $firestoreError', name: 'AuthBloc');
         }
       }
       dev.log('Login successful, profile complete, and paired.', name: 'AuthBloc');
@@ -249,17 +254,41 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(ProfileSetupLoading());
     try {
       dev.log('Saving profile setup: ${event.nickname}', name: 'AuthBloc');
+
+      String avatarUrl = event.avatarUrl ?? '';
+
+      // If a local file was picked, upload to Cloudinary
+      if (event.avatarFile != null) {
+        dev.log('Local avatar file detected — uploading to Cloudinary...',
+            name: 'AuthBloc');
+        final cloudinaryUrl =
+            await CloudinaryService.uploadImage(event.avatarFile!);
+
+        if (cloudinaryUrl == null) {
+          dev.log('Cloudinary upload returned null — emitting failure.',
+              name: 'AuthBloc');
+          emit(ProfileSetupFailure(
+            'Failed to upload profile picture. Please check your internet connection and try again.',
+          ));
+          return;
+        }
+
+        avatarUrl = cloudinaryUrl;
+        dev.log('Cloudinary upload successful: $avatarUrl', name: 'AuthBloc');
+      }
+
       await _authService.saveProfileSetup(
         nickname: event.nickname,
-        avatarUrl: event.avatarUrl,
-        avatarFile: event.avatarFile,
+        avatarUrl: avatarUrl,
       );
       emit(ProfileSetupSuccess());
     } catch (e, stack) {
-      dev.log('Error during profile setup: $e', error: e, stackTrace: stack, name: 'AuthBloc');
+      dev.log('Error during profile setup: $e',
+          error: e, stackTrace: stack, name: 'AuthBloc');
       emit(ProfileSetupFailure(e.toString()));
     }
   }
+
 
   Future<void> _onGenerateInviteCodeRequested(
     GenerateInviteCodeRequested event,

@@ -71,6 +71,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
       final picked = await _imagePicker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 70,
+        maxWidth: 800,
+        maxHeight: 800,
       );
       if (picked != null) {
         setState(() {
@@ -138,7 +140,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                               logoIcon: Icons.person_outline_rounded,
                               eyebrow: 'Profile Customization',
                               headline: 'Setup your\nprofile ✦',
-                              subtitle: 'Choose an avatar or upload your own, and pick a nickname that your partner will see.',
+                              subtitle:
+                                  'Choose an avatar or upload your own, and pick a nickname that your partner will see.',
                             ),
                             UIHelper.verticalSpace(28.h),
                             _buildAvatarSelector(),
@@ -267,7 +270,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isSelected ? const Color(0xFF8060C8) : Colors.transparent,
+                      color: isSelected
+                          ? const Color(0xFF8060C8)
+                          : Colors.transparent,
                       width: 2.5.sp,
                     ),
                     image: DecorationImage(

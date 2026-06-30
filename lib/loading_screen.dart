@@ -44,34 +44,66 @@ class _LoadingState extends State<Loading> {
 
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      if (!user.emailVerified) {
+      // Reload user to get latest emailVerified status
+      try {
+        await user.reload().timeout(const Duration(seconds: 5));
+      } catch (_) {
+        // If reload fails (offline), continue with cached user state
+      }
+
+      final refreshedUser = FirebaseAuth.instance.currentUser;
+      if (refreshedUser != null && !refreshedUser.emailVerified) {
         _initialScreen = const EmailVerificationScreen();
-      } else {
+      } else if (refreshedUser != null) {
+        // Try to get user profile — cache first, then server
+        Map<String, dynamic>? data;
         try {
           final doc = await FirebaseFirestore.instance
               .collection('users')
-              .doc(user.uid)
-              .get()
-              .timeout(const Duration(seconds: 5));
+              .doc(refreshedUser.uid)
+              .get(const GetOptions(source: Source.cache));
           if (doc.exists && doc.data() != null) {
-            final data = doc.data()!;
-            final isProfileComplete = data['profileComplete'] as bool? ?? false;
-            if (!isProfileComplete) {
-              _initialScreen = const ProfileSetupScreen();
-            } else {
-              final pairStatus = data['pairStatus'] as String? ?? 'none';
-              if (pairStatus == 'paired' || pairStatus == 'unpaired') {
-                _initialScreen = const NavigationScreen();
-              } else {
-                _initialScreen = const PairingScreen();
-              }
+            data = doc.data()!;
+          }
+        } catch (_) {
+          // Cache miss — try server
+        }
+
+        // If cache miss, try server with timeout
+        if (data == null) {
+          try {
+            final doc = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(refreshedUser.uid)
+                .get(const GetOptions(source: Source.server))
+                .timeout(const Duration(seconds: 8));
+            if (doc.exists && doc.data() != null) {
+              data = doc.data()!;
             }
+          } catch (_) {
+            // Server also failed
+          }
+        }
+
+        if (data != null) {
+          final isProfileComplete = data['profileComplete'] as bool? ?? false;
+          if (!isProfileComplete) {
+            _initialScreen = const ProfileSetupScreen();
+          } else {
+            final pairStatus = data['pairStatus'] as String? ?? 'none';
+            if (pairStatus == 'paired' || pairStatus == 'unpaired') {
+              _initialScreen = const NavigationScreen();
+            } else {
+              _initialScreen = const PairingScreen();
+            }
+          }
+        } else {
+
+          if (appData.read(kKeyIsLoggedIn) == true) {
+            _initialScreen = const NavigationScreen();
           } else {
             _initialScreen = const ProfileSetupScreen();
           }
-        } catch (e) {
-          // Fallback if Firestore timeout or error
-          _initialScreen = const ProfileSetupScreen();
         }
       }
     } else {
