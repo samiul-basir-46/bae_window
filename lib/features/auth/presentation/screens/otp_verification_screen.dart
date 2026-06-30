@@ -251,6 +251,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
               controller: _controllers[index],
               focusNode: _focusNodes[index],
               keyboardType: TextInputType.number,
+              cursorColor: Colors.white,
               inputFormatters: [
                 LengthLimitingTextInputFormatter(1),
                 FilteringTextInputFormatter.digitsOnly,
