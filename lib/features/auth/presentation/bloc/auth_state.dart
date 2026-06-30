@@ -17,3 +17,24 @@ class AuthFailure extends AuthState {
 
   AuthFailure(this.errorMessage);
 }
+
+class ForgotPasswordLoading extends AuthState {}
+
+class ForgotPasswordSuccess extends AuthState {}
+
+class ForgotPasswordFailure extends AuthState {
+  final String errorMessage;
+
+  ForgotPasswordFailure(this.errorMessage);
+}
+
+class VerifyOtpLoading extends AuthState {}
+
+class VerifyOtpSuccess extends AuthState {}
+
+class VerifyOtpFailure extends AuthState {
+  final String errorMessage;
+
+  VerifyOtpFailure(this.errorMessage);
+}
+

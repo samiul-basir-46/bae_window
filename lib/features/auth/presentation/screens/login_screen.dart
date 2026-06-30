@@ -5,6 +5,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
+import 'package:bea_window_app/helpers/ui_helpers.dart';
+import 'package:bea_window_app/common_widgets/custom_auth_text_field.dart';
+import 'package:bea_window_app/common_widgets/custom_auth_button.dart';
+import '../widgets/auth_background_blobs.dart';
+import '../widgets/auth_header.dart';
 import '../../../../gen/assets.gen.dart';
 import '../bloc/auth_bloc.dart';
 
@@ -19,7 +24,6 @@ class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
@@ -70,8 +74,7 @@ class _LoginScreenState extends State<LoginScreen>
           backgroundColor: const Color(0xFF0D0D10),
           body: Stack(
             children: [
-              // Background blobs
-              _buildBlobs(),
+              const AuthBackgroundBlobs(),
               SafeArea(
                 child: FadeTransition(
                   opacity: _fadeAnim,
@@ -82,43 +85,48 @@ class _LoginScreenState extends State<LoginScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          SizedBox(height: 52.h),
-                          _buildLogoMark(),
-                          SizedBox(height: 20.h),
-                          _buildEyebrow('Welcome back'),
-                          SizedBox(height: 6.h),
-                          _buildHeadline('Your window\nawaits ✦'),
-                          SizedBox(height: 8.h),
-                          _buildSubtitle(
-                              'Sign in to reconnect with your person.'),
-                          SizedBox(height: 32.h),
-                          _buildTextField(
-                            controller: _emailController,
-                            hint: 'Email address',
-                            icon: Icons.mail_outline_rounded,
+                          UIHelper.verticalSpace(52.h),
+                          const AuthHeader(
+                            logoIcon: Icons.favorite_rounded,
+                            eyebrow: 'Welcome back',
+                            headline: 'Your window\nawaits ✦',
+                            subtitle: 'Sign in to reconnect with your person.',
                           ),
-                          SizedBox(height: 12.h),
-                          _buildPasswordField(),
-                          SizedBox(height: 8.h),
+                          UIHelper.verticalSpace(32.h),
+                           CustomAuthTextField(
+                            controller: _emailController,
+                            hintText: 'Email address',
+                            prefixIcon: Icons.mail_outline_rounded,
+                            keyboardType: TextInputType.emailAddress,
+                          ),
+                          UIHelper.verticalSpace(12.h),
+                          CustomAuthTextField(
+                            controller: _passwordController,
+                            hintText: 'Password',
+                            prefixIcon: Icons.lock_outline_rounded,
+                            isPassword: true,
+                          ),
+                          UIHelper.verticalSpace(8.h),
                           _buildForgotPassword(),
-                          SizedBox(height: 20.h),
-                          _buildPrimaryButton(
+                          UIHelper.verticalSpace(20.h),
+                          CustomAuthButton(
                             label: 'Sign In',
                             isLoading: isLoading,
+                            showArrow: true,
                             onTap: () {
                               NavigationService.navigateToUntilReplacement(
                                   Routes.navigationScreen);
                             },
                           ),
-                          SizedBox(height: 20.h),
+                          UIHelper.verticalSpace(20.h),
                           _buildOrDivider(),
-                          SizedBox(height: 16.h),
+                          UIHelper.verticalSpace(16.h),
                           _buildGoogleButton(context, isLoading),
                           if (Platform.isIOS) ...[
-                            SizedBox(height: 10.h),
+                            UIHelper.verticalSpace(10.h),
                             _buildAppleButton(context, isLoading),
                           ],
-                          SizedBox(height: 32.h),
+                          UIHelper.verticalSpace(32.h),
                           _buildBottomLink(
                             prefix: "New here? ",
                             action: "Create your window →",
@@ -127,7 +135,7 @@ class _LoginScreenState extends State<LoginScreen>
                               Routes.signUpScreen,
                             ),
                           ),
-                          SizedBox(height: 24.h),
+                          UIHelper.verticalSpace(24.h),
                         ],
                       ),
                     ),
@@ -141,181 +149,15 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _buildBlobs() {
-    return Stack(children: [
-      Positioned(
-        top: -80,
-        left: 0,
-        right: 0,
-        child: Center(
-          child: Container(
-            width: 300.w,
-            height: 300.w,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(colors: [
-                const Color(0xFFFF8FB8).withValues(alpha: 0.15),
-                Colors.transparent,
-              ]),
-            ),
-          ),
-        ),
-      ),
-      Positioned(
-        bottom: 80.h,
-        right: -40.w,
-        child: Container(
-          width: 200.w,
-          height: 200.w,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: RadialGradient(colors: [
-              const Color(0xFF8250DC).withValues(alpha: 0.1),
-              Colors.transparent,
-            ]),
-          ),
-        ),
-      ),
-    ]);
-  }
 
-  // ─── Logo ─────────────────────────────────────────────────────────────────
-  Widget _buildLogoMark() {
-    return Container(
-      width: 52.w,
-      height: 52.w,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16.r),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFFF8FB8), Color(0xFFD94E98), Color(0xFFB03085)],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFB03085).withValues(alpha: 0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Center(
-        child: Icon(Icons.favorite_rounded, color: Colors.white, size: 26.sp),
-      ),
-    );
-  }
 
-  // ─── Typography ───────────────────────────────────────────────────────────
-  Widget _buildEyebrow(String text) {
-    return Text(
-      text.toUpperCase(),
-      style: GoogleFonts.dmSans(
-        fontSize: 10.sp,
-        fontWeight: FontWeight.w600,
-        color: const Color(0xFFE060A0),
-        letterSpacing: 2,
-      ),
-    );
-  }
 
-  Widget _buildHeadline(String text) {
-    return Text(
-      text,
-      textAlign: TextAlign.center,
-      style: GoogleFonts.playfairDisplay(
-        fontSize: 28.sp,
-        fontWeight: FontWeight.w700,
-        color: Colors.white,
-        height: 1.25,
-      ),
-    );
-  }
-
-  Widget _buildSubtitle(String text) {
-    return Text(
-      text,
-      textAlign: TextAlign.center,
-      style: GoogleFonts.dmSans(
-        fontSize: 13.sp,
-        color: const Color(0xFF6B6B80),
-        height: 1.6,
-      ),
-    );
-  }
-
-  // ─── Fields ───────────────────────────────────────────────────────────────
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String hint,
-    required IconData icon,
-    TextInputType keyboardType = TextInputType.emailAddress,
-  }) {
-    return Container(
-      height: 52.h,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        style: GoogleFonts.dmSans(color: Colors.white, fontSize: 14.sp),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: GoogleFonts.dmSans(
-              color: const Color(0xFF555568), fontSize: 14.sp),
-          prefixIcon: Icon(icon,
-              color: Colors.white.withValues(alpha: 0.3), size: 18.sp),
-          border: InputBorder.none,
-          contentPadding:
-              EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPasswordField() {
-    return Container(
-      height: 52.h,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: TextField(
-        controller: _passwordController,
-        obscureText: _obscurePassword,
-        style: GoogleFonts.dmSans(color: Colors.white, fontSize: 14.sp),
-        decoration: InputDecoration(
-          hintText: 'Password',
-          hintStyle: GoogleFonts.dmSans(
-              color: const Color(0xFF555568), fontSize: 14.sp),
-          prefixIcon: Icon(Icons.lock_outline_rounded,
-              color: Colors.white.withValues(alpha: 0.3), size: 18.sp),
-          suffixIcon: GestureDetector(
-            onTap: () => setState(() => _obscurePassword = !_obscurePassword),
-            child: Icon(
-              _obscurePassword
-                  ? Icons.visibility_off_outlined
-                  : Icons.visibility_outlined,
-              color: Colors.white.withValues(alpha: 0.3),
-              size: 18.sp,
-            ),
-          ),
-          border: InputBorder.none,
-          contentPadding:
-              EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-        ),
-      ),
-    );
-  }
 
   Widget _buildForgotPassword() {
     return Align(
       alignment: Alignment.centerRight,
       child: GestureDetector(
-        onTap: () {},
+        onTap: () => Navigator.pushNamed(context, Routes.forgotPasswordScreen),
         child: Text(
           'Forgot password?',
           style: GoogleFonts.dmSans(
@@ -328,52 +170,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  // ─── Buttons ──────────────────────────────────────────────────────────────
-  Widget _buildPrimaryButton({
-    required String label,
-    required bool isLoading,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: isLoading ? null : onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        height: 52.h,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16.r),
-          gradient: const LinearGradient(
-            colors: [Color(0xFFFF8FB8), Color(0xFFD94E98), Color(0xFFB03085)],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFB03085).withValues(alpha: 0.4),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Center(
-          child: isLoading
-              ? SizedBox(
-                  width: 22.w,
-                  height: 22.w,
-                  child: const CircularProgressIndicator(
-                      color: Colors.white, strokeWidth: 2.5),
-                )
-              : Text(
-                  '$label →',
-                  style: GoogleFonts.dmSans(
-                    color: Colors.white,
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildOrDivider() {
     return Row(children: [
@@ -407,7 +204,7 @@ class _LoginScreenState extends State<LoginScreen>
               height: 24.h,
               width: 24.w,
             ),
-            SizedBox(width: 10.w),
+            UIHelper.horizontalSpace(10.w),
             Text('Continue with Google',
                 style: GoogleFonts.dmSans(
                     color: const Color(0xFF9090A8),
@@ -430,7 +227,7 @@ class _LoginScreenState extends State<LoginScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _appleLogo(),
-            SizedBox(width: 10.w),
+            UIHelper.horizontalSpace(10.w),
             Text('Continue with Apple',
                 style: GoogleFonts.dmSans(
                     color: const Color(0xFF9090A8),

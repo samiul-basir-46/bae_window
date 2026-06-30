@@ -41,9 +41,9 @@ class CustomButton extends StatelessWidget {
           backgroundColor: backgroundColor ?? AppColors.allPrimaryColor,
           foregroundColor: foregroundColor ?? AppColors.cFFFFFF,
           disabledBackgroundColor: 
-              (backgroundColor ?? AppColors.allPrimaryColor).withOpacity(0.5),
+              (backgroundColor ?? AppColors.allPrimaryColor).withValues(alpha:0.5),
           disabledForegroundColor: 
-              (foregroundColor ?? AppColors.cFFFFFF).withOpacity(0.5),
+              (foregroundColor ?? AppColors.cFFFFFF).withValues(alpha:0.5),
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: borderRadius ?? BorderRadius.circular(12.r),
@@ -93,9 +93,9 @@ Widget customButton({
         backgroundColor: backgroundColor ?? AppColors.allPrimaryColor,
         foregroundColor: foregroundColor ?? AppColors.cFFFFFF,
         disabledBackgroundColor: 
-            (backgroundColor ?? AppColors.allPrimaryColor).withOpacity(0.5),
+            (backgroundColor ?? AppColors.allPrimaryColor).withValues(alpha:0.5),
         disabledForegroundColor: 
-            (foregroundColor ?? AppColors.cFFFFFF).withOpacity(0.5),
+            (foregroundColor ?? AppColors.cFFFFFF).withValues(alpha:0.5),
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: borderRadius ?? BorderRadius.circular(12.r),
