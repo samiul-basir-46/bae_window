@@ -14,11 +14,15 @@ import '../bloc/auth_bloc.dart';
 class OtpVerificationScreen extends StatefulWidget {
   final String email;
   final bool isFromSignUp;
+  final String? name;
+  final String? password;
 
   const OtpVerificationScreen({
     super.key,
     required this.email,
     this.isFromSignUp = false,
+    this.name,
+    this.password,
   });
 
   @override
@@ -118,7 +122,12 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
       return;
     }
 
-    context.read<AuthBloc>().add(VerifyOtpRequestedEvent(otp));
+    context.read<AuthBloc>().add(VerifyOtpRequestedEvent(
+          otp: otp,
+          name: widget.name,
+          email: widget.isFromSignUp ? widget.email : null,
+          password: widget.password,
+        ));
   }
 
   @override

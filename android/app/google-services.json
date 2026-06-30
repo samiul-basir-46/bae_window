@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "136195551048",
+    "project_id": "bae-window",
+    "storage_bucket": "bae-window.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:136195551048:android:18e8b1100ad88f3fd14d7d",
+        "android_client_info": {
+          "package_name": "com.example.bea_window_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBdfDR1REpE9T4XezsaoVVWUfwDOe3fEDo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

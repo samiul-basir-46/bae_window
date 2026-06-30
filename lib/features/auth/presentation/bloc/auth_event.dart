@@ -19,7 +19,15 @@ class ForgotPasswordRequestedEvent extends AuthEvent {
 
 class VerifyOtpRequestedEvent extends AuthEvent {
   final String otp;
-  const VerifyOtpRequestedEvent(this.otp);
+  final String? name;
+  final String? email;
+  final String? password;
+  const VerifyOtpRequestedEvent({
+    required this.otp,
+    this.name,
+    this.email,
+    this.password,
+  });
 }
 
 class SignUpRequestedEvent extends AuthEvent {
@@ -31,4 +39,21 @@ class SignUpRequestedEvent extends AuthEvent {
     required this.email,
     required this.password,
   });
+}
+
+class LoginRequestedEvent extends AuthEvent {
+  final String email;
+  final String password;
+  const LoginRequestedEvent({
+    required this.email,
+    required this.password,
+  });
+}
+
+class CheckEmailVerificationRequested extends AuthEvent {
+  const CheckEmailVerificationRequested();
+}
+
+class ResendVerificationEmailRequested extends AuthEvent {
+  const ResendVerificationEmailRequested();
 }

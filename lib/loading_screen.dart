@@ -2,6 +2,9 @@ import 'dart:async';
 import 'package:bea_window_app/features/auth/presentation/screens/login_screen.dart';
 import 'package:bea_window_app/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:bea_window_app/features/splash/presentation/screens/splash_screen.dart';
+import 'package:bea_window_app/features/auth/presentation/screens/email_verification_screen.dart';
+import 'package:bea_window_app/navigation_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'constants/app_constants.dart';
 import 'helpers/di.dart';
@@ -65,11 +68,16 @@ class _LoadingState extends State<Loading> {
     if (_isLoading) {
       return const SplashScreen();
     } else {
-      return appData.read(kKeyIsLoggedIn)
-          ? const LoginScreen()
-          : appData.read(kKeyfirstTime)
-              ? const OnboardingScreen()
-              : const LoginScreen();
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        if (!user.emailVerified) {
+          return const EmailVerificationScreen();
+        }
+        return const NavigationScreen();
+      }
+      return appData.read(kKeyfirstTime)
+          ? const OnboardingScreen()
+          : const LoginScreen();
     }
   }
 }

@@ -6,6 +6,7 @@ import 'package:bea_window_app/features/auth/presentation/screens/signup_screen.
 import 'package:bea_window_app/features/auth/presentation/screens/forgot_password_screen.dart';
 import 'package:bea_window_app/features/auth/presentation/screens/otp_verification_screen.dart';
 import 'package:bea_window_app/features/auth/presentation/screens/reset_password_screen.dart';
+import 'package:bea_window_app/features/auth/presentation/screens/email_verification_screen.dart';
 import 'package:bea_window_app/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:bea_window_app/navigation_screen.dart';
 
@@ -36,6 +37,7 @@ final class Routes {
   static const String resetPasswordScreen = '/resetPassword';
   static const String onboardingScreen = '/onboarding';
   static const String navigationScreen = '/navigation';
+  static const String emailVerificationScreen = '/emailVerification';
 
   // Space Routes
   static const String vaultScreen = '/vault';
@@ -88,25 +90,41 @@ final class RouteGenerator {
         final args = settings.arguments;
         final String email;
         final bool isFromSignUp;
+        final String? name;
+        final String? password;
         if (args is Map<String, dynamic>) {
           email = args['email'] as String? ?? '';
           isFromSignUp = args['isFromSignUp'] as bool? ?? false;
+          name = args['name'] as String?;
+          password = args['password'] as String?;
         } else {
           email = args as String? ?? '';
           isFromSignUp = false;
+          name = null;
+          password = null;
         }
         return defaultTargetPlatform == TargetPlatform.iOS
             ? CupertinoPageRoute(
                 builder: (context) => OtpVerificationScreen(
                       email: email,
                       isFromSignUp: isFromSignUp,
+                      name: name,
+                      password: password,
                     ))
             : _FadedTransitionRoute(
                 widget: OtpVerificationScreen(
                   email: email,
                   isFromSignUp: isFromSignUp,
+                  name: name,
+                  password: password,
                 ),
                 settings: settings);
+
+      case Routes.emailVerificationScreen:
+        return defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(builder: (context) => const EmailVerificationScreen())
+            : _FadedTransitionRoute(
+                widget: const EmailVerificationScreen(), settings: settings);
 
       case Routes.resetPasswordScreen:
         return defaultTargetPlatform == TargetPlatform.iOS

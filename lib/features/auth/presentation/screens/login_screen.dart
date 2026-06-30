@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:bea_window_app/helpers/navigation_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -8,6 +7,7 @@ import 'package:bea_window_app/helpers/all_routes.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
 import 'package:bea_window_app/common_widgets/custom_auth_text_field.dart';
 import 'package:bea_window_app/common_widgets/custom_auth_button.dart';
+import 'package:bea_window_app/constants/validator.dart';
 import '../widgets/auth_background_blobs.dart';
 import '../widgets/auth_header.dart';
 import '../../../../gen/assets.gen.dart';
@@ -24,6 +24,8 @@ class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  String? _loginErrorMessage;
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
@@ -54,18 +56,19 @@ class _LoginScreenState extends State<LoginScreen>
   Widget build(BuildContext context) {
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
+        if (state is AuthLoading) {
+          setState(() {
+            _loginErrorMessage = null;
+          });
+        }
         if (state is AuthSuccess) {
-          Navigator.pushReplacementNamed(context, '/couple_link');
+          Navigator.pushReplacementNamed(context, Routes.navigationScreen);
+        } else if (state is EmailVerificationPending) {
+          Navigator.pushReplacementNamed(context, Routes.emailVerificationScreen);
         } else if (state is AuthFailure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.errorMessage),
-              backgroundColor: const Color(0xFFB03085),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-          );
+          setState(() {
+            _loginErrorMessage = state.errorMessage;
+          });
         }
       },
       builder: (context, state) {
@@ -82,61 +85,84 @@ class _LoginScreenState extends State<LoginScreen>
                     position: _slideAnim,
                     child: SingleChildScrollView(
                       padding: EdgeInsets.symmetric(horizontal: 28.w),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          UIHelper.verticalSpace(52.h),
-                          const AuthHeader(
-                            logoIcon: Icons.favorite_rounded,
-                            eyebrow: 'Welcome back',
-                            headline: 'Your window\nawaits ✦',
-                            subtitle: 'Sign in to reconnect with your person.',
-                          ),
-                          UIHelper.verticalSpace(32.h),
-                           CustomAuthTextField(
-                            controller: _emailController,
-                            hintText: 'Email address',
-                            prefixIcon: Icons.mail_outline_rounded,
-                            keyboardType: TextInputType.emailAddress,
-                          ),
-                          UIHelper.verticalSpace(12.h),
-                          CustomAuthTextField(
-                            controller: _passwordController,
-                            hintText: 'Password',
-                            prefixIcon: Icons.lock_outline_rounded,
-                            isPassword: true,
-                          ),
-                          UIHelper.verticalSpace(8.h),
-                          _buildForgotPassword(),
-                          UIHelper.verticalSpace(20.h),
-                          CustomAuthButton(
-                            label: 'Sign In',
-                            isLoading: isLoading,
-                            showArrow: true,
-                            onTap: () {
-                              NavigationService.navigateToUntilReplacement(
-                                  Routes.navigationScreen);
-                            },
-                          ),
-                          UIHelper.verticalSpace(20.h),
-                          _buildOrDivider(),
-                          UIHelper.verticalSpace(16.h),
-                          _buildGoogleButton(context, isLoading),
-                          if (Platform.isIOS) ...[
-                            UIHelper.verticalSpace(10.h),
-                            _buildAppleButton(context, isLoading),
-                          ],
-                          UIHelper.verticalSpace(32.h),
-                          _buildBottomLink(
-                            prefix: "New here? ",
-                            action: "Create your window →",
-                            onTap: () => Navigator.pushReplacementNamed(
-                              context,
-                              Routes.signUpScreen,
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            UIHelper.verticalSpace(52.h),
+                            const AuthHeader(
+                              logoIcon: Icons.favorite_rounded,
+                              eyebrow: 'Welcome back',
+                              headline: 'Your window\nawaits ✦',
+                              subtitle: 'Sign in to reconnect with your person.',
                             ),
-                          ),
-                          UIHelper.verticalSpace(24.h),
-                        ],
+                            UIHelper.verticalSpace(32.h),
+                            CustomAuthTextField(
+                              controller: _emailController,
+                              hintText: 'Email address',
+                              prefixIcon: Icons.mail_outline_rounded,
+                              keyboardType: TextInputType.emailAddress,
+                              validator: emailValidator,
+                            ),
+                            UIHelper.verticalSpace(12.h),
+                            CustomAuthTextField(
+                              controller: _passwordController,
+                              hintText: 'Password',
+                              prefixIcon: Icons.lock_outline_rounded,
+                              isPassword: true,
+                              validator: passwordValidator,
+                            ),
+                            UIHelper.verticalSpace(8.h),
+                            _buildForgotPassword(),
+                            if (_loginErrorMessage != null) ...[
+                              UIHelper.verticalSpace(12.h),
+                              Text(
+                                _loginErrorMessage!,
+                                style: GoogleFonts.dmSans(
+                                  color: const Color(0xFFE060A0),
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                            UIHelper.verticalSpace(20.h),
+                            CustomAuthButton(
+                              label: 'Sign In',
+                              isLoading: isLoading,
+                              showArrow: true,
+                              onTap: () {
+                                if (_formKey.currentState?.validate() ?? false) {
+                                  context.read<AuthBloc>().add(
+                                        LoginRequestedEvent(
+                                          email: _emailController.text.trim(),
+                                          password: _passwordController.text,
+                                        ),
+                                      );
+                                }
+                              },
+                            ),
+                            UIHelper.verticalSpace(20.h),
+                            _buildOrDivider(),
+                            UIHelper.verticalSpace(16.h),
+                            _buildGoogleButton(context, isLoading),
+                            if (Platform.isIOS) ...[
+                              UIHelper.verticalSpace(10.h),
+                              _buildAppleButton(context, isLoading),
+                            ],
+                            UIHelper.verticalSpace(32.h),
+                            _buildBottomLink(
+                              prefix: "New here? ",
+                              action: "Create your window →",
+                              onTap: () => Navigator.pushReplacementNamed(
+                                context,
+                                Routes.signUpScreen,
+                              ),
+                            ),
+                            UIHelper.verticalSpace(24.h),
+                          ],
+                        ),
                       ),
                     ),
                   ),

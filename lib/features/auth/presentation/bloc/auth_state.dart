@@ -48,3 +48,13 @@ class SignUpFailure extends AuthState {
   SignUpFailure(this.errorMessage);
 }
 
+class EmailVerificationPending extends AuthState {}
+
+class EmailVerificationSuccess extends AuthState {}
+
+class EmailVerificationFailure extends AuthState {
+  final String errorMessage;
+
+  EmailVerificationFailure(this.errorMessage);
+}
+

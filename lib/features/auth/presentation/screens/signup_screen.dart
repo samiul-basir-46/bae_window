@@ -103,11 +103,7 @@ class _SignUpScreenState extends State<SignUpScreen>
         } else if (state is SignUpSuccess) {
           Navigator.pushReplacementNamed(
             context,
-            Routes.otpVerificationScreen,
-            arguments: {
-              'email': _emailController.text.trim(),
-              'isFromSignUp': true,
-            },
+            Routes.emailVerificationScreen,
           );
         } else if (state is SignUpFailure) {
           setState(() {

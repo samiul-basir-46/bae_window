@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:bea_window_app/features/auth/services/firebase_auth_service.dart';
 
 import '../widgets/profile_avatar.dart';
 import '../widgets/profile_form_field.dart';
@@ -16,10 +18,42 @@ class MyProfileScreen extends StatefulWidget {
 }
 
 class _MyProfileScreenState extends State<MyProfileScreen> {
-  final _nameController = TextEditingController(text: "Rafiq");
-  final _nicknameController = TextEditingController(text: "Babu 🐻");
-  final _emailController = TextEditingController(text: "rafiq@email.com");
-  final _dateController = TextEditingController(text: "Feb 14, 2025");
+  final _authService = FirebaseAuthService();
+  final _nameController = TextEditingController();
+  final _nicknameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _dateController = TextEditingController();
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      _emailController.text = user.email ?? '';
+      try {
+        final data = await _authService.getUserProfile(user.uid);
+        if (data != null) {
+          _nameController.text = data['name'] ?? user.displayName ?? '';
+          _nicknameController.text = data['nickname'] ?? '';
+          _dateController.text = data['relationshipStartDate'] ?? '';
+        } else {
+          _nameController.text = user.displayName ?? '';
+        }
+      } catch (_) {
+        _nameController.text = user.displayName ?? '';
+      }
+    }
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -58,21 +92,55 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     }
   }
 
-  void _saveProfile() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.check_circle_outline_rounded, color: Colors.white, size: 20.sp),
-            SizedBox(width: 8.w),
-            const Text("Profile changes saved!"),
-          ],
-        ),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-      ),
-    );
+  Future<void> _saveProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      setState(() {
+        _isLoading = true;
+      });
+      try {
+        await _authService.updateUserProfile(
+          user.uid,
+          name: _nameController.text.trim(),
+          nickname: _nicknameController.text.trim(),
+          relationshipStartDate: _dateController.text.trim(),
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle_outline_rounded, color: Colors.white, size: 20.sp),
+                  SizedBox(width: 8.w),
+                  const Text("Profile changes saved!"),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Failed to save changes: $e"),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    }
   }
 
   @override
@@ -183,6 +251,10 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
               ],
             ),
           ),
+          if (_isLoading)
+            const Center(
+              child: CircularProgressIndicator(color: AppColors.primaryPink),
+            ),
         ],
       ),
     );
