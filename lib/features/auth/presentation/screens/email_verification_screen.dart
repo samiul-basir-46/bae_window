@@ -9,12 +9,16 @@ import 'package:bea_window_app/helpers/ui_helpers.dart';
 import '../widgets/auth_background_blobs.dart';
 import '../widgets/auth_header.dart';
 import '../bloc/auth_bloc.dart';
+import 'package:bea_window_app/helpers/di.dart';
+import 'package:bea_window_app/constants/app_constants.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
   const EmailVerificationScreen({super.key});
 
   @override
-  State<EmailVerificationScreen> createState() => _EmailVerificationScreenState();
+  State<EmailVerificationScreen> createState() =>
+      _EmailVerificationScreenState();
 }
 
 class _EmailVerificationScreenState extends State<EmailVerificationScreen>
@@ -86,21 +90,24 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
             _errorMessage = null;
           });
         } else if (state is EmailVerificationSuccess) {
+          appData.write(kKeyIsLoggedIn, true);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
                 children: [
-                  Icon(Icons.check_circle_outline_rounded, color: Colors.white, size: 20.sp),
+                  Icon(Icons.check_circle_outline_rounded,
+                      color: Colors.white, size: 20.sp),
                   SizedBox(width: 8.w),
                   const Text("Email verified successfully! Welcome."),
                 ],
               ),
               backgroundColor: const Color(0xFF4CD964),
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
           );
-          Navigator.pushReplacementNamed(context, Routes.navigationScreen);
+          Navigator.pushReplacementNamed(context, Routes.profileSetupScreen);
         } else if (state is EmailVerificationFailure) {
           setState(() {
             _errorMessage = state.errorMessage;
@@ -130,7 +137,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
                             logoIcon: Icons.mark_email_read_outlined,
                             eyebrow: 'Verify Email Address',
                             headline: 'Verify your\nemail ✦',
-                            subtitle: 'We have sent a verification link to your email. Please check your inbox and click the link to verify your account, then click the button below.',
+                            subtitle:
+                                'We have sent a verification link to your email. Please check your inbox and click the link to verify your account, then click the button below.',
                           ),
                           UIHelper.verticalSpace(40.h),
                           CustomAuthButton(
@@ -152,6 +160,35 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
                               textAlign: TextAlign.center,
                             ),
                           ],
+                          UIHelper.verticalSpace(28.h),
+                          GestureDetector(
+                            onTap: () async {
+                              final navigator = Navigator.of(context);
+                              try {
+                                await FirebaseAuth.instance.signOut();
+                                appData.write(kKeyIsLoggedIn, false);
+                                if (mounted) {
+                                  navigator.pushNamedAndRemoveUntil(
+                                    Routes.loginScreen,
+                                    (route) => false,
+                                  );
+                                }
+                              } catch (e) {
+                                setState(() {
+                                  _errorMessage = "Failed to sign out: $e";
+                                });
+                              }
+                            },
+                            child: Text(
+                              "Wrong email address? Go back",
+                              style: GoogleFonts.dmSans(
+                                color: const Color(0xFF9090A8),
+                                fontSize: 13.sp,
+                                fontWeight: FontWeight.w500,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
                           UIHelper.verticalSpace(40.h),
                         ],
                       ),
@@ -188,7 +225,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
                 ? 'Resend Email'
                 : 'Resend in ${_secondsRemaining.toString().padLeft(2, '0')}s',
             style: GoogleFonts.dmSans(
-              color: canResend ? const Color(0xFF9090A8) : const Color(0xFF555568),
+              color:
+                  canResend ? const Color(0xFF9090A8) : const Color(0xFF555568),
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
             ),

@@ -1,4 +1,5 @@
 import 'dart:developer' as dev;
+import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:bea_window_app/features/auth/services/firebase_auth_service.dart';
@@ -17,6 +18,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LoginRequestedEvent>(_onLoginRequested);
     on<CheckEmailVerificationRequested>(_onCheckEmailVerificationRequested);
     on<ResendVerificationEmailRequested>(_onResendVerificationEmailRequested);
+    on<SaveProfileRequested>(_onSaveProfileRequested);
+    on<GenerateInviteCodeRequested>(_onGenerateInviteCodeRequested);
+    on<JoinWithCodeRequested>(_onJoinWithCodeRequested);
+    on<SkipPairingRequested>(_onSkipPairingRequested);
   }
 
   Future<void> _onSignUpRequested(
@@ -96,13 +101,38 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           emit(EmailVerificationPending());
           return;
         }
+
+        // Check if profile setup or pairing is pending
+        final userDoc = await _authService.getUserProfile(credential.user!.uid);
+        if (userDoc != null) {
+          final isProfileComplete = userDoc['profileComplete'] as bool? ?? false;
+          if (!isProfileComplete) {
+            dev.log('User logged in but profile is not completed.', name: 'AuthBloc');
+            emit(ProfileSetupPendingState());
+            return;
+          }
+          final pairStatus = userDoc['pairStatus'] as String? ?? 'none';
+          if (pairStatus != 'paired' && pairStatus != 'unpaired') {
+            dev.log('User logged in but pairing is pending.', name: 'AuthBloc');
+            emit(PairingPendingState());
+            return;
+          }
+        } else {
+          dev.log('User logged in but Firestore document does not exist.', name: 'AuthBloc');
+          emit(ProfileSetupPendingState());
+          return;
+        }
       }
-      dev.log('Login successful and email verified.', name: 'AuthBloc');
+      dev.log('Login successful, profile complete, and paired.', name: 'AuthBloc');
       emit(AuthSuccess());
     } on FirebaseAuthException catch (e, stack) {
       dev.log('FirebaseAuthException during login: [${e.code}] ${e.message}',
           error: e, stackTrace: stack, name: 'AuthBloc');
-      emit(AuthFailure(e.message ?? 'An error occurred during login.'));
+      String errorMsg = e.message ?? 'An error occurred during login.';
+      if (e.code == 'wrong-password' || e.code == 'invalid-credential' || e.code == 'user-not-found') {
+        errorMsg = 'Incorrect email or password. Please try again.';
+      }
+      emit(AuthFailure(errorMsg));
     } catch (e, stack) {
       dev.log('Exception during login: $e',
           error: e, stackTrace: stack, name: 'AuthBloc');
@@ -209,6 +239,70 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(AuthSuccess());
     } catch (e) {
       emit(AuthFailure(e.toString()));
+    }
+  }
+
+  Future<void> _onSaveProfileRequested(
+    SaveProfileRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(ProfileSetupLoading());
+    try {
+      dev.log('Saving profile setup: ${event.nickname}', name: 'AuthBloc');
+      await _authService.saveProfileSetup(
+        nickname: event.nickname,
+        avatarUrl: event.avatarUrl,
+        avatarFile: event.avatarFile,
+      );
+      emit(ProfileSetupSuccess());
+    } catch (e, stack) {
+      dev.log('Error during profile setup: $e', error: e, stackTrace: stack, name: 'AuthBloc');
+      emit(ProfileSetupFailure(e.toString()));
+    }
+  }
+
+  Future<void> _onGenerateInviteCodeRequested(
+    GenerateInviteCodeRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(PairingInProgress());
+    try {
+      dev.log('Generating pairing invite code...', name: 'AuthBloc');
+      final code = await _authService.generateInviteCode();
+      emit(PairingCodeGenerated(code));
+    } catch (e, stack) {
+      dev.log('Error generating pairing code: $e', error: e, stackTrace: stack, name: 'AuthBloc');
+      emit(PairingFailure(e.toString()));
+    }
+  }
+
+  Future<void> _onJoinWithCodeRequested(
+    JoinWithCodeRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(PairingInProgress());
+    try {
+      dev.log('Attempting to join with partner code: ${event.code}', name: 'AuthBloc');
+      await _authService.joinWithCode(event.code);
+      emit(PairingSuccess());
+    } catch (e, stack) {
+      dev.log('Error joining with code: $e', error: e, stackTrace: stack, name: 'AuthBloc');
+      emit(PairingFailure(e.toString()));
+    }
+  }
+
+  Future<void> _onSkipPairingRequested(
+    SkipPairingRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(PairingInProgress());
+    try {
+      dev.log('Skipping pairing step...', name: 'AuthBloc');
+      await _authService.skipPairing();
+      emit(PairingSkipped());
+    } catch (e, stack) {
+      dev.log('Error skipping pairing: $e', error: e, stackTrace: stack, name: 'AuthBloc');
+      emit(PairingFailure(e.toString()));
     }
   }
 }

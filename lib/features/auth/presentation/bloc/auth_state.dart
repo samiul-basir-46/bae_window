@@ -58,3 +58,32 @@ class EmailVerificationFailure extends AuthState {
   EmailVerificationFailure(this.errorMessage);
 }
 
+class ProfileSetupPendingState extends AuthState {}
+
+class PairingPendingState extends AuthState {}
+
+class ProfileSetupLoading extends AuthState {}
+
+class ProfileSetupSuccess extends AuthState {}
+
+class ProfileSetupFailure extends AuthState {
+  final String errorMessage;
+  ProfileSetupFailure(this.errorMessage);
+}
+
+class PairingCodeGenerated extends AuthState {
+  final String code;
+  PairingCodeGenerated(this.code);
+}
+
+class PairingInProgress extends AuthState {}
+
+class PairingSuccess extends AuthState {}
+
+class PairingFailure extends AuthState {
+  final String errorMessage;
+  PairingFailure(this.errorMessage);
+}
+
+class PairingSkipped extends AuthState {}
+

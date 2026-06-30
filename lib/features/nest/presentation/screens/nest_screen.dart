@@ -4,6 +4,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:bea_window_app/helpers/di.dart';
+import 'package:bea_window_app/constants/app_constants.dart';
 
 import '../bloc/nest_bloc.dart';
 import '../bloc/nest_event.dart';
@@ -141,8 +144,8 @@ class NestScreen extends StatelessWidget {
                                 title: "Change Vault Passcode",
                                 subtitle: "Update your vault lock PIN",
                                 onTap: () {
-                                  Navigator.pushNamed(
-                                      context, Routes.changeVaultPasscodeScreen);
+                                  Navigator.pushNamed(context,
+                                      Routes.changeVaultPasscodeScreen);
                                 },
                               ),
                               const SettingsDivider(),
@@ -170,8 +173,8 @@ class NestScreen extends StatelessWidget {
                                 title: "Notification Settings",
                                 subtitle: "Snap, Pulse, Tasks, Quiet Hours",
                                 onTap: () {
-                                  Navigator.pushNamed(
-                                      context, Routes.notificationSettingsScreen);
+                                  Navigator.pushNamed(context,
+                                      Routes.notificationSettingsScreen);
                                 },
                               ),
                             ],
@@ -188,7 +191,6 @@ class NestScreen extends StatelessWidget {
                           ),
                           UIHelper.verticalSpace(24.h),
 
-                          // Data & Privacy
                           _buildSectionHeader("DATA & PRIVACY"),
                           SettingsGroup(
                             children: [
@@ -217,8 +219,24 @@ class NestScreen extends StatelessWidget {
                                 subtitle:
                                     "Sign out of your account on this device",
                                 textColor: Colors.redAccent,
-                                onTap: () =>
-                                    _showSnackbar(context, "Log Out tapped"),
+                                onTap: () async {
+                                  try {
+                                    await FirebaseAuth.instance.signOut();
+                                    await appData.write(kKeyIsLoggedIn, false);
+                                    if (context.mounted) {
+                                      Navigator.pushNamedAndRemoveUntil(
+                                        context,
+                                        Routes.loginScreen,
+                                        (route) => false,
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      _showSnackbar(
+                                          context, "Log Out failed: $e");
+                                    }
+                                  }
+                                },
                               ),
                             ],
                           ),

@@ -7,6 +7,8 @@ import 'package:bea_window_app/features/auth/presentation/screens/forgot_passwor
 import 'package:bea_window_app/features/auth/presentation/screens/otp_verification_screen.dart';
 import 'package:bea_window_app/features/auth/presentation/screens/reset_password_screen.dart';
 import 'package:bea_window_app/features/auth/presentation/screens/email_verification_screen.dart';
+import 'package:bea_window_app/features/auth/presentation/screens/profile_setup_screen.dart';
+import 'package:bea_window_app/features/auth/presentation/screens/pairing_screen.dart';
 import 'package:bea_window_app/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:bea_window_app/navigation_screen.dart';
 
@@ -38,6 +40,8 @@ final class Routes {
   static const String onboardingScreen = '/onboarding';
   static const String navigationScreen = '/navigation';
   static const String emailVerificationScreen = '/emailVerification';
+  static const String profileSetupScreen = '/profileSetup';
+  static const String pairingScreen = '/pairing';
 
   // Space Routes
   static const String vaultScreen = '/vault';
@@ -125,6 +129,18 @@ final class RouteGenerator {
             ? CupertinoPageRoute(builder: (context) => const EmailVerificationScreen())
             : _FadedTransitionRoute(
                 widget: const EmailVerificationScreen(), settings: settings);
+
+      case Routes.profileSetupScreen:
+        return defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(builder: (context) => const ProfileSetupScreen())
+            : _FadedTransitionRoute(
+                widget: const ProfileSetupScreen(), settings: settings);
+
+      case Routes.pairingScreen:
+        return defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(builder: (context) => const PairingScreen())
+            : _FadedTransitionRoute(
+                widget: const PairingScreen(), settings: settings);
 
       case Routes.resetPasswordScreen:
         return defaultTargetPlatform == TargetPlatform.iOS

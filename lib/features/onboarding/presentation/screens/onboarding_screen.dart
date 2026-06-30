@@ -5,6 +5,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/constants/text_font_style.dart';
+import 'package:bea_window_app/helpers/di.dart';
+import 'package:bea_window_app/constants/app_constants.dart';
 import '../bloc/onboarding_bloc.dart';
 import '../bloc/onboarding_event.dart';
 import '../bloc/onboarding_state.dart';
@@ -52,6 +54,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return BlocConsumer<OnboardingBloc, OnboardingState>(
       listener: (context, state) {
         if (state is OnboardingFinished) {
+          appData.write(kKeyfirstTime, false);
           Navigator.pushReplacementNamed(context, Routes.loginScreen);
         }
       },
@@ -73,11 +76,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ignoring: currentIndex >= 2,
                       child: TextButton(
                         onPressed: () {
-                          _pageController.animateToPage(
-                            2,
-                            duration: const Duration(milliseconds: 600),
-                            curve: Curves.easeInOutCubic,
-                          );
+                          appData.write(kKeyfirstTime, false);
+                          NavigationService.navigateToReplacement(
+                              Routes.loginScreen);
                         },
                         child: Text(
                           "Skip",
@@ -159,6 +160,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               curve: Curves.easeInOutCubic,
                             );
                           } else {
+                            appData.write(kKeyfirstTime, false);
                             NavigationService.navigateToReplacement(
                                 Routes.loginScreen);
                           }

@@ -11,6 +11,8 @@ import 'package:bea_window_app/constants/validator.dart';
 import '../widgets/auth_background_blobs.dart';
 import '../widgets/auth_header.dart';
 import '../../../../gen/assets.gen.dart';
+import 'package:bea_window_app/helpers/di.dart';
+import 'package:bea_window_app/constants/app_constants.dart';
 import '../bloc/auth_bloc.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -62,9 +64,16 @@ class _LoginScreenState extends State<LoginScreen>
           });
         }
         if (state is AuthSuccess) {
+          appData.write(kKeyIsLoggedIn, true);
           Navigator.pushReplacementNamed(context, Routes.navigationScreen);
         } else if (state is EmailVerificationPending) {
           Navigator.pushReplacementNamed(context, Routes.emailVerificationScreen);
+        } else if (state is ProfileSetupPendingState) {
+          appData.write(kKeyIsLoggedIn, true);
+          Navigator.pushReplacementNamed(context, Routes.profileSetupScreen);
+        } else if (state is PairingPendingState) {
+          appData.write(kKeyIsLoggedIn, true);
+          Navigator.pushReplacementNamed(context, Routes.pairingScreen);
         } else if (state is AuthFailure) {
           setState(() {
             _loginErrorMessage = state.errorMessage;

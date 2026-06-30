@@ -57,3 +57,27 @@ class CheckEmailVerificationRequested extends AuthEvent {
 class ResendVerificationEmailRequested extends AuthEvent {
   const ResendVerificationEmailRequested();
 }
+
+class SaveProfileRequested extends AuthEvent {
+  final String nickname;
+  final String? avatarUrl;
+  final File? avatarFile;
+  const SaveProfileRequested({
+    required this.nickname,
+    this.avatarUrl,
+    this.avatarFile,
+  });
+}
+
+class GenerateInviteCodeRequested extends AuthEvent {
+  const GenerateInviteCodeRequested();
+}
+
+class JoinWithCodeRequested extends AuthEvent {
+  final String code;
+  const JoinWithCodeRequested(this.code);
+}
+
+class SkipPairingRequested extends AuthEvent {
+  const SkipPairingRequested();
+}
