@@ -3,6 +3,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:bea_window_app/common_widgets/custom_auth_text_field.dart';
 import 'package:bea_window_app/common_widgets/custom_auth_button.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
+import 'package:bea_window_app/helpers/ui_helpers.dart';
+import 'package:bea_window_app/constants/validator.dart';
 import '../widgets/auth_background_blobs.dart';
 import '../widgets/auth_header.dart';
 
@@ -110,52 +112,36 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        SizedBox(height: 36.h),
+                        UIHelper.verticalSpace(36.h),
                         const AuthHeader(
                           logoIcon: Icons.vpn_key_outlined,
                           eyebrow: 'Create New Credentials',
                           headline: 'Reset Password ✦',
                           subtitle: 'Ensure your new password contains at least 6 characters and matches in both fields.',
                         ),
-                        SizedBox(height: 32.h),
+                        UIHelper.verticalSpace(32.h),
                         CustomAuthTextField(
                           controller: _newPasswordController,
                           hintText: 'New Password',
                           prefixIcon: Icons.lock_outline_rounded,
                           isPassword: true,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Please enter a new password';
-                            }
-                            if (value.length < 6) {
-                              return 'Password must be at least 6 characters';
-                            }
-                            return null;
-                          },
+                          validator: passwordValidator,
                         ),
-                        SizedBox(height: 16.h),
+                        UIHelper.verticalSpace(16.h),
                         CustomAuthTextField(
                           controller: _confirmPasswordController,
                           hintText: 'Confirm Password',
                           prefixIcon: Icons.lock_clock_outlined,
                           isPassword: true,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Please confirm your password';
-                            }
-                            if (value != _newPasswordController.text) {
-                              return 'Passwords do not match';
-                            }
-                            return null;
-                          },
+                          validator: (value) => confirmPasswordValidator(value, _newPasswordController.text),
                         ),
-                        SizedBox(height: 28.h),
+                        UIHelper.verticalSpace(28.h),
                         CustomAuthButton(
                           label: 'Reset Password',
                           isLoading: _isLoading,
                           onTap: _handleResetPassword,
                         ),
-                        SizedBox(height: 24.h),
+                        UIHelper.verticalSpace(24.h),
                       ],
                     ),
                   ),
@@ -167,6 +153,4 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
       ),
     );
   }
-
-
 }

@@ -5,6 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/common_widgets/custom_auth_text_field.dart';
 import 'package:bea_window_app/common_widgets/custom_auth_button.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
+import 'package:bea_window_app/helpers/ui_helpers.dart';
+import 'package:bea_window_app/constants/validator.dart';
 import '../widgets/auth_background_blobs.dart';
 import '../widgets/auth_header.dart';
 import '../bloc/auth_bloc.dart';
@@ -106,44 +108,34 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            SizedBox(height: 36.h),
+                            UIHelper.verticalSpace(36.h),
                             const AuthHeader(
                               logoIcon: Icons.lock_reset_rounded,
                               eyebrow: 'Recover password',
                               headline: 'Forgot your\npassword? ✦',
                               subtitle: 'Enter the email address associated with your account, and we\'ll send you instructions to reset your password.',
                             ),
-                            SizedBox(height: 32.h),
+                            UIHelper.verticalSpace(32.h),
                             CustomAuthTextField(
                               controller: _emailController,
                               hintText: 'Email address',
                               prefixIcon: Icons.mail_outline_rounded,
                               keyboardType: TextInputType.emailAddress,
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Please enter your email address';
-                                }
-                                final emailRegex = RegExp(
-                                    r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
-                                if (!emailRegex.hasMatch(value.trim())) {
-                                  return 'Please enter a valid email address';
-                                }
-                                return null;
-                              },
+                              validator: emailValidator,
                             ),
-                            SizedBox(height: 24.h),
+                            UIHelper.verticalSpace(24.h),
                             CustomAuthButton(
                               label: 'Send Reset Link',
                               isLoading: isLoading,
                               onTap: _handleReset,
                             ),
-                            SizedBox(height: 32.h),
+                            UIHelper.verticalSpace(32.h),
                             _buildBottomLink(
                               prefix: "Remembered? ",
                               action: "Sign in →",
                               onTap: () => Navigator.pop(context),
                             ),
-                            SizedBox(height: 24.h),
+                            UIHelper.verticalSpace(24.h),
                           ],
                         ),
                       ),
@@ -157,8 +149,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
       },
     );
   }
-
-
 
   Widget _buildBottomLink({
     required String prefix,

@@ -16,3 +16,8 @@ class ForgotPasswordRequestedEvent extends AuthEvent {
   final String email;
   const ForgotPasswordRequestedEvent(this.email);
 }
+
+class VerifyOtpRequestedEvent extends AuthEvent {
+  final String otp;
+  const VerifyOtpRequestedEvent(this.otp);
+}

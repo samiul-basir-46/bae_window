@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:bea_window_app/helpers/ui_helpers.dart';
 
 class AuthHeader extends StatelessWidget {
   final IconData logoIcon;
@@ -44,7 +45,7 @@ class AuthHeader extends StatelessWidget {
             child: Icon(logoIcon, color: Colors.white, size: 26.sp),
           ),
         ),
-        SizedBox(height: 20.h),
+        UIHelper.verticalSpace(20.h),
         // Eyebrow
         Text(
           eyebrow.toUpperCase(),
@@ -55,7 +56,7 @@ class AuthHeader extends StatelessWidget {
             letterSpacing: 2,
           ),
         ),
-        SizedBox(height: 6.h),
+        UIHelper.verticalSpace(6.h),
         // Headline
         Text(
           headline,
@@ -67,7 +68,7 @@ class AuthHeader extends StatelessWidget {
             height: 1.25,
           ),
         ),
-        SizedBox(height: 8.h),
+        UIHelper.verticalSpace(8.h),
         // Subtitle
         Text(
           subtitle,

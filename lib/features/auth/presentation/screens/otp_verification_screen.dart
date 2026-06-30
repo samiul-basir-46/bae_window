@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/common_widgets/custom_auth_button.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
+import 'package:bea_window_app/helpers/ui_helpers.dart';
 import '../widgets/auth_background_blobs.dart';
 import '../widgets/auth_header.dart';
 
@@ -121,8 +122,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
     setState(() {
       _isLoading = true;
     });
-
-    // Mock OTP verification API request
     await Future.delayed(const Duration(seconds: 2));
 
     if (mounted) {
@@ -173,24 +172,24 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      SizedBox(height: 36.h),
+                      UIHelper.verticalSpace(36.h),
                       AuthHeader(
                         logoIcon: Icons.shield_outlined,
                         eyebrow: 'Security Check',
                         headline: 'Verify Code ✦',
                         subtitle: 'We\'ve sent a 6-digit verification code to:\n${widget.email}',
                       ),
-                      SizedBox(height: 36.h),
+                      UIHelper.verticalSpace(36.h),
                       _buildOtpRow(),
-                      SizedBox(height: 36.h),
+                      UIHelper.verticalSpace(36.h),
                       CustomAuthButton(
                         label: 'Verify Code',
                         isLoading: _isLoading,
                         onTap: _verifyOtp,
                       ),
-                      SizedBox(height: 32.h),
+                      UIHelper.verticalSpace(32.h),
                       _buildResendRow(),
-                      SizedBox(height: 24.h),
+                      UIHelper.verticalSpace(24.h),
                     ],
                   ),
                 ),

@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
+import 'package:bea_window_app/helpers/ui_helpers.dart';
 import 'package:bea_window_app/common_widgets/custom_auth_text_field.dart';
 import 'package:bea_window_app/common_widgets/custom_auth_button.dart';
 import '../widgets/auth_background_blobs.dart';
@@ -84,30 +85,30 @@ class _LoginScreenState extends State<LoginScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          SizedBox(height: 52.h),
+                          UIHelper.verticalSpace(52.h),
                           const AuthHeader(
                             logoIcon: Icons.favorite_rounded,
                             eyebrow: 'Welcome back',
                             headline: 'Your window\nawaits ✦',
                             subtitle: 'Sign in to reconnect with your person.',
                           ),
-                          SizedBox(height: 32.h),
+                          UIHelper.verticalSpace(32.h),
                            CustomAuthTextField(
                             controller: _emailController,
                             hintText: 'Email address',
                             prefixIcon: Icons.mail_outline_rounded,
                             keyboardType: TextInputType.emailAddress,
                           ),
-                          SizedBox(height: 12.h),
+                          UIHelper.verticalSpace(12.h),
                           CustomAuthTextField(
                             controller: _passwordController,
                             hintText: 'Password',
                             prefixIcon: Icons.lock_outline_rounded,
                             isPassword: true,
                           ),
-                          SizedBox(height: 8.h),
+                          UIHelper.verticalSpace(8.h),
                           _buildForgotPassword(),
-                          SizedBox(height: 20.h),
+                          UIHelper.verticalSpace(20.h),
                           CustomAuthButton(
                             label: 'Sign In',
                             isLoading: isLoading,
@@ -117,15 +118,15 @@ class _LoginScreenState extends State<LoginScreen>
                                   Routes.navigationScreen);
                             },
                           ),
-                          SizedBox(height: 20.h),
+                          UIHelper.verticalSpace(20.h),
                           _buildOrDivider(),
-                          SizedBox(height: 16.h),
+                          UIHelper.verticalSpace(16.h),
                           _buildGoogleButton(context, isLoading),
                           if (Platform.isIOS) ...[
-                            SizedBox(height: 10.h),
+                            UIHelper.verticalSpace(10.h),
                             _buildAppleButton(context, isLoading),
                           ],
-                          SizedBox(height: 32.h),
+                          UIHelper.verticalSpace(32.h),
                           _buildBottomLink(
                             prefix: "New here? ",
                             action: "Create your window →",
@@ -134,7 +135,7 @@ class _LoginScreenState extends State<LoginScreen>
                               Routes.signUpScreen,
                             ),
                           ),
-                          SizedBox(height: 24.h),
+                          UIHelper.verticalSpace(24.h),
                         ],
                       ),
                     ),
@@ -203,7 +204,7 @@ class _LoginScreenState extends State<LoginScreen>
               height: 24.h,
               width: 24.w,
             ),
-            SizedBox(width: 10.w),
+            UIHelper.horizontalSpace(10.w),
             Text('Continue with Google',
                 style: GoogleFonts.dmSans(
                     color: const Color(0xFF9090A8),
@@ -226,7 +227,7 @@ class _LoginScreenState extends State<LoginScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _appleLogo(),
-            SizedBox(width: 10.w),
+            UIHelper.horizontalSpace(10.w),
             Text('Continue with Apple',
                 style: GoogleFonts.dmSans(
                     color: const Color(0xFF9090A8),

@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
+import 'package:bea_window_app/helpers/ui_helpers.dart';
 import 'package:bea_window_app/common_widgets/custom_auth_text_field.dart';
 import '../../../../common_widgets/custom_auth_button.dart';
 import '../widgets/auth_background_blobs.dart';
@@ -113,54 +114,54 @@ class _SignUpScreenState extends State<SignUpScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          SizedBox(height: 48.h),
+                          UIHelper.verticalSpace(48.h),
                           const AuthHeader(
                             logoIcon: Icons.favorite_rounded,
                             eyebrow: 'New beginning',
                             headline: 'Create your\nwindow ✦',
                             subtitle: 'Just for the two of you — private & precious.',
                           ),
-                          SizedBox(height: 32.h),
+                          UIHelper.verticalSpace(32.h),
                           CustomAuthTextField(
                             controller: _nameController,
                             hintText: 'Your name',
                             prefixIcon: Icons.person_outline_rounded,
                             keyboardType: TextInputType.name,
                           ),
-                          SizedBox(height: 12.h),
+                          UIHelper.verticalSpace(12.h),
                           CustomAuthTextField(
                             controller: _emailController,
                             hintText: 'Email address',
                             prefixIcon: Icons.mail_outline_rounded,
                             keyboardType: TextInputType.emailAddress,
                           ),
-                          SizedBox(height: 12.h),
+                          UIHelper.verticalSpace(12.h),
                           CustomAuthTextField(
                             controller: _passwordController,
                             hintText: 'Create password',
                             prefixIcon: Icons.lock_outline_rounded,
                             isPassword: true,
                           ),
-                          SizedBox(height: 10.h),
+                          UIHelper.verticalSpace(10.h),
                           _buildStrengthBar(),
-                          SizedBox(height: 20.h),
+                          UIHelper.verticalSpace(20.h),
                           CustomAuthButton(
                             label: 'Create Account',
                             isLoading: isLoading,
                             showArrow: true,
                             onTap: () {},
                           ),
-                          SizedBox(height: 20.h),
+                          UIHelper.verticalSpace(20.h),
                           _buildOrDivider(),
-                          SizedBox(height: 16.h),
+                          UIHelper.verticalSpace(16.h),
                           _buildGoogleButton(context, isLoading),
                           if (Platform.isIOS) ...[
-                            SizedBox(height: 10.h),
+                            UIHelper.verticalSpace(10.h),
                             _buildAppleButton(context, isLoading),
                           ],
-                          SizedBox(height: 16.h),
+                          UIHelper.verticalSpace(16.h),
                           _buildTerms(),
-                          SizedBox(height: 16.h),
+                          UIHelper.verticalSpace(16.h),
                           _buildBottomLink(
                             prefix: 'Already have an account? ',
                             action: 'Sign In →',
@@ -169,7 +170,7 @@ class _SignUpScreenState extends State<SignUpScreen>
                               Routes.loginScreen,
                             ),
                           ),
-                          SizedBox(height: 28.h),
+                          UIHelper.verticalSpace(28.h),
                         ],
                       ),
                     ),
@@ -208,7 +209,7 @@ class _SignUpScreenState extends State<SignUpScreen>
           }),
         ),
         if (_strengthLabel.isNotEmpty) ...[
-          SizedBox(height: 6.h),
+         UIHelper.verticalSpace(6.h),
           Text(
             _strengthLabel,
             style: GoogleFonts.dmSans(
@@ -253,7 +254,7 @@ class _SignUpScreenState extends State<SignUpScreen>
               height: 24.h,
               width: 24.w,
             ),
-            SizedBox(width: 10.w),
+            UIHelper.horizontalSpace(10.w),
             Text('Continue with Google',
                 style: GoogleFonts.dmSans(
                     color: const Color(0xFF9090A8),
@@ -276,7 +277,7 @@ class _SignUpScreenState extends State<SignUpScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.apple, color: Colors.white, size: 20.sp),
-            SizedBox(width: 10.w),
+            UIHelper.horizontalSpace(10.w),
             Text('Sign up with Apple',
                 style: GoogleFonts.dmSans(
                     color: const Color(0xFF9090A8),
