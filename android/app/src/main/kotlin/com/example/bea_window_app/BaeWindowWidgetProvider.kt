@@ -73,18 +73,25 @@ class BaeWindowWidgetProvider : AppWidgetProvider() {
                         val result = createWidgetBitmap(context, imgFile)
                         if (result != null) {
                             val (widgetFile, bitmap) = result
-                            // Try URI approach first (more reliable for large images)
+                            // Try FileProvider content:// URI approach first
                             try {
-                                val uri = Uri.fromFile(widgetFile)
+                                val authority = "${context.packageName}.fileprovider"
+                                val uri = androidx.core.content.FileProvider.getUriForFile(context, authority, widgetFile)
                                 Log.d(TAG, "Trying setImageViewUri: $uri")
+                                
+                                // Grant temporary permission to all apps that can handle the widget intent
+                                context.grantUriPermission("com.android.systemui", uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                context.grantUriPermission("com.android.launcher3", uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                // Also try standard package manager query if needed, but manual systemUI/launcher usually covers it.
+                                
                                 views.setImageViewUri(R.id.widget_image, uri)
                                 imageSet = true
-                                Log.d(TAG, "Image set via URI")
+                                Log.d(TAG, "Image set via content:// URI")
                             } catch (e: Exception) {
-                                Log.e(TAG, "setImageViewUri failed: ${e.message}")
+                                Log.e(TAG, "setImageViewUri content provider failed: ${e.message}", e)
                             }
 
-                            // Also try bitmap approach as fallback/additional
+                            // If URI fails, fall back to resized Bitmap
                             if (!imageSet) {
                                 try {
                                     Log.d(TAG, "Trying setImageViewBitmap: ${bitmap.width}x${bitmap.height}")
@@ -101,7 +108,8 @@ class BaeWindowWidgetProvider : AppWidgetProvider() {
                                 views.setViewVisibility(R.id.widget_placeholder, View.GONE)
                             }
 
-                            if (!imageSet) bitmap.recycle()
+                            // Recycle since we saved to file and/or already passed it to RemoteViews
+                            bitmap.recycle()
                         } else {
                             Log.e(TAG, "Failed to create widget bitmap")
                         }
