@@ -6,6 +6,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
 import 'package:bea_window_app/common_widgets/custom_auth_text_field.dart';
 import '../../../../common_widgets/custom_auth_button.dart';
+import '../widgets/auth_background_blobs.dart';
+import '../widgets/auth_header.dart';
 import '../../../../gen/assets.gen.dart';
 import '../bloc/auth_bloc.dart';
 
@@ -100,7 +102,7 @@ class _SignUpScreenState extends State<SignUpScreen>
           backgroundColor: const Color(0xFF0D0D10),
           body: Stack(
             children: [
-              _buildBlobs(),
+              const AuthBackgroundBlobs(),
               SafeArea(
                 child: FadeTransition(
                   opacity: _fadeAnim,
@@ -112,14 +114,12 @@ class _SignUpScreenState extends State<SignUpScreen>
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           SizedBox(height: 48.h),
-                          _buildLogoMark(),
-                          SizedBox(height: 20.h),
-                          _buildEyebrow('New beginning'),
-                          SizedBox(height: 6.h),
-                          _buildHeadline('Create your\nwindow ✦'),
-                          SizedBox(height: 8.h),
-                          _buildSubtitle(
-                              'Just for the two of you — private & precious.'),
+                          const AuthHeader(
+                            logoIcon: Icons.favorite_rounded,
+                            eyebrow: 'New beginning',
+                            headline: 'Create your\nwindow ✦',
+                            subtitle: 'Just for the two of you — private & precious.',
+                          ),
                           SizedBox(height: 32.h),
                           CustomAuthTextField(
                             controller: _nameController,
@@ -183,105 +183,7 @@ class _SignUpScreenState extends State<SignUpScreen>
     );
   }
 
-  Widget _buildBlobs() {
-    return Stack(children: [
-      Positioned(
-        top: -80,
-        left: 0,
-        right: 0,
-        child: Center(
-          child: Container(
-            width: 300.w,
-            height: 300.w,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(colors: [
-                const Color(0xFFFF8FB8).withValues(alpha: 0.15),
-                Colors.transparent,
-              ]),
-            ),
-          ),
-        ),
-      ),
-      Positioned(
-        bottom: 100.h,
-        right: -40.w,
-        child: Container(
-          width: 200.w,
-          height: 200.w,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: RadialGradient(colors: [
-              const Color(0xFF8250DC).withValues(alpha: 0.1),
-              Colors.transparent,
-            ]),
-          ),
-        ),
-      ),
-    ]);
-  }
 
-  Widget _buildLogoMark() {
-    return Container(
-      width: 52.w,
-      height: 52.w,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16.r),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFFF8FB8), Color(0xFFD94E98), Color(0xFFB03085)],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFB03085).withValues(alpha: 0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Center(
-        child: Icon(Icons.favorite_rounded, color: Colors.white, size: 26.sp),
-      ),
-    );
-  }
-
-  Widget _buildEyebrow(String text) {
-    return Text(
-      text.toUpperCase(),
-      style: GoogleFonts.dmSans(
-        fontSize: 10.sp,
-        fontWeight: FontWeight.w600,
-        color: const Color(0xFFE060A0),
-        letterSpacing: 2,
-      ),
-    );
-  }
-
-  Widget _buildHeadline(String text) {
-    return Text(
-      text,
-      textAlign: TextAlign.center,
-      style: GoogleFonts.playfairDisplay(
-        fontSize: 28.sp,
-        fontWeight: FontWeight.w700,
-        color: Colors.white,
-        height: 1.25,
-      ),
-    );
-  }
-
-  Widget _buildSubtitle(String text) {
-    return Text(
-      text,
-      textAlign: TextAlign.center,
-      style: GoogleFonts.dmSans(
-        fontSize: 13.sp,
-        color: const Color(0xFF6B6B80),
-        height: 1.6,
-      ),
-    );
-  }
 
   Widget _buildStrengthBar() {
     if (_passwordController.text.isEmpty) return const SizedBox.shrink();

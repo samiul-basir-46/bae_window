@@ -4,6 +4,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/common_widgets/custom_auth_text_field.dart';
 import 'package:bea_window_app/common_widgets/custom_auth_button.dart';
+import 'package:bea_window_app/helpers/all_routes.dart';
+import '../widgets/auth_background_blobs.dart';
+import '../widgets/auth_header.dart';
 import '../bloc/auth_bloc.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -20,7 +23,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
-  bool _isSuccessState = false;
 
   @override
   void initState() {
@@ -56,9 +58,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is ForgotPasswordSuccess) {
-          setState(() {
-            _isSuccessState = true;
-          });
+          Navigator.pushNamed(
+            context,
+            Routes.otpVerificationScreen,
+            arguments: _emailController.text.trim(),
+          );
         } else if (state is ForgotPasswordFailure) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -81,14 +85,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
             backgroundColor: Colors.transparent,
             elevation: 0,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white),
               onPressed: () => Navigator.pop(context),
             ),
           ),
           extendBodyBehindAppBar: true,
           body: Stack(
             children: [
-              _buildBlobs(),
+              const AuthBackgroundBlobs(),
               SafeArea(
                 child: FadeTransition(
                   opacity: _fadeAnim,
@@ -102,64 +107,42 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             SizedBox(height: 36.h),
-                            _buildLogoMark(),
-                            SizedBox(height: 24.h),
-                            if (!_isSuccessState) ...[
-                              _buildEyebrow('Recover password'),
-                              SizedBox(height: 6.h),
-                              _buildHeadline('Forgot your\npassword? ✦'),
-                              SizedBox(height: 8.h),
-                              _buildSubtitle(
-                                'Enter the email address associated with your account, and we\'ll send you instructions to reset your password.',
-                              ),
-                              SizedBox(height: 32.h),
-                              CustomAuthTextField(
-                                controller: _emailController,
-                                hintText: 'Email address',
-                                prefixIcon: Icons.mail_outline_rounded,
-                                keyboardType: TextInputType.emailAddress,
-                                validator: (value) {
-                                  if (value == null || value.trim().isEmpty) {
-                                    return 'Please enter your email address';
-                                  }
-                                  final emailRegex = RegExp(
-                                      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
-                                  if (!emailRegex.hasMatch(value.trim())) {
-                                    return 'Please enter a valid email address';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              SizedBox(height: 24.h),
-                              CustomAuthButton(
-                                label: 'Send Reset Link',
-                                isLoading: isLoading,
-                                onTap: _handleReset,
-                              ),
-                            ] else ...[
-                              _buildEyebrow('Check your inbox'),
-                              SizedBox(height: 6.h),
-                              _buildHeadline('Reset link sent! ✦'),
-                              SizedBox(height: 8.h),
-                              _buildSubtitle(
-                                'We have sent password reset instructions to:\n${_emailController.text.trim()}',
-                              ),
-                              SizedBox(height: 36.h),
-                              _buildSuccessCheckmark(),
-                              SizedBox(height: 36.h),
-                              CustomAuthButton(
-                                label: 'Back to Login',
-                                isLoading: false,
-                                onTap: () => Navigator.pop(context),
-                              ),
-                            ],
+                            const AuthHeader(
+                              logoIcon: Icons.lock_reset_rounded,
+                              eyebrow: 'Recover password',
+                              headline: 'Forgot your\npassword? ✦',
+                              subtitle: 'Enter the email address associated with your account, and we\'ll send you instructions to reset your password.',
+                            ),
                             SizedBox(height: 32.h),
-                            if (!_isSuccessState)
-                              _buildBottomLink(
-                                prefix: "Remembered? ",
-                                action: "Sign in →",
-                                onTap: () => Navigator.pop(context),
-                              ),
+                            CustomAuthTextField(
+                              controller: _emailController,
+                              hintText: 'Email address',
+                              prefixIcon: Icons.mail_outline_rounded,
+                              keyboardType: TextInputType.emailAddress,
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Please enter your email address';
+                                }
+                                final emailRegex = RegExp(
+                                    r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+                                if (!emailRegex.hasMatch(value.trim())) {
+                                  return 'Please enter a valid email address';
+                                }
+                                return null;
+                              },
+                            ),
+                            SizedBox(height: 24.h),
+                            CustomAuthButton(
+                              label: 'Send Reset Link',
+                              isLoading: isLoading,
+                              onTap: _handleReset,
+                            ),
+                            SizedBox(height: 32.h),
+                            _buildBottomLink(
+                              prefix: "Remembered? ",
+                              action: "Sign in →",
+                              onTap: () => Navigator.pop(context),
+                            ),
                             SizedBox(height: 24.h),
                           ],
                         ),
@@ -172,132 +155,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
           ),
         );
       },
-    );
-  }
-
-  Widget _buildBlobs() {
-    return Stack(
-      children: [
-        Positioned(
-          top: -80,
-          left: 0,
-          right: 0,
-          child: Center(
-            child: Container(
-              width: 300.w,
-              height: 300.w,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    const Color(0xFFFF8FB8).withValues(alpha: 0.15),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: 80.h,
-          right: -40.w,
-          child: Container(
-            width: 200.w,
-            height: 200.w,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  const Color(0xFF8250DC).withValues(alpha: 0.1),
-                  Colors.transparent,
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLogoMark() {
-    return Container(
-      width: 52.w,
-      height: 52.w,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16.r),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFFF8FB8), Color(0xFFD94E98), Color(0xFFB03085)],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFB03085).withValues(alpha: 0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Center(
-        child: Icon(Icons.lock_reset_rounded, color: Colors.white, size: 28.sp),
-      ),
-    );
-  }
-
-  Widget _buildEyebrow(String text) {
-    return Text(
-      text.toUpperCase(),
-      style: GoogleFonts.dmSans(
-        fontSize: 10.sp,
-        fontWeight: FontWeight.w600,
-        color: const Color(0xFFE060A0),
-        letterSpacing: 2,
-      ),
-    );
-  }
-
-  Widget _buildHeadline(String text) {
-    return Text(
-      text,
-      textAlign: TextAlign.center,
-      style: GoogleFonts.playfairDisplay(
-        fontSize: 28.sp,
-        fontWeight: FontWeight.w700,
-        color: Colors.white,
-        height: 1.25,
-      ),
-    );
-  }
-
-  Widget _buildSubtitle(String text) {
-    return Text(
-      text,
-      textAlign: TextAlign.center,
-      style: GoogleFonts.dmSans(
-        fontSize: 13.sp,
-        color: const Color(0xFF6B6B80),
-        height: 1.6,
-      ),
-    );
-  }
-
-
-  Widget _buildSuccessCheckmark() {
-    return Container(
-      width: 72.w,
-      height: 72.w,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: const Color(0xFF4CD964).withValues(alpha: 0.1),
-        border: Border.all(color: const Color(0xFF4CD964).withValues(alpha: 0.3), width: 2),
-      ),
-      child: Center(
-        child: Icon(
-          Icons.check_circle_outline_rounded,
-          color: const Color(0xFF4CD964),
-          size: 40.sp,
-        ),
-      ),
     );
   }
 

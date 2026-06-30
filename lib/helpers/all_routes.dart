@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:bea_window_app/features/auth/presentation/screens/login_screen.dart';
 import 'package:bea_window_app/features/auth/presentation/screens/signup_screen.dart';
 import 'package:bea_window_app/features/auth/presentation/screens/forgot_password_screen.dart';
+import 'package:bea_window_app/features/auth/presentation/screens/otp_verification_screen.dart';
+import 'package:bea_window_app/features/auth/presentation/screens/reset_password_screen.dart';
 import 'package:bea_window_app/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:bea_window_app/navigation_screen.dart';
 
@@ -30,6 +32,8 @@ final class Routes {
   static const String loginScreen = '/logIn';
   static const String signUpScreen = '/signUp';
   static const String forgotPasswordScreen = '/forgotPassword';
+  static const String otpVerificationScreen = '/otpVerification';
+  static const String resetPasswordScreen = '/resetPassword';
   static const String onboardingScreen = '/onboarding';
   static const String navigationScreen = '/navigation';
 
@@ -79,6 +83,19 @@ final class RouteGenerator {
             ? CupertinoPageRoute(builder: (context) => const ForgotPasswordScreen())
             : _FadedTransitionRoute(
                 widget: const ForgotPasswordScreen(), settings: settings);
+
+      case Routes.otpVerificationScreen:
+        final email = settings.arguments as String? ?? '';
+        return defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(builder: (context) => OtpVerificationScreen(email: email))
+            : _FadedTransitionRoute(
+                widget: OtpVerificationScreen(email: email), settings: settings);
+
+      case Routes.resetPasswordScreen:
+        return defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(builder: (context) => const ResetPasswordScreen())
+            : _FadedTransitionRoute(
+                widget: const ResetPasswordScreen(), settings: settings);
 
       case Routes.navigationScreen:
         return defaultTargetPlatform == TargetPlatform.iOS
