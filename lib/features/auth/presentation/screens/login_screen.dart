@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
+import 'package:bea_window_app/common_widgets/custom_auth_text_field.dart';
 import '../../../../gen/assets.gen.dart';
 import '../bloc/auth_bloc.dart';
 
@@ -19,7 +20,6 @@ class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
@@ -92,13 +92,19 @@ class _LoginScreenState extends State<LoginScreen>
                           _buildSubtitle(
                               'Sign in to reconnect with your person.'),
                           SizedBox(height: 32.h),
-                          _buildTextField(
+                           CustomAuthTextField(
                             controller: _emailController,
-                            hint: 'Email address',
-                            icon: Icons.mail_outline_rounded,
+                            hintText: 'Email address',
+                            prefixIcon: Icons.mail_outline_rounded,
+                            keyboardType: TextInputType.emailAddress,
                           ),
                           SizedBox(height: 12.h),
-                          _buildPasswordField(),
+                          CustomAuthTextField(
+                            controller: _passwordController,
+                            hintText: 'Password',
+                            prefixIcon: Icons.lock_outline_rounded,
+                            isPassword: true,
+                          ),
                           SizedBox(height: 8.h),
                           _buildForgotPassword(),
                           SizedBox(height: 20.h),
@@ -179,7 +185,6 @@ class _LoginScreenState extends State<LoginScreen>
     ]);
   }
 
-  // ─── Logo ─────────────────────────────────────────────────────────────────
   Widget _buildLogoMark() {
     return Container(
       width: 52.w,
@@ -205,7 +210,6 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  // ─── Typography ───────────────────────────────────────────────────────────
   Widget _buildEyebrow(String text) {
     return Text(
       text.toUpperCase(),
@@ -243,79 +247,13 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  // ─── Fields ───────────────────────────────────────────────────────────────
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String hint,
-    required IconData icon,
-    TextInputType keyboardType = TextInputType.emailAddress,
-  }) {
-    return Container(
-      height: 52.h,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        style: GoogleFonts.dmSans(color: Colors.white, fontSize: 14.sp),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: GoogleFonts.dmSans(
-              color: const Color(0xFF555568), fontSize: 14.sp),
-          prefixIcon: Icon(icon,
-              color: Colors.white.withValues(alpha: 0.3), size: 18.sp),
-          border: InputBorder.none,
-          contentPadding:
-              EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-        ),
-      ),
-    );
-  }
 
-  Widget _buildPasswordField() {
-    return Container(
-      height: 52.h,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: TextField(
-        controller: _passwordController,
-        obscureText: _obscurePassword,
-        style: GoogleFonts.dmSans(color: Colors.white, fontSize: 14.sp),
-        decoration: InputDecoration(
-          hintText: 'Password',
-          hintStyle: GoogleFonts.dmSans(
-              color: const Color(0xFF555568), fontSize: 14.sp),
-          prefixIcon: Icon(Icons.lock_outline_rounded,
-              color: Colors.white.withValues(alpha: 0.3), size: 18.sp),
-          suffixIcon: GestureDetector(
-            onTap: () => setState(() => _obscurePassword = !_obscurePassword),
-            child: Icon(
-              _obscurePassword
-                  ? Icons.visibility_off_outlined
-                  : Icons.visibility_outlined,
-              color: Colors.white.withValues(alpha: 0.3),
-              size: 18.sp,
-            ),
-          ),
-          border: InputBorder.none,
-          contentPadding:
-              EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-        ),
-      ),
-    );
-  }
 
   Widget _buildForgotPassword() {
     return Align(
       alignment: Alignment.centerRight,
       child: GestureDetector(
-        onTap: () {},
+        onTap: () => Navigator.pushNamed(context, Routes.forgotPasswordScreen),
         child: Text(
           'Forgot password?',
           style: GoogleFonts.dmSans(
@@ -328,7 +266,6 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  // ─── Buttons ──────────────────────────────────────────────────────────────
   Widget _buildPrimaryButton({
     required String label,
     required bool isLoading,

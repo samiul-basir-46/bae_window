@@ -11,3 +11,8 @@ class GoogleSignInRequestedEvent extends AuthEvent {
 class AppleSignInRequestedEvent extends AuthEvent {
   const AppleSignInRequestedEvent();
 }
+
+class ForgotPasswordRequestedEvent extends AuthEvent {
+  final String email;
+  const ForgotPasswordRequestedEvent(this.email);
+}

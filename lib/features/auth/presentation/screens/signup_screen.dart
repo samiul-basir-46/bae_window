@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
+import 'package:bea_window_app/common_widgets/custom_auth_text_field.dart';
 import '../../../../gen/assets.gen.dart';
 import '../bloc/auth_bloc.dart';
 
@@ -19,7 +20,6 @@ class _SignUpScreenState extends State<SignUpScreen>
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
   int _passwordStrength = 0;
 
   late AnimationController _fadeCtrl;
@@ -120,20 +120,26 @@ class _SignUpScreenState extends State<SignUpScreen>
                           _buildSubtitle(
                               'Just for the two of you — private & precious.'),
                           SizedBox(height: 32.h),
-                          _buildTextField(
+                          CustomAuthTextField(
                             controller: _nameController,
-                            hint: 'Your name',
-                            icon: Icons.person_outline_rounded,
+                            hintText: 'Your name',
+                            prefixIcon: Icons.person_outline_rounded,
                             keyboardType: TextInputType.name,
                           ),
                           SizedBox(height: 12.h),
-                          _buildTextField(
+                          CustomAuthTextField(
                             controller: _emailController,
-                            hint: 'Email address',
-                            icon: Icons.mail_outline_rounded,
+                            hintText: 'Email address',
+                            prefixIcon: Icons.mail_outline_rounded,
+                            keyboardType: TextInputType.emailAddress,
                           ),
                           SizedBox(height: 12.h),
-                          _buildPasswordField(),
+                          CustomAuthTextField(
+                            controller: _passwordController,
+                            hintText: 'Create password',
+                            prefixIcon: Icons.lock_outline_rounded,
+                            isPassword: true,
+                          ),
                           SizedBox(height: 10.h),
                           _buildStrengthBar(),
                           SizedBox(height: 20.h),
@@ -275,73 +281,7 @@ class _SignUpScreenState extends State<SignUpScreen>
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String hint,
-    required IconData icon,
-    TextInputType keyboardType = TextInputType.emailAddress,
-  }) {
-    return Container(
-      height: 52.h,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: TextField(
-        controller: controller,
-        cursorColor: Colors.white,
-        keyboardType: keyboardType,
-        style: GoogleFonts.dmSans(color: Colors.white, fontSize: 14.sp),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: GoogleFonts.dmSans(
-              color: const Color(0xFF555568), fontSize: 14.sp),
-          prefixIcon: Icon(icon,
-              color: Colors.white.withValues(alpha: 0.3), size: 18.sp),
-          border: InputBorder.none,
-          contentPadding:
-              EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-        ),
-      ),
-    );
-  }
 
-  Widget _buildPasswordField() {
-    return Container(
-      height: 52.h,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: TextField(
-        controller: _passwordController,
-        obscureText: _obscurePassword,
-        style: GoogleFonts.dmSans(color: Colors.white, fontSize: 14.sp),
-        decoration: InputDecoration(
-          hintText: 'Create password',
-          hintStyle: GoogleFonts.dmSans(
-              color: const Color(0xFF555568), fontSize: 14.sp),
-          prefixIcon: Icon(Icons.lock_outline_rounded,
-              color: Colors.white.withValues(alpha: 0.3), size: 18.sp),
-          suffixIcon: GestureDetector(
-            onTap: () => setState(() => _obscurePassword = !_obscurePassword),
-            child: Icon(
-              _obscurePassword
-                  ? Icons.visibility_off_outlined
-                  : Icons.visibility_outlined,
-              color: Colors.white.withValues(alpha: 0.3),
-              size: 18.sp,
-            ),
-          ),
-          border: InputBorder.none,
-          contentPadding:
-              EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-        ),
-      ),
-    );
-  }
 
   Widget _buildStrengthBar() {
     if (_passwordController.text.isEmpty) return const SizedBox.shrink();

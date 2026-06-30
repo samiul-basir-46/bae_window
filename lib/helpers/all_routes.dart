@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 
 import 'package:bea_window_app/features/auth/presentation/screens/login_screen.dart';
 import 'package:bea_window_app/features/auth/presentation/screens/signup_screen.dart';
+import 'package:bea_window_app/features/auth/presentation/screens/forgot_password_screen.dart';
 import 'package:bea_window_app/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:bea_window_app/navigation_screen.dart';
 
@@ -28,6 +29,7 @@ final class Routes {
   // Auth Routes
   static const String loginScreen = '/logIn';
   static const String signUpScreen = '/signUp';
+  static const String forgotPasswordScreen = '/forgotPassword';
   static const String onboardingScreen = '/onboarding';
   static const String navigationScreen = '/navigation';
 
@@ -71,6 +73,12 @@ final class RouteGenerator {
             ? CupertinoPageRoute(builder: (context) => const SignUpScreen())
             : _FadedTransitionRoute(
                 widget: const SignUpScreen(), settings: settings);
+
+      case Routes.forgotPasswordScreen:
+        return defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(builder: (context) => const ForgotPasswordScreen())
+            : _FadedTransitionRoute(
+                widget: const ForgotPasswordScreen(), settings: settings);
 
       case Routes.navigationScreen:
         return defaultTargetPlatform == TargetPlatform.iOS
