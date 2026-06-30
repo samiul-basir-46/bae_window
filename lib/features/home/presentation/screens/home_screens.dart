@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
+import 'package:bea_window_app/helpers/all_routes.dart';
 import 'package:bea_window_app/navigation_screen.dart';
 import '../bloc/home_bloc.dart';
 import '../bloc/home_event.dart';
@@ -262,127 +263,131 @@ class HomeScreenView extends StatelessWidget {
   }
 
   Widget _buildInvitePartnerCard(BuildContext context, String? inviteCode) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24.r),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-        child: Container(
-          padding: EdgeInsets.all(24.w),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                AppColors.primaryPink.withValues(alpha: 0.06),
-                AppColors.primaryPurple.withValues(alpha: 0.06),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(24.r),
-            border: Border.all(
-              color: AppColors.primaryPink.withValues(alpha: 0.12),
-              width: 1.w,
-            ),
-          ),
-          child: Column(
-            children: [
-              Container(
-                padding: EdgeInsets.all(16.w),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.primaryPink.withValues(alpha: 0.1),
-                      AppColors.primaryPurple.withValues(alpha: 0.1),
-                    ],
-                  ),
+    return GestureDetector(
+        onTap: () {
+          Navigator.pushNamed(context, Routes.pairingScreen);
+        },
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24.r),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+            child: Container(
+              padding: EdgeInsets.all(24.w),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.primaryPink.withValues(alpha: 0.06),
+                    AppColors.primaryPurple.withValues(alpha: 0.06),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                child: Icon(
-                  Icons.favorite_rounded,
-                  color: AppColors.primaryPink,
-                  size: 32.sp,
+                borderRadius: BorderRadius.circular(24.r),
+                border: Border.all(
+                  color: AppColors.primaryPink.withValues(alpha: 0.12),
+                  width: 1.w,
                 ),
               ),
-              UIHelper.verticalSpace(16.h),
-              Text(
-                "Connect with your Partner",
-                style: GoogleFonts.dmSans(
-                  color: Colors.white,
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              UIHelper.verticalSpace(6.h),
-              Text(
-                "Share your invite code or enter your partner's code from Settings → Account & Pairing",
-                textAlign: TextAlign.center,
-                style: GoogleFonts.dmSans(
-                  color: Colors.white.withValues(alpha: 0.4),
-                  fontSize: 12.sp,
-                  height: 1.5,
-                ),
-              ),
-              if (inviteCode != null && inviteCode.isNotEmpty) ...[
-                UIHelper.verticalSpace(20.h),
-                Container(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.03),
-                    borderRadius: BorderRadius.circular(16.r),
-                    border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.08)),
-                  ),
-                  child: Text(
-                    inviteCode,
-                    style: GoogleFonts.dmSans(
+              child: Column(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(16.w),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.primaryPink.withValues(alpha: 0.1),
+                          AppColors.primaryPurple.withValues(alpha: 0.1),
+                        ],
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.favorite_rounded,
                       color: AppColors.primaryPink,
-                      fontSize: 24.sp,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 4,
+                      size: 32.sp,
                     ),
                   ),
-                ),
-                UIHelper.verticalSpace(12.h),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _buildSmallAction(
-                      icon: Icons.copy_rounded,
-                      label: "Copy",
-                      onTap: () {
-                        Clipboard.setData(ClipboardData(text: inviteCode));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text("Code copied!"),
-                            backgroundColor: AppColors.primaryPink,
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12.r)),
-                          ),
-                        );
-                      },
+                  UIHelper.verticalSpace(16.h),
+                  Text(
+                    "Connect with your Partner",
+                    style: GoogleFonts.dmSans(
+                      color: Colors.white,
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.bold,
                     ),
-                    SizedBox(width: 20.w),
-                    _buildSmallAction(
-                      icon: Icons.share_rounded,
-                      label: "Share",
-                      onTap: () {
-                        SharePlus.instance.share(
-                          ShareParams(
-                            text:
-                                "Hey! Pair with me on Bae Window: $inviteCode ✦",
-                          ),
-                        );
-                      },
+                  ),
+                  UIHelper.verticalSpace(6.h),
+                  Text(
+                    "Share your invite code or enter your partner's code from Settings → Account & Pairing",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.dmSans(
+                      color: Colors.white.withValues(alpha: 0.4),
+                      fontSize: 12.sp,
+                      height: 1.5,
+                    ),
+                  ),
+                  if (inviteCode != null && inviteCode.isNotEmpty) ...[
+                    UIHelper.verticalSpace(20.h),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 20.w, vertical: 10.h),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.03),
+                        borderRadius: BorderRadius.circular(16.r),
+                        border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.08)),
+                      ),
+                      child: Text(
+                        inviteCode,
+                        style: GoogleFonts.dmSans(
+                          color: AppColors.primaryPink,
+                          fontSize: 24.sp,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 4,
+                        ),
+                      ),
+                    ),
+                    UIHelper.verticalSpace(12.h),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildSmallAction(
+                          icon: Icons.copy_rounded,
+                          label: "Copy",
+                          onTap: () {
+                            Clipboard.setData(ClipboardData(text: inviteCode));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text("Code copied!"),
+                                backgroundColor: AppColors.primaryPink,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12.r)),
+                              ),
+                            );
+                          },
+                        ),
+                        SizedBox(width: 20.w),
+                        _buildSmallAction(
+                          icon: Icons.share_rounded,
+                          label: "Share",
+                          onTap: () {
+                            SharePlus.instance.share(
+                              ShareParams(
+                                text:
+                                    "Hey! Pair with me on Bae Window: $inviteCode ✦",
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                     ),
                   ],
-                ),
-              ],
-            ],
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
-    );
+        ));
   }
 
   Widget _buildSmallAction({

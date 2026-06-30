@@ -11,12 +11,18 @@ class ConnectionCard extends StatefulWidget {
   final String partnerName;
   final bool isLeftAvatarOnTop;
   final VoidCallback onTap;
+  final bool isPaired;
+  final String userAvatarUrl;
+  final String partnerAvatarUrl;
 
   const ConnectionCard({
     super.key,
     required this.partnerName,
     required this.isLeftAvatarOnTop,
     required this.onTap,
+    required this.isPaired,
+    required this.userAvatarUrl,
+    required this.partnerAvatarUrl,
   });
 
   @override
@@ -94,6 +100,7 @@ class _ConnectionCardState extends State<ConnectionCard>
   }
 
   void _triggerCircleSwap() {
+    if (!widget.isPaired) return;
     if (_controller.isAnimating) return;
     context.read<NestBloc>().add(const SwapConnectionAvatarsEvent());
   }
@@ -143,7 +150,7 @@ class _ConnectionCardState extends State<ConnectionCard>
                       }
                     }
 
-                    // Circle A (Left, Blue/Purple)
+                    // Circle A (Left, User Avatar)
                     final Widget leftCircle = Positioned(
                       left: 0.w - sep,
                       child: Transform.scale(
@@ -153,11 +160,6 @@ class _ConnectionCardState extends State<ConnectionCard>
                           height: 48.h,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF6A82FF), Color(0xFF9868FF)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
                             border: Border.all(
                                 color: AppColors.softBlack, width: 2.w),
                             boxShadow: _isLeftOnTop
@@ -171,11 +173,29 @@ class _ConnectionCardState extends State<ConnectionCard>
                                   ]
                                 : null,
                           ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(24.r),
+                            child: widget.userAvatarUrl.isNotEmpty
+                                ? Image.network(
+                                    widget.userAvatarUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, e, s) => Container(
+                                      color: const Color(0xFF9868FF),
+                                      child: Icon(Icons.person_rounded,
+                                          color: Colors.white, size: 20.sp),
+                                    ),
+                                  )
+                                : Container(
+                                    color: const Color(0xFF9868FF),
+                                    child: Icon(Icons.person_rounded,
+                                        color: Colors.white, size: 20.sp),
+                                  ),
+                          ),
                         ),
                       ),
                     );
 
-                    // Circle B (Right, Pink/Blue)
+                    // Circle B (Right, Partner Avatar / Invite Placeholder)
                     final Widget rightCircle = Positioned(
                       left: 24.w + sep,
                       child: Transform.scale(
@@ -185,14 +205,9 @@ class _ConnectionCardState extends State<ConnectionCard>
                           height: 48.h,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFFF6E7F), Color(0xFFBFE9FF)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
                             border: Border.all(
                                 color: AppColors.softBlack, width: 2.w),
-                            boxShadow: !_isLeftOnTop
+                            boxShadow: !_isLeftOnTop && widget.isPaired
                                 ? [
                                     BoxShadow(
                                       color: const Color(0xFFFF6E7F)
@@ -202,6 +217,30 @@ class _ConnectionCardState extends State<ConnectionCard>
                                     )
                                   ]
                                 : null,
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(24.r),
+                            child: widget.isPaired
+                                ? (widget.partnerAvatarUrl.isNotEmpty
+                                    ? Image.network(
+                                        widget.partnerAvatarUrl,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, e, s) => Container(
+                                          color: const Color(0xFFFF6E7F),
+                                          child: Icon(Icons.favorite_rounded,
+                                              color: Colors.white, size: 18.sp),
+                                        ),
+                                      )
+                                    : Container(
+                                        color: const Color(0xFFFF6E7F),
+                                        child: Icon(Icons.favorite_rounded,
+                                            color: Colors.white, size: 18.sp),
+                                      ))
+                                : Container(
+                                    color: Colors.white.withValues(alpha: 0.05),
+                                    child: Icon(Icons.add_rounded,
+                                        color: AppColors.primaryPink, size: 20.sp),
+                                  ),
                           ),
                         ),
                       ),
@@ -223,7 +262,7 @@ class _ConnectionCardState extends State<ConnectionCard>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "You & ${widget.partnerName}",
+                    widget.isPaired ? "You & ${widget.partnerName}" : "Solo Mode",
                     style: GoogleFonts.dmSans(
                       color: Colors.white,
                       fontSize: 15.sp,
@@ -232,7 +271,9 @@ class _ConnectionCardState extends State<ConnectionCard>
                   ),
                   UIHelper.verticalSpace(4.h),
                   Text(
-                    "Tap circles to swap, tap card for profile",
+                    widget.isPaired
+                        ? "Tap circles to swap, tap card for profile"
+                        : "Connect with partner to share your space",
                     style: GoogleFonts.dmSans(
                       color: Colors.white38,
                       fontSize: 11.sp,

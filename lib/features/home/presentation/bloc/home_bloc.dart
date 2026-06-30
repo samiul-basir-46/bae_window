@@ -6,6 +6,7 @@ import 'package:bea_window_app/features/auth/services/firebase_auth_service.dart
 import 'package:intl/intl.dart';
 import 'home_event.dart';
 import 'home_state.dart';
+import 'package:bea_window_app/helpers/widget_helper.dart';
 
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
   final FirebaseAuthService _authService = FirebaseAuthService();
@@ -211,8 +212,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       partnerMoodEmoji = partnerMood?['emoji'] as String?;
       partnerMoodText = partnerMood?['text'] as String?;
 
-      // Calculate days together from relationshipStartDate
-      daysTogether = _calculateDaysTogether(userData);
+      // Calculate days together from relationshipStartDate (checks both own and partner's profile)
+      daysTogether = _calculateDaysTogether(userData) ?? _calculateDaysTogether(partnerData);
     }
 
     emit(HomeLoaded(
@@ -256,6 +257,14 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
             )
           : null,
     ));
+
+    // Update Home Screen Widget in background
+    WidgetHelper.updateWidget(
+      isPaired: _isPaired,
+      partnerName: partnerName,
+      daysTogether: daysTogether,
+      latestSnapUrl: '', // Will connect to actual snap image URL field once available
+    );
   }
 
   int? _calculateDaysTogether(Map<String, dynamic> userData) {

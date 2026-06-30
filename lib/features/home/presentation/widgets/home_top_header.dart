@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:bea_window_app/features/auth/services/firebase_auth_service.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
+import 'package:bea_window_app/helpers/all_routes.dart';
 
 class HomeTopHeader extends StatelessWidget {
   final String userAvatarUrl;
@@ -21,6 +25,35 @@ class HomeTopHeader extends StatelessWidget {
     this.isPartnerOnline,
     this.daysTogether,
   });
+
+  Future<void> _selectRelationshipDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.primaryPink,
+              onPrimary: Colors.white,
+              surface: AppColors.navBgColor,
+              onSurface: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      final formattedDate = DateFormat('MMM d, yyyy').format(picked);
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid != null) {
+        await FirebaseAuthService().updateUserProfile(uid, relationshipStartDate: formattedDate);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,21 +82,37 @@ class HomeTopHeader extends StatelessWidget {
                 isOnline: isPartnerOnline ?? false,
               )
             else
-              _buildInviteAvatar(),
+              GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(context, Routes.pairingScreen);
+                },
+                child: _buildInviteAvatar(),
+              ),
           ],
         ),
         UIHelper.verticalSpace(12.h),
-        Opacity(
-          opacity: 0.6,
-          child: Text(
-            isPaired && daysTogether != null
-                ? "$daysTogether Days Together ❤️"
-                : "Solo Mode ✦ Invite your partner",
-            style: GoogleFonts.dmSans(
-              fontSize: 13.sp,
-              fontWeight: FontWeight.w500,
-              color: Colors.white,
-              letterSpacing: 0.5,
+        GestureDetector(
+          onTap: () {
+            if (!isPaired) {
+              Navigator.pushNamed(context, Routes.pairingScreen);
+            } else if (daysTogether == null) {
+              _selectRelationshipDate(context);
+            }
+          },
+          child: Opacity(
+            opacity: 0.6,
+            child: Text(
+              isPaired
+                  ? (daysTogether != null
+                      ? "$daysTogether Days Together ❤️"
+                      : "Set Anniversary Date 📅")
+                  : "Solo Mode ✦ Invite your partner",
+              style: GoogleFonts.dmSans(
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+                letterSpacing: 0.5,
+              ),
             ),
           ),
         ),

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingHorizontal="16dp"
+    android:paddingVertical="12dp">
+
+    <!-- Left Side: Status Info -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.2"
+        android:orientation="vertical"
+        android:layout_marginRight="8dp">
+
+        <TextView
+            android:id="@+id/dock_partner_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Bae's Phone"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/dock_subtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="Waiting for action..."
+            android:textColor="#60FFFFFF"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <!-- Divider line -->
+    <View
+        android:layout_width="1dp"
+        android:layout_height="32dp"
+        android:background="#15FFFFFF"
+        android:layout_marginRight="12dp" />
+
+    <!-- Right Side: 4 Action Buttons -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <!-- Button 1: Camera -->
+        <ImageButton
+            android:id="@+id/btn_camera"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/dock_button_background"
+            android:src="@android:drawable/ic_menu_camera"
+            android:padding="8dp"
+            android:scaleType="fitCenter"
+            android:layout_marginRight="6dp" />
+
+        <!-- Button 2: Draw -->
+        <ImageButton
+            android:id="@+id/btn_draw"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/dock_button_background"
+            android:src="@android:drawable/ic_menu_edit"
+            android:padding="8dp"
+            android:scaleType="fitCenter"
+            android:layout_marginRight="6dp" />
+
+        <!-- Button 3: Pulse -->
+        <ImageButton
+            android:id="@+id/btn_pulse"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/dock_button_background"
+            android:src="@android:drawable/ic_popup_sync"
+            android:padding="8dp"
+            android:scaleType="fitCenter"
+            android:layout_marginRight="6dp" />
+
+        <!-- Button 4: Voice -->
+        <ImageButton
+            android:id="@+id/btn_voice"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/dock_button_background"
+            android:src="@android:drawable/ic_btn_speak_now"
+            android:padding="8dp"
+            android:scaleType="fitCenter" />
+    </LinearLayout>
+</LinearLayout>

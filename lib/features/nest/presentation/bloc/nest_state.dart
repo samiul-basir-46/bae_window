@@ -19,6 +19,9 @@ class NestLoaded extends NestState {
   final String selectedTheme;
   final String partnerName;
   final bool isLeftAvatarOnTop;
+  final bool isPaired;
+  final String userAvatarUrl;
+  final String partnerAvatarUrl;
 
   const NestLoaded({
     required this.isVaultLocked,
@@ -26,6 +29,9 @@ class NestLoaded extends NestState {
     required this.selectedTheme,
     required this.partnerName,
     required this.isLeftAvatarOnTop,
+    required this.isPaired,
+    required this.userAvatarUrl,
+    required this.partnerAvatarUrl,
   });
 
   NestLoaded copyWith({
@@ -34,6 +40,9 @@ class NestLoaded extends NestState {
     String? selectedTheme,
     String? partnerName,
     bool? isLeftAvatarOnTop,
+    bool? isPaired,
+    String? userAvatarUrl,
+    String? partnerAvatarUrl,
   }) {
     return NestLoaded(
       isVaultLocked: isVaultLocked ?? this.isVaultLocked,
@@ -41,6 +50,9 @@ class NestLoaded extends NestState {
       selectedTheme: selectedTheme ?? this.selectedTheme,
       partnerName: partnerName ?? this.partnerName,
       isLeftAvatarOnTop: isLeftAvatarOnTop ?? this.isLeftAvatarOnTop,
+      isPaired: isPaired ?? this.isPaired,
+      userAvatarUrl: userAvatarUrl ?? this.userAvatarUrl,
+      partnerAvatarUrl: partnerAvatarUrl ?? this.partnerAvatarUrl,
     );
   }
 }
