@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
+import '../../../../gen/assets.gen.dart';
 import '../bloc/auth_bloc.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -152,14 +153,14 @@ class _SignUpScreenState extends State<SignUpScreen>
                           SizedBox(height: 16.h),
                           _buildTerms(),
                           SizedBox(height: 16.h),
-                            _buildBottomLink(
-                              prefix: 'Already have an account? ',
-                              action: 'Sign In →',
-                              onTap: () => Navigator.pushReplacementNamed(
-                                context,
-                                Routes.loginScreen,
-                              ),
+                          _buildBottomLink(
+                            prefix: 'Already have an account? ',
+                            action: 'Sign In →',
+                            onTap: () => Navigator.pushReplacementNamed(
+                              context,
+                              Routes.loginScreen,
                             ),
+                          ),
                           SizedBox(height: 28.h),
                         ],
                       ),
@@ -174,7 +175,6 @@ class _SignUpScreenState extends State<SignUpScreen>
     );
   }
 
-  // ─── Blobs ────────────────────────────────────────────────────────────────
   Widget _buildBlobs() {
     return Stack(children: [
       Positioned(
@@ -213,7 +213,6 @@ class _SignUpScreenState extends State<SignUpScreen>
     ]);
   }
 
-  // ─── Logo ─────────────────────────────────────────────────────────────────
   Widget _buildLogoMark() {
     return Container(
       width: 52.w,
@@ -239,7 +238,6 @@ class _SignUpScreenState extends State<SignUpScreen>
     );
   }
 
-  // ─── Typography ───────────────────────────────────────────────────────────
   Widget _buildEyebrow(String text) {
     return Text(
       text.toUpperCase(),
@@ -277,7 +275,6 @@ class _SignUpScreenState extends State<SignUpScreen>
     );
   }
 
-  // ─── Fields ───────────────────────────────────────────────────────────────
   Widget _buildTextField({
     required TextEditingController controller,
     required String hint,
@@ -382,7 +379,6 @@ class _SignUpScreenState extends State<SignUpScreen>
     );
   }
 
-  // ─── Buttons ──────────────────────────────────────────────────────────────
   Widget _buildPrimaryButton({
     required String label,
     required bool isLoading,
@@ -456,13 +452,13 @@ class _SignUpScreenState extends State<SignUpScreen>
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(
-              width: 18.w,
-              height: 18.w,
-              child: CustomPaint(painter: _GoogleLogoPainter()),
+            Image.asset(
+              Assets.icons.google.path,
+              height: 24.h,
+              width: 24.w,
             ),
             SizedBox(width: 10.w),
-            Text('Sign up with Google',
+            Text('Continue with Google',
                 style: GoogleFonts.dmSans(
                     color: const Color(0xFF9090A8),
                     fontSize: 13.sp,
@@ -550,26 +546,4 @@ class _SignUpScreenState extends State<SignUpScreen>
       ),
     );
   }
-}
-
-// ─── Google Logo Painter ──────────────────────────────────────────────────────
-class _GoogleLogoPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final s = size.width;
-    final paint = Paint()..style = PaintingStyle.fill;
-    paint.color = const Color(0xFF4285F4);
-    canvas.drawArc(Rect.fromLTWH(0, 0, s, s), -1.4, 2.2, true, paint);
-    paint.color = const Color(0xFF34A853);
-    canvas.drawArc(Rect.fromLTWH(0, 0, s, s), 0.8, 1.2, true, paint);
-    paint.color = const Color(0xFFFBBC05);
-    canvas.drawArc(Rect.fromLTWH(0, 0, s, s), 2.0, 1.1, true, paint);
-    paint.color = const Color(0xFFEA4335);
-    canvas.drawArc(Rect.fromLTWH(0, 0, s, s), 3.1, 1.0, true, paint);
-    paint.color = const Color(0xFF0D0D10);
-    canvas.drawCircle(Offset(s / 2, s / 2), s * 0.3, paint);
-  }
-
-  @override
-  bool shouldRepaint(_) => false;
 }

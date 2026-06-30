@@ -1,5 +1,5 @@
 import 'package:bea_window_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
-import 'package:bea_window_app/navigation_screen.dart';
+import 'package:bea_window_app/loading_screen.dart';
 import 'package:bea_window_app/features/story/presentation/bloc/story_bloc.dart';
 import 'package:bea_window_app/features/story/presentation/bloc/story_event.dart';
 import 'package:flutter/material.dart';
@@ -95,7 +95,7 @@ class UtillScreenMobile extends StatelessWidget {
                 },
                 navigatorKey: NavigationService.navigatorKey,
                 onGenerateRoute: RouteGenerator.generateRoute,
-                home: const NavigationScreen()),
+                home: const Loading()),
           ),
         );
       },
