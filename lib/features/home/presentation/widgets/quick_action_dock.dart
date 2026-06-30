@@ -1,6 +1,7 @@
 import 'dart:async';
-import 'dart:ui';
-import 'package:flutter/material.dart';
+import 'dart:io';
+import 'dart:ui' as ui;
+import 'package:flutter/material.dart' hide Image;
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,6 +11,8 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
+import 'package:bea_window_app/features/auth/services/cloudinary_service.dart';
+import 'package:bea_window_app/features/auth/services/firebase_auth_service.dart';
 
 class QuickActionDock extends StatelessWidget {
   const QuickActionDock({super.key});
@@ -17,18 +20,46 @@ class QuickActionDock extends StatelessWidget {
   Future<void> _handleCamera(BuildContext context) async {
     final picker = ImagePicker();
     try {
-      final XFile? image = await picker.pickImage(source: ImageSource.camera);
+      final XFile? image =
+          await picker.pickImage(source: ImageSource.camera, imageQuality: 80);
       if (!context.mounted) return;
       if (image != null) {
+        // Show loading indicator
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Snapped: ${image.name}"),
-            backgroundColor: AppColors.primaryPink,
+          const SnackBar(
+            content: Row(
+              children: [
+                CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation(Colors.white)),
+                SizedBox(width: 16),
+                Text("Uploading snap to Bae..."),
+              ],
+            ),
+            duration: Duration(seconds: 8),
           ),
         );
+
+        final File file = File(image.path);
+        final String? imageUrl = await CloudinaryService.uploadImage(file);
+
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).clearSnackBars();
+
+        if (imageUrl != null) {
+          FirebaseAuthService()
+              .updateLatestSnap(snapUrl: imageUrl, snapType: 'Image');
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Failed to upload image. Please try again."),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (!context.mounted) return;
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Camera error: $e"),
@@ -62,16 +93,16 @@ class QuickActionDock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(24.r),
+      borderRadius: BorderRadius.circular(20.r),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+        filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: Container(
-          padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 16.w),
+          padding: EdgeInsets.symmetric(vertical: 6.h, horizontal: 8.w),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.04),
-            borderRadius: BorderRadius.circular(24.r),
+            color: Colors.black.withValues(alpha: 0.25),
+            borderRadius: BorderRadius.circular(20.r),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.08),
+              color: Colors.white.withValues(alpha: 0.1),
               width: 1.w,
             ),
           ),
@@ -113,40 +144,40 @@ class QuickActionDock extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+        padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 4.h),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 46.w,
-              height: 46.h,
+              width: 38.w,
+              height: 38.h,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
                   colors: [
-                    Colors.white.withValues(alpha: 0.08),
-                    Colors.white.withValues(alpha: 0.02),
+                    Colors.white.withValues(alpha: 0.12),
+                    Colors.white.withValues(alpha: 0.04),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.1),
+                  color: Colors.white.withValues(alpha: 0.15),
                   width: 1.w,
                 ),
               ),
               child: Icon(
                 icon,
-                color: Colors.white.withValues(alpha: 0.9),
-                size: 22.sp,
+                color: Colors.white.withValues(alpha: 0.95),
+                size: 18.sp,
               ),
             ),
-            UIHelper.verticalSpace(6.h),
+            UIHelper.verticalSpace(4.h),
             Text(
               label,
               style: GoogleFonts.dmSans(
                 color: Colors.white70,
-                fontSize: 11.sp,
+                fontSize: 9.5.sp,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -159,7 +190,7 @@ class QuickActionDock extends StatelessWidget {
 
 class DrawingPoint {
   final Offset? offset;
-  final Paint paint;
+  final ui.Paint paint;
 
   DrawingPoint({required this.offset, required this.paint});
 }
@@ -228,7 +259,8 @@ class _DrawingCanvasSheetState extends State<DrawingCanvasSheet> {
                 Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.undo_rounded, color: Colors.white70),
+                      icon:
+                          const Icon(Icons.undo_rounded, color: Colors.white70),
                       onPressed: () {
                         if (_points.isNotEmpty) {
                           setState(() {
@@ -236,7 +268,8 @@ class _DrawingCanvasSheetState extends State<DrawingCanvasSheet> {
                             if (_points.last.offset == null) {
                               _points.removeLast();
                             }
-                            while (_points.isNotEmpty && _points.last.offset != null) {
+                            while (_points.isNotEmpty &&
+                                _points.last.offset != null) {
                               _points.removeLast();
                             }
                           });
@@ -244,7 +277,8 @@ class _DrawingCanvasSheetState extends State<DrawingCanvasSheet> {
                       },
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete_sweep_rounded, color: Colors.redAccent),
+                      icon: const Icon(Icons.delete_sweep_rounded,
+                          color: Colors.redAccent),
                       onPressed: () {
                         setState(() {
                           _points.clear();
@@ -252,14 +286,88 @@ class _DrawingCanvasSheetState extends State<DrawingCanvasSheet> {
                       },
                     ),
                     TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
+                      onPressed: () async {
+                        if (_points.isEmpty) {
+                          Navigator.pop(context);
+                          return;
+                        }
+                        
+                        // Show uploading loader
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text("Drawing Saved!"),
-                            backgroundColor: AppColors.primaryPink,
+                            content: Row(
+                              children: [
+                                CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(Colors.white)),
+                                SizedBox(width: 16),
+                                Text("Uploading drawing to Bae..."),
+                              ],
+                            ),
                           ),
                         );
+
+                        Navigator.pop(context);
+
+                        try {
+                          // Generate image from points
+                          final recorder = ui.PictureRecorder();
+                          final canvas = ui.Canvas(recorder);
+                          final paintBg = ui.Paint()..color = const Color(0xFF1E1E24);
+                          
+                          // Canvas size
+                          const canvasWidth = 800.0;
+                          const canvasHeight = 800.0;
+                          canvas.drawRect(const Rect.fromLTWH(0, 0, canvasWidth, canvasHeight), paintBg);
+
+                          // We need to scale points to match our 800x800 canvas
+                          for (int i = 0; i < _points.length - 1; i++) {
+                            if (_points[i].offset != null && _points[i + 1].offset != null) {
+                              final p1 = _points[i].offset!;
+                              final p2 = _points[i + 1].offset!;
+                              
+                              // Create a new fresh paint instance to prevent engine crash
+                              final paintLine = ui.Paint()
+                                ..color = _points[i].paint.color
+                                ..strokeCap = ui.StrokeCap.round
+                                ..strokeWidth = _points[i].paint.strokeWidth;
+                                
+                              canvas.drawLine(p1, p2, paintLine);
+                            }
+                          }
+
+                          final picture = recorder.endRecording();
+                          final img = await picture.toImage(canvasWidth.toInt(), canvasHeight.toInt());
+                          final pngBytes = await img.toByteData(format: ui.ImageByteFormat.png);
+
+                          if (pngBytes != null) {
+                            final directory = await getTemporaryDirectory();
+                            final filePath = '${directory.path}/draw_${DateTime.now().millisecondsSinceEpoch}.png';
+                            final file = File(filePath);
+                            await file.writeAsBytes(pngBytes.buffer.asUint8List());
+
+                            final String? imageUrl = await CloudinaryService.uploadImage(file);
+                            
+                            ScaffoldMessenger.of(context).clearSnackBars();
+
+                            if (imageUrl != null) {
+                              FirebaseAuthService().updateLatestSnap(snapUrl: imageUrl, snapType: 'Draw');
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Failed to send drawing. Please try again."),
+                                  backgroundColor: Colors.redAccent,
+                                ),
+                              );
+                            }
+                          }
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).clearSnackBars();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text("Drawing error: $e"),
+                              backgroundColor: Colors.redAccent,
+                            ),
+                          );
+                        }
                       },
                       child: Text(
                         "Save",
@@ -292,9 +400,9 @@ class _DrawingCanvasSheetState extends State<DrawingCanvasSheet> {
                 child: GestureDetector(
                   onPanStart: (details) {
                     setState(() {
-                      final paint = Paint()
+                      final paint = ui.Paint()
                         ..color = _selectedColor
-                        ..strokeCap = StrokeCap.round
+                        ..strokeCap = ui.StrokeCap.round
                         ..strokeWidth = _strokeWidth;
                       _points.add(DrawingPoint(
                         offset: details.localPosition,
@@ -304,9 +412,9 @@ class _DrawingCanvasSheetState extends State<DrawingCanvasSheet> {
                   },
                   onPanUpdate: (details) {
                     setState(() {
-                      final paint = Paint()
+                      final paint = ui.Paint()
                         ..color = _selectedColor
-                        ..strokeCap = StrokeCap.round
+                        ..strokeCap = ui.StrokeCap.round
                         ..strokeWidth = _strokeWidth;
                       _points.add(DrawingPoint(
                         offset: details.localPosition,
@@ -318,7 +426,7 @@ class _DrawingCanvasSheetState extends State<DrawingCanvasSheet> {
                     setState(() {
                       _points.add(DrawingPoint(
                         offset: null,
-                        paint: Paint(),
+                        paint: ui.Paint(),
                       ));
                     });
                   },
@@ -349,7 +457,8 @@ class _DrawingCanvasSheetState extends State<DrawingCanvasSheet> {
                   children: [
                     Text(
                       "Brush Size",
-                      style: GoogleFonts.dmSans(color: Colors.white70, fontSize: 13.sp),
+                      style: GoogleFonts.dmSans(
+                          color: Colors.white70, fontSize: 13.sp),
                     ),
                     Expanded(
                       child: Slider(
@@ -386,7 +495,8 @@ class _DrawingCanvasSheetState extends State<DrawingCanvasSheet> {
                           color: color,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: isSelected ? Colors.white : Colors.transparent,
+                            color:
+                                isSelected ? Colors.white : Colors.transparent,
                             width: 2.w,
                           ),
                           boxShadow: isSelected
@@ -419,7 +529,7 @@ class CanvasPainter extends CustomPainter {
   CanvasPainter({required this.points});
 
   @override
-  void paint(Canvas canvas, Size size) {
+  void paint(ui.Canvas canvas, Size size) {
     for (int i = 0; i < points.length - 1; i++) {
       if (points[i].offset != null && points[i + 1].offset != null) {
         canvas.drawLine(
@@ -471,7 +581,8 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet> {
     try {
       if (await _audioRecorder.hasPermission()) {
         final directory = await getTemporaryDirectory();
-        final path = '${directory.path}/voice_temp_${DateTime.now().millisecondsSinceEpoch}.m4a';
+        final path =
+            '${directory.path}/voice_temp_${DateTime.now().millisecondsSinceEpoch}.m4a';
 
         await _audioRecorder.start(
           const RecordConfig(encoder: AudioEncoder.aacLc),
@@ -594,7 +705,8 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet> {
                   child: CircularProgressIndicator(
                     value: _recordingProgress,
                     strokeWidth: 4.w,
-                    valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primaryPink),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                        AppColors.primaryPink),
                     backgroundColor: Colors.white12,
                   ),
                 ),
@@ -607,7 +719,8 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet> {
                       color: Colors.redAccent,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.stop_rounded, color: Colors.white, size: 28.sp),
+                    child: Icon(Icons.stop_rounded,
+                        color: Colors.white, size: 28.sp),
                   ),
                 ),
               ],
@@ -623,7 +736,10 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet> {
                     height: 70.h,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [AppColors.primaryPink, AppColors.primaryPurple],
+                        colors: [
+                          AppColors.primaryPink,
+                          AppColors.primaryPurple
+                        ],
                       ),
                       shape: BoxShape.circle,
                       boxShadow: [
@@ -634,7 +750,8 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet> {
                         ),
                       ],
                     ),
-                    child: Icon(Icons.fiber_manual_record_rounded, color: Colors.white, size: 32.sp),
+                    child: Icon(Icons.fiber_manual_record_rounded,
+                        color: Colors.white, size: 32.sp),
                   ),
                 ),
                 if (_filePath != null) ...[
@@ -653,7 +770,9 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet> {
                         ),
                       ),
                       child: Icon(
-                        _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                        _isPlaying
+                            ? Icons.pause_rounded
+                            : Icons.play_arrow_rounded,
                         color: Colors.white,
                         size: 26.sp,
                       ),

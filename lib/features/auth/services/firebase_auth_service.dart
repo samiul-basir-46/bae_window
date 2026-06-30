@@ -277,4 +277,16 @@ class FirebaseAuthService {
       'mood': {'emoji': emoji, 'text': text},
     }, SetOptions(merge: true));
   }
+
+  /// Update current user's latest snap in Firestore
+  void updateLatestSnap({required String snapUrl, String? snapType}) {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    _firestore.collection('users').doc(user.uid).set({
+      'latestSnapUrl': snapUrl,
+      'latestSnapType': snapType ?? 'Image',
+      'lastSnapTime': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
 }

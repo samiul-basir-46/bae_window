@@ -130,18 +130,15 @@ class HomeScreenView extends StatelessWidget {
 
                         // Paired-only widgets
                         if (state.isPaired) ...[
-                          if (state.livePeekImageUrl.isNotEmpty) ...[
-                            UIHelper.verticalSpace(20.h),
-                            LivePeekCard(
-                              imageUrl: state.livePeekImageUrl,
-                              onTap: () {
-                                const SwitchTabNotification(1)
-                                    .dispatch(context);
-                              },
-                            ),
-                          ],
+                          UIHelper.verticalSpace(20.h),
+                          LivePeekCard(
+                            imageUrl: state.livePeekImageUrl,
+                            onTap: () {
+                              const SwitchTabNotification(1)
+                                  .dispatch(context);
+                            },
+                          ),
                           UIHelper.verticalSpace(24.h),
-                          const QuickActionDock(),
                           if (state.relationshipPulse.isNotEmpty) ...[
                             UIHelper.verticalSpace(24.h),
                             RelationshipPulseCard(

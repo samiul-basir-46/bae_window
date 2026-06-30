@@ -149,6 +149,8 @@ class _SplashScreenState extends State<SplashScreen>
         listener: (context, state) {
           if (state is UnauthenticatedState) {
             Navigator.pushReplacementNamed(context, Routes.loginScreen);
+          } else if (state is AuthenticatedState) {
+            Navigator.pushReplacementNamed(context, Routes.navigationScreen);
           }
         },
         child: Scaffold(

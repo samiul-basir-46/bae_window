@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Bae Window</string>
+    <string name="widget_description">Bae Window – See your partner\'s latest snap on your home screen</string>
+    <string name="widget_dock_description">Bae Window Quick Actions – Send snaps, drawings, pulse and voice notes</string>
+</resources>

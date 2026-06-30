@@ -15,4 +15,8 @@
     <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
         <item name="android:windowBackground">?android:colorBackground</item>
     </style>
+    <!-- Base widget style for older Android versions -->
+    <style name="Widget.BaeWindow.AppWidgetContainer" parent="android:Theme">
+        <item name="android:background">@drawable/widget_background</item>
+    </style>
 </resources>

@@ -70,7 +70,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       }
 
       // Emit initial loaded state
-      _emitLoadedState(emit);
+      await _emitLoadedState(emit);
 
       // Start real-time listeners
       _startUserListener(user.uid);
@@ -112,10 +112,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     );
   }
 
-  void _onUserDataUpdated(
+  Future<void> _onUserDataUpdated(
     UserDataUpdated event,
     Emitter<HomeState> emit,
-  ) {
+  ) async {
     _cachedUserData = event.data;
 
     // Check if pairing status changed (e.g. partner just joined)
@@ -131,7 +131,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       _resolveAndListenPartner(newPairId);
     }
 
-    _emitLoadedState(emit);
+    await _emitLoadedState(emit);
   }
 
   Future<void> _resolveAndListenPartner(String pairId) async {
@@ -142,12 +142,12 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     }
   }
 
-  void _onPartnerDataUpdated(
+  Future<void> _onPartnerDataUpdated(
     PartnerDataUpdated event,
     Emitter<HomeState> emit,
-  ) {
+  ) async {
     _cachedPartnerData = event.data;
-    _emitLoadedState(emit);
+    await _emitLoadedState(emit);
   }
 
   void _onUpdateUserMood(
@@ -178,16 +178,14 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     }
   }
 
-  void _emitLoadedState(Emitter<HomeState> emit) {
+  Future<void> _emitLoadedState(Emitter<HomeState> emit) async {
     final userData = _cachedUserData;
     if (userData == null) return;
 
-    // Extract user mood
     final moodData = userData['mood'] as Map<String, dynamic>?;
     final userMoodEmoji = moodData?['emoji'] as String? ?? '😊';
     final userMoodText = moodData?['text'] as String? ?? 'Happy';
 
-    // Extract user info
     final userAvatar = userData['profilePicture'] as String? ?? '';
     final userName = userData['nickname'] as String? ??
         userData['name'] as String? ??
@@ -200,6 +198,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     String? partnerMoodEmoji;
     String? partnerMoodText;
     int? daysTogether;
+    String latestSnapUrl = '';
+    String? latestSnapType;
 
     if (_isPaired && _cachedPartnerData != null) {
       final partnerData = _cachedPartnerData!;
@@ -211,6 +211,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       final partnerMood = partnerData['mood'] as Map<String, dynamic>?;
       partnerMoodEmoji = partnerMood?['emoji'] as String?;
       partnerMoodText = partnerMood?['text'] as String?;
+
+      // Read snap details sent by partner
+      latestSnapUrl = partnerData['latestSnapUrl'] as String? ?? '';
+      latestSnapType = partnerData['latestSnapType'] as String?;
 
       // Calculate days together from relationshipStartDate (checks both own and partner's profile)
       daysTogether = _calculateDaysTogether(userData) ?? _calculateDaysTogether(partnerData);
@@ -224,13 +228,12 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       userName: userName,
       partnerAvatarUrl: partnerAvatar,
       partnerName: partnerName,
-      isPartnerOnline: _isPaired, // placeholder — true when paired
+      isPartnerOnline: _isPaired,
       daysTogether: daysTogether,
       partnerMoodEmoji: partnerMoodEmoji,
       partnerMoodText: partnerMoodText,
       inviteCode: inviteCode,
-      // Keep placeholder data for widgets not yet integrated
-      livePeekImageUrl: '',
+      livePeekImageUrl: latestSnapUrl,
       relationshipPulse: _isPaired
           ? const [
               PulseData(day: "M", userCount: 4, partnerCount: 6),
@@ -259,12 +262,21 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     ));
 
     // Update Home Screen Widget in background
-    WidgetHelper.updateWidget(
-      isPaired: _isPaired,
-      partnerName: partnerName,
-      daysTogether: daysTogether,
-      latestSnapUrl: '', // Will connect to actual snap image URL field once available
-    );
+    try {
+      dev.log('HomeBloc: Calling WidgetHelper.updateWidget(isPaired=$_isPaired, partner=$partnerName, days=$daysTogether, snap=$latestSnapUrl)',
+          name: 'HomeBloc');
+      await WidgetHelper.updateWidget(
+        isPaired: _isPaired,
+        partnerName: partnerName,
+        daysTogether: daysTogether,
+        latestSnapUrl: latestSnapUrl,
+        latestSnapType: latestSnapType,
+      );
+      dev.log('HomeBloc: WidgetHelper.updateWidget completed successfully', name: 'HomeBloc');
+    } catch (e, stack) {
+      dev.log('HomeBloc: WidgetHelper.updateWidget FAILED: $e',
+          error: e, stackTrace: stack, name: 'HomeBloc');
+    }
   }
 
   int? _calculateDaysTogether(Map<String, dynamic> userData) {
@@ -272,7 +284,6 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     if (dateStr == null || dateStr.isEmpty) return null;
 
     try {
-      // Try parsing "MMM d, yyyy" format (e.g. "Jun 15, 2024")
       final date = DateFormat('MMM d, yyyy').parse(dateStr);
       return DateTime.now().difference(date).inDays;
     } catch (_) {
