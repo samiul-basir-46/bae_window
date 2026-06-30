@@ -38,3 +38,13 @@ class VerifyOtpFailure extends AuthState {
   VerifyOtpFailure(this.errorMessage);
 }
 
+class SignUpLoading extends AuthState {}
+
+class SignUpSuccess extends AuthState {}
+
+class SignUpFailure extends AuthState {
+  final String errorMessage;
+
+  SignUpFailure(this.errorMessage);
+}
+

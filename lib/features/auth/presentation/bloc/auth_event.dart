@@ -21,3 +21,14 @@ class VerifyOtpRequestedEvent extends AuthEvent {
   final String otp;
   const VerifyOtpRequestedEvent(this.otp);
 }
+
+class SignUpRequestedEvent extends AuthEvent {
+  final String name;
+  final String email;
+  final String password;
+  const SignUpRequestedEvent({
+    required this.name,
+    required this.email,
+    required this.password,
+  });
+}

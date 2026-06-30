@@ -22,6 +22,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
     with SingleTickerProviderStateMixin {
   final _emailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  String? _blocErrorMessage;
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
@@ -59,6 +60,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
   Widget build(BuildContext context) {
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
+        if (state is ForgotPasswordLoading) {
+          setState(() {
+            _blocErrorMessage = null;
+          });
+        }
         if (state is ForgotPasswordSuccess) {
           Navigator.pushNamed(
             context,
@@ -66,16 +72,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
             arguments: _emailController.text.trim(),
           );
         } else if (state is ForgotPasswordFailure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.errorMessage),
-              backgroundColor: const Color(0xFFB03085),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          );
+          setState(() {
+            _blocErrorMessage = state.errorMessage;
+          });
         }
       },
       builder: (context, state) {
@@ -123,6 +122,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                               keyboardType: TextInputType.emailAddress,
                               validator: emailValidator,
                             ),
+                            if (_blocErrorMessage != null) ...[
+                              UIHelper.verticalSpace(12.h),
+                              Text(
+                                _blocErrorMessage!,
+                                style: GoogleFonts.dmSans(
+                                  color: const Color(0xFFE060A0),
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
                             UIHelper.verticalSpace(24.h),
                             CustomAuthButton(
                               label: 'Send Reset Link',

@@ -18,7 +18,6 @@ class ErrorMessageHandler {
   }
 
   static String _getDioErrorMessage(DioException error) {
-    // Handle network-related errors first
     switch (error.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:

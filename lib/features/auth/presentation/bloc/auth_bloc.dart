@@ -9,6 +9,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AppleSignInRequestedEvent>(_onAppleSignInRequested);
     on<ForgotPasswordRequestedEvent>(_onForgotPasswordRequested);
     on<VerifyOtpRequestedEvent>(_onVerifyOtpRequested);
+    on<SignUpRequestedEvent>(_onSignUpRequested);
+  }
+
+  Future<void> _onSignUpRequested(
+    SignUpRequestedEvent event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(SignUpLoading());
+    try {
+      await Future.delayed(const Duration(seconds: 2));
+      emit(SignUpSuccess());
+    } catch (e) {
+      emit(SignUpFailure(e.toString()));
+    }
   }
 
   Future<void> _onVerifyOtpRequested(
