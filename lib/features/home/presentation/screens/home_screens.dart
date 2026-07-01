@@ -12,6 +12,8 @@ import 'package:bea_window_app/navigation_screen.dart';
 import '../bloc/home_bloc.dart';
 import '../bloc/home_event.dart';
 import '../bloc/home_state.dart';
+import '../bloc/home_action_bloc.dart';
+import '../bloc/home_action_state.dart';
 import '../widgets/home_top_header.dart';
 import '../widgets/mood_card.dart';
 import '../widgets/live_peek_card.dart';
@@ -26,8 +28,15 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<HomeBloc>(
-      create: (context) => HomeBloc()..add(const LoadHomeDataEvent()),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<HomeBloc>(
+          create: (context) => HomeBloc()..add(const LoadHomeDataEvent()),
+        ),
+        BlocProvider<HomeActionBloc>(
+          create: (context) => HomeActionBloc(),
+        ),
+      ],
       child: const HomeScreenView(),
     );
   }
@@ -38,9 +47,50 @@ class HomeScreenView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.softBlack,
-      body: Stack(
+    return BlocListener<HomeActionBloc, HomeActionState>(
+      listener: (context, state) {
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.clearSnackBars();
+
+        if (state is HomeActionLoading) {
+          messenger.showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(child: Text(state.message)),
+                ],
+              ),
+              duration: const Duration(seconds: 30),
+            ),
+          );
+        } else if (state is HomeActionSuccess) {
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: AppColors.primaryPink,
+            ),
+          );
+        } else if (state is HomeActionFailure) {
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.softBlack,
+        body: Stack(
         children: [
           Positioned(
             top: -100.h,
@@ -145,7 +195,9 @@ class HomeScreenView extends StatelessWidget {
                           if (state.relationshipPulse.isNotEmpty) ...[
                             UIHelper.verticalSpace(24.h),
                             RelationshipPulseCard(
-                                data: state.relationshipPulse),
+                              data: state.relationshipPulse,
+                              partnerName: state.partnerName ?? 'Bae',
+                            ),
                           ],
                           if (state.questionOfTheDay != null) ...[
                             UIHelper.verticalSpace(24.h),
@@ -187,6 +239,7 @@ class HomeScreenView extends StatelessWidget {
             ),
           ),
         ],
+        ),
       ),
     );
   }

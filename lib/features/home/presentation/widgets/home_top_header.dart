@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:bea_window_app/features/auth/services/firebase_auth_service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
+import '../bloc/home_action_bloc.dart';
+import '../bloc/home_action_event.dart';
 
 class HomeTopHeader extends StatelessWidget {
   final String userAvatarUrl;
@@ -48,10 +49,10 @@ class HomeTopHeader extends StatelessWidget {
     );
     if (picked != null) {
       final formattedDate = DateFormat('MMM d, yyyy').format(picked);
-      final uid = FirebaseAuth.instance.currentUser?.uid;
-      if (uid != null) {
-        await FirebaseAuthService().updateUserProfile(uid, relationshipStartDate: formattedDate);
-      }
+      if (!context.mounted) return;
+      context
+          .read<HomeActionBloc>()
+          .add(UpdateRelationshipDateRequested(formattedDate));
     }
   }
 

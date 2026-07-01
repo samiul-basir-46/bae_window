@@ -18,6 +18,9 @@ class WidgetHelper {
     String? latestDrawingUrl,
     String? latestVoiceUrl,
     String? avatarLetter,
+    String? partnerMoodEmoji,
+    String? partnerMoodText,
+    int? partnerBatteryLevel,
   }) async {
     final String status = isPaired
         ? (daysTogether != null
@@ -60,6 +63,18 @@ class WidgetHelper {
         'footerDescription', footerDescription);
     await HomeWidget.saveWidgetData<String>('timestamp', timestamp);
     await HomeWidget.saveWidgetData<String>('avatarLetter', avatar);
+    await HomeWidget.saveWidgetData<String>(
+      'partnerMoodEmoji',
+      partnerMoodEmoji ?? '',
+    );
+    await HomeWidget.saveWidgetData<String>(
+      'partnerMoodText',
+      partnerMoodText ?? '',
+    );
+    await HomeWidget.saveWidgetData<int>(
+      'partnerBatteryLevel',
+      partnerBatteryLevel ?? -1,
+    );
 
     if (latestSnapType != null && latestSnapType.isNotEmpty) {
       await HomeWidget.saveWidgetData<String>('badgeText', latestSnapType);

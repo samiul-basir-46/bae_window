@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:developer' as dev;
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:bea_window_app/features/auth/services/firebase_auth_service.dart';
 import 'package:intl/intl.dart';
 import 'home_event.dart';
@@ -9,20 +11,32 @@ import 'home_state.dart';
 import 'package:bea_window_app/helpers/widget_helper.dart';
 
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
+  static const MethodChannel _pulseChannel = MethodChannel('bea_window/pulse');
+  static const MethodChannel _deviceChannel =
+      MethodChannel('bea_window/device');
+
   final FirebaseAuthService _authService = FirebaseAuthService();
 
   StreamSubscription? _userSub;
   StreamSubscription? _partnerSub;
+  StreamSubscription? _coupleSub;
+  Timer? _batteryTimer;
 
   // Cache the latest data for merging user + partner updates
   Map<String, dynamic>? _cachedUserData;
   Map<String, dynamic>? _cachedPartnerData;
+  Map<String, dynamic>? _cachedCoupleData;
+  String? _currentUserUid;
   String? _partnerUid;
   String? _pairId;
   bool _isPaired = false;
   String _latestPartnerImageUrl = '';
   String _latestPartnerDrawingUrl = '';
   String _latestPartnerVoiceUrl = '';
+  bool _partnerPulseSeeded = false;
+  String? _lastPartnerPulseId;
+  int _partnerPulseTrackingStartedAtMs =
+      DateTime.now().toUtc().millisecondsSinceEpoch;
 
   HomeBloc() : super(const HomeInitial()) {
     on<LoadHomeDataEvent>(_onLoadHomeData);
@@ -30,6 +44,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<UpdateAwarenessEvent>(_onUpdateAwareness);
     on<UserDataUpdated>(_onUserDataUpdated);
     on<PartnerDataUpdated>(_onPartnerDataUpdated);
+    on<CoupleDataUpdated>(_onCoupleDataUpdated);
   }
 
   Future<void> _onLoadHomeData(
@@ -55,10 +70,12 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       }
 
       _cachedUserData = userData;
+      _currentUserUid = user.uid;
       final pairStatus = userData['pairStatus'] as String? ?? 'none';
       final pairId = userData['pairId'] as String?;
       _isPaired = pairStatus == 'paired' && pairId != null;
       _pairId = _isPaired ? pairId : null;
+      _cachedCoupleData = null;
       _clearPartnerContentCache();
 
       // If paired, get partner UID and start listening
@@ -67,6 +84,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
             'HomeBloc: User is paired (coupleId: $pairId). Resolving partner...',
             name: 'HomeBloc');
         _partnerUid = await _authService.getPartnerUid(pairId);
+        _cachedCoupleData = await _authService.getCoupleData(pairId);
         if (_partnerUid != null) {
           dev.log('HomeBloc: Partner UID resolved: $_partnerUid',
               name: 'HomeBloc');
@@ -86,6 +104,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       if (_partnerUid != null) {
         _startPartnerListener(_partnerUid!);
       }
+      if (_pairId != null) {
+        _startCoupleListener(_pairId!);
+      }
+      _startBatterySync();
     } catch (e, stack) {
       dev.log('HomeBloc: Error loading home data: $e',
           error: e, stackTrace: stack, name: 'HomeBloc');
@@ -121,6 +143,40 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     );
   }
 
+  void _startCoupleListener(String pairId) {
+    _coupleSub?.cancel();
+    _coupleSub = _authService.coupleStream(pairId).listen(
+      (snapshot) {
+        if (snapshot.exists && snapshot.data() != null) {
+          add(CoupleDataUpdated(snapshot.data()!));
+        }
+      },
+      onError: (e) {
+        dev.log('HomeBloc: Couple stream error: $e', name: 'HomeBloc');
+      },
+    );
+  }
+
+  void _startBatterySync() {
+    _batteryTimer?.cancel();
+    unawaited(_syncBatteryLevel());
+    _batteryTimer = Timer.periodic(
+      const Duration(minutes: 5),
+      (_) => unawaited(_syncBatteryLevel()),
+    );
+  }
+
+  Future<void> _syncBatteryLevel() async {
+    try {
+      final level = await _deviceChannel.invokeMethod<int>('getBatteryLevel');
+      if (level != null) {
+        await _authService.updateBatteryLevel(level);
+      }
+    } catch (e) {
+      dev.log('HomeBloc: Battery sync unavailable: $e', name: 'HomeBloc');
+    }
+  }
+
   Future<void> _onUserDataUpdated(
     UserDataUpdated event,
     Emitter<HomeState> emit,
@@ -143,8 +199,11 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       _pairId = null;
       _partnerUid = null;
       _cachedPartnerData = null;
+      _cachedCoupleData = null;
       await _partnerSub?.cancel();
       _partnerSub = null;
+      await _coupleSub?.cancel();
+      _coupleSub = null;
       _clearPartnerContentCache();
     } else {
       _isPaired = shouldBePaired;
@@ -154,6 +213,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   }
 
   Future<void> _resolveAndListenPartner(String pairId) async {
+    _cachedCoupleData = await _authService.getCoupleData(pairId);
+    _startCoupleListener(pairId);
     final resolvedPartnerUid = await _authService.getPartnerUid(pairId);
     if (resolvedPartnerUid != _partnerUid) {
       _clearPartnerContentCache();
@@ -177,12 +238,20 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     await _emitLoadedState(emit);
   }
 
+  Future<void> _onCoupleDataUpdated(
+    CoupleDataUpdated event,
+    Emitter<HomeState> emit,
+  ) async {
+    _cachedCoupleData = event.data;
+    await _emitLoadedState(emit);
+  }
+
   void _onUpdateUserMood(
     UpdateUserMoodEvent event,
     Emitter<HomeState> emit,
   ) {
     // Write mood to Firestore (fire-and-forget — partner sees via stream)
-    _authService.updateMood(emoji: event.emoji, text: event.text);
+    unawaited(_authService.updateMood(emoji: event.emoji, text: event.text));
 
     // Optimistic local update
     if (state is HomeLoaded) {
@@ -209,6 +278,46 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     _latestPartnerImageUrl = '';
     _latestPartnerDrawingUrl = '';
     _latestPartnerVoiceUrl = '';
+    _partnerPulseSeeded = false;
+    _lastPartnerPulseId = null;
+    _partnerPulseTrackingStartedAtMs =
+        DateTime.now().toUtc().millisecondsSinceEpoch;
+  }
+
+  void _handlePartnerPulse(Map<String, dynamic> partnerData) {
+    final pulseData = partnerData['latestPulse'];
+    final pulseId = pulseData is Map ? pulseData['id']?.toString() : null;
+    final sentAt = pulseData is Map ? pulseData['sentAt'] : null;
+    final sentAtMs = sentAt is Timestamp
+        ? sentAt.toDate().toUtc().millisecondsSinceEpoch
+        : pulseData is Map && pulseData['sentAtClientMs'] is num
+            ? (pulseData['sentAtClientMs'] as num).toInt()
+            : null;
+
+    if (!_partnerPulseSeeded) {
+      _partnerPulseSeeded = true;
+      _lastPartnerPulseId = pulseId;
+      final isFreshPulse = sentAtMs != null &&
+          sentAtMs >= _partnerPulseTrackingStartedAtMs - 5000;
+      if (pulseId != null && isFreshPulse) {
+        unawaited(_vibrateForPartnerPulse());
+      }
+      return;
+    }
+
+    if (pulseId == null || pulseId == _lastPartnerPulseId) return;
+    _lastPartnerPulseId = pulseId;
+    unawaited(_vibrateForPartnerPulse());
+  }
+
+  Future<void> _vibrateForPartnerPulse() async {
+    try {
+      await _pulseChannel.invokeMethod<void>('vibratePulse');
+    } catch (_) {
+      await HapticFeedback.vibrate();
+      await Future<void>.delayed(const Duration(milliseconds: 140));
+      await HapticFeedback.heavyImpact();
+    }
   }
 
   Future<void> _emitLoadedState(Emitter<HomeState> emit) async {
@@ -229,15 +338,18 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     String? partnerName;
     String? partnerMoodEmoji;
     String? partnerMoodText;
+    int? partnerBatteryLevel;
     int? daysTogether;
     String latestSnapUrl = '';
     String latestImageUrl = '';
     String latestDrawingUrl = '';
     String latestVoiceUrl = '';
     String? latestSnapType;
+    List<PulseData> relationshipPulse = const [];
 
     if (_isPaired && _cachedPartnerData != null) {
       final partnerData = _cachedPartnerData!;
+      _handlePartnerPulse(partnerData);
       partnerAvatar = partnerData['profilePicture'] as String? ?? '';
       partnerName = partnerData['nickname'] as String? ??
           partnerData['name'] as String? ??
@@ -246,6 +358,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       final partnerMood = partnerData['mood'] as Map<String, dynamic>?;
       partnerMoodEmoji = partnerMood?['emoji'] as String?;
       partnerMoodText = partnerMood?['text'] as String?;
+      final rawPartnerBattery = partnerData['batteryLevel'];
+      partnerBatteryLevel = rawPartnerBattery is num
+          ? rawPartnerBattery.toInt().clamp(0, 100).toInt()
+          : null;
 
       // Read snap details sent by partner
       latestSnapUrl = partnerData['latestSnapUrl'] as String? ?? '';
@@ -283,6 +399,13 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       // Calculate days together from relationshipStartDate (checks both own and partner's profile)
       daysTogether = _calculateDaysTogether(userData) ??
           _calculateDaysTogether(partnerData);
+      relationshipPulse = _buildWeeklyEngagement(
+        userData,
+        partnerData,
+        coupleData: _cachedCoupleData,
+        userUid: _currentUserUid,
+        partnerUid: _partnerUid,
+      );
     }
 
     emit(HomeLoaded(
@@ -302,17 +425,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       livePeekDrawingUrl: latestDrawingUrl,
       livePeekVoiceUrl: latestVoiceUrl,
       latestSnapType: latestSnapType,
-      relationshipPulse: _isPaired
-          ? const [
-              PulseData(day: "M", userCount: 4, partnerCount: 6),
-              PulseData(day: "T", userCount: 6, partnerCount: 4),
-              PulseData(day: "W", userCount: 3, partnerCount: 5),
-              PulseData(day: "T", userCount: 7, partnerCount: 5),
-              PulseData(day: "F", userCount: 5, partnerCount: 8),
-              PulseData(day: "S", userCount: 8, partnerCount: 4),
-              PulseData(day: "S", userCount: 4, partnerCount: 7),
-            ]
-          : const [],
+      relationshipPulse: relationshipPulse,
       questionOfTheDay: _isPaired
           ? const TriviaQuestion(
               questionText:
@@ -343,6 +456,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         latestImageUrl: latestImageUrl,
         latestDrawingUrl: latestDrawingUrl,
         latestVoiceUrl: latestVoiceUrl,
+        partnerMoodEmoji: partnerMoodEmoji,
+        partnerMoodText: partnerMoodText,
+        partnerBatteryLevel: partnerBatteryLevel,
       );
       dev.log('HomeBloc: WidgetHelper.updateWidget completed successfully',
           name: 'HomeBloc');
@@ -364,10 +480,57 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     }
   }
 
+  List<PulseData> _buildWeeklyEngagement(
+    Map<String, dynamic> userData,
+    Map<String, dynamic> partnerData, {
+    required Map<String, dynamic>? coupleData,
+    required String? userUid,
+    required String? partnerUid,
+  }) {
+    const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    final today = DateTime.now();
+    final startOfToday = DateTime(today.year, today.month, today.day);
+    final monday =
+        startOfToday.subtract(Duration(days: startOfToday.weekday - 1));
+    final sharedEngagement = coupleData?['weeklyEngagement'];
+    final sharedUserEngagement = sharedEngagement is Map && userUid != null
+        ? sharedEngagement[userUid]
+        : null;
+    final sharedPartnerEngagement =
+        sharedEngagement is Map && partnerUid != null
+            ? sharedEngagement[partnerUid]
+            : null;
+    final userEngagement = sharedUserEngagement is Map
+        ? sharedUserEngagement
+        : userData['weeklyEngagement'];
+    final partnerEngagement = sharedPartnerEngagement is Map
+        ? sharedPartnerEngagement
+        : partnerData['weeklyEngagement'];
+
+    return List<PulseData>.generate(7, (index) {
+      final date = monday.add(Duration(days: index));
+      final dateKey = DateFormat('yyyy-MM-dd').format(date);
+
+      return PulseData(
+        day: dayLabels[index],
+        userCount: _engagementCountForDate(userEngagement, dateKey),
+        partnerCount: _engagementCountForDate(partnerEngagement, dateKey),
+      );
+    });
+  }
+
+  int _engagementCountForDate(dynamic engagement, String dateKey) {
+    if (engagement is! Map) return 0;
+    final value = engagement[dateKey];
+    return value is num ? value.toInt() : 0;
+  }
+
   @override
   Future<void> close() {
     _userSub?.cancel();
     _partnerSub?.cancel();
+    _coupleSub?.cancel();
+    _batteryTimer?.cancel();
     return super.close();
   }
 }

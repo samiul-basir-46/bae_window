@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:email_otp/email_otp.dart';
+import 'package:intl/intl.dart';
 
 class FirebaseAuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -297,6 +298,15 @@ class FirebaseAuthService {
     return _firestore.collection('users').doc(uid).snapshots();
   }
 
+  Future<Map<String, dynamic>?> getCoupleData(String pairId) async {
+    final doc = await _firestore.collection('couples').doc(pairId).get();
+    return doc.exists ? doc.data() : null;
+  }
+
+  Stream<DocumentSnapshot<Map<String, dynamic>>> coupleStream(String pairId) {
+    return _firestore.collection('couples').doc(pairId).snapshots();
+  }
+
   /// Get partner's UID from a couple document
   /// The coupleId format is "{user1Uid}_{user2Uid}"
   Future<String?> getPartnerUid(String coupleId) async {
@@ -321,13 +331,59 @@ class FirebaseAuthService {
   }
 
   /// Update current user's mood in Firestore
-  void updateMood({required String emoji, required String text}) {
+  Future<void> updateMood({required String emoji, required String text}) async {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    _firestore.collection('users').doc(user.uid).set({
-      'mood': {'emoji': emoji, 'text': text},
+    final userRef = _firestore.collection('users').doc(user.uid);
+    final userData = (await userRef.get()).data();
+    final batch = _firestore.batch();
+    batch.set(
+        userRef,
+        {
+          'mood': {'emoji': emoji, 'text': text},
+          ..._weeklyEngagementUpdate(),
+        },
+        SetOptions(merge: true));
+    _addCoupleEngagement(batch, userData, user.uid);
+    await batch.commit();
+  }
+
+  Future<void> updateBatteryLevel(int level) async {
+    final user = _auth.currentUser;
+    if (user == null || level < 0 || level > 100) return;
+
+    await _firestore.collection('users').doc(user.uid).set({
+      'batteryLevel': level,
+      'batteryUpdatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+  }
+
+  /// Send a real-time pulse event through the current user's profile stream.
+  Future<void> sendPulse() async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('No authenticated user found.');
+
+    final userRef = _firestore.collection('users').doc(user.uid);
+    final userData = (await userRef.get()).data();
+    if (userData?['pairStatus'] != 'paired' || userData?['pairId'] == null) {
+      throw Exception('Pair with your partner before sending a pulse.');
+    }
+
+    final batch = _firestore.batch();
+    batch.set(
+        userRef,
+        {
+          'latestPulse': {
+            'id': '${user.uid}_${DateTime.now().microsecondsSinceEpoch}',
+            'sentAtClientMs': DateTime.now().toUtc().millisecondsSinceEpoch,
+            'sentAt': FieldValue.serverTimestamp(),
+          },
+          ..._weeklyEngagementUpdate(),
+        },
+        SetOptions(merge: true));
+    _addCoupleEngagement(batch, userData, user.uid);
+    await batch.commit();
   }
 
   /// Update current user's latest snap in Firestore
@@ -397,8 +453,44 @@ class FirebaseAuthService {
       'latestSnapUrl': snapUrl,
       'latestSnapType': snapType ?? 'Image',
       'lastSnapTime': FieldValue.serverTimestamp(),
+      ..._weeklyEngagementUpdate(),
     });
 
-    await userRef.set(updates, SetOptions(merge: true));
+    final batch = _firestore.batch();
+    batch.set(userRef, updates, SetOptions(merge: true));
+    _addCoupleEngagement(batch, existingData, user.uid);
+    await batch.commit();
+  }
+
+  Map<String, dynamic> _weeklyEngagementUpdate() {
+    final dayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    return {
+      'weeklyEngagement': {
+        dayKey: FieldValue.increment(1),
+      },
+    };
+  }
+
+  void _addCoupleEngagement(
+    WriteBatch batch,
+    Map<String, dynamic>? userData,
+    String uid,
+  ) {
+    if (userData?['pairStatus'] != 'paired') return;
+    final pairId = userData?['pairId'] as String?;
+    if (pairId == null) return;
+
+    final dayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    batch.set(
+      _firestore.collection('couples').doc(pairId),
+      {
+        'weeklyEngagement': {
+          uid: {
+            dayKey: FieldValue.increment(1),
+          },
+        },
+      },
+      SetOptions(merge: true),
+    );
   }
 }

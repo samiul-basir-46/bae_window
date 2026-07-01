@@ -9,8 +9,13 @@ import '../bloc/home_state.dart';
 
 class RelationshipPulseCard extends StatelessWidget {
   final List<PulseData> data;
+  final String partnerName;
 
-  const RelationshipPulseCard({super.key, required this.data});
+  const RelationshipPulseCard({
+    super.key,
+    required this.data,
+    required this.partnerName,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +67,7 @@ class RelationshipPulseCard extends StatelessWidget {
                   ),
                   UIHelper.verticalSpace(4.h),
                   Text(
-                    "Messages & interactions",
+                    "Snaps, drawings, voice, mood & pulse",
                     style: GoogleFonts.dmSans(
                       color: Colors.white38,
                       fontSize: 11.sp,
@@ -85,9 +90,11 @@ class RelationshipPulseCard extends StatelessWidget {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
-                                    _buildBar(item.userCount, maxCount, AppColors.primaryPurple),
+                                    _buildBar(item.userCount, maxCount,
+                                        AppColors.primaryPurple),
                                     SizedBox(width: 4.w),
-                                    _buildBar(item.partnerCount, maxCount, AppColors.primaryPink),
+                                    _buildBar(item.partnerCount, maxCount,
+                                        AppColors.primaryPink),
                                   ],
                                 ),
                               ),
@@ -112,7 +119,10 @@ class RelationshipPulseCard extends StatelessWidget {
                     children: [
                       _buildLegendItem("You", AppColors.primaryPurple),
                       SizedBox(width: 16.w),
-                      _buildLegendItem("Bae", AppColors.primaryPink),
+                      _buildLegendItem(
+                        partnerName.trim().isEmpty ? "Bae" : partnerName,
+                        AppColors.primaryPink,
+                      ),
                     ],
                   ),
                 ],

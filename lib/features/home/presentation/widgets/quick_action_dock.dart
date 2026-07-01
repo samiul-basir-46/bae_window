@@ -69,8 +69,28 @@ class QuickActionDock extends StatelessWidget {
     }
   }
 
-  void _handlePulse() {
+  Future<void> _handlePulse(BuildContext context) async {
     HapticFeedback.heavyImpact();
+
+    try {
+      await FirebaseAuthService().sendPulse();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Pulse sent to your Bae!"),
+          backgroundColor: AppColors.primaryPink,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Could not send pulse: $e"),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
   }
 
   void _showDrawingCanvas(BuildContext context) {
@@ -122,7 +142,7 @@ class QuickActionDock extends StatelessWidget {
               _buildDockItem(
                 icon: Icons.vibration_rounded,
                 label: "Pulse",
-                onTap: _handlePulse,
+                onTap: () => _handlePulse(context),
               ),
               _buildDockItem(
                 icon: Icons.mic_rounded,

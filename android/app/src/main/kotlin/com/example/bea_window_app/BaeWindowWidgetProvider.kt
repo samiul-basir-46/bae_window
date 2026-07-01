@@ -31,6 +31,9 @@ class BaeWindowWidgetProvider : AppWidgetProvider() {
                 val views = RemoteViews(context.packageName, R.layout.bae_window_widget_viewer)
                 val isPaired = prefs.getBoolean("isPaired", false)
                 val senderName = prefs.getString("senderName", "from Bae") ?: "from Bae"
+                val partnerMoodEmoji = prefs.getString("partnerMoodEmoji", "") ?: ""
+                val partnerMoodText = prefs.getString("partnerMoodText", "") ?: ""
+                val partnerBatteryLevel = prefs.getInt("partnerBatteryLevel", -1)
                 val partnerName = senderName.removePrefix("from ").ifBlank { "Bae" }
                 val footerDescription =
                     prefs.getString("footerDescription", "Awaiting a shared moment")
@@ -50,6 +53,18 @@ class BaeWindowWidgetProvider : AppWidgetProvider() {
                     if (isPaired) "CONNECTED" else "SOLO MODE"
                 )
                 views.setTextViewText(R.id.sender_name_top, senderName)
+                val partnerStatus = buildList {
+                    val mood = listOf(partnerMoodEmoji, partnerMoodText)
+                        .filter { it.isNotBlank() }
+                        .joinToString(" ")
+                    if (mood.isNotBlank()) add(mood)
+                    if (partnerBatteryLevel in 0..100) add("🔋 $partnerBatteryLevel%")
+                }.joinToString("  •  ")
+                views.setTextViewText(R.id.partner_status_summary, partnerStatus)
+                views.setViewVisibility(
+                    R.id.partner_status_summary,
+                    if (isPaired && partnerStatus.isNotBlank()) View.VISIBLE else View.GONE
+                )
                 views.setTextViewText(
                     R.id.footer_description,
                     if (latestType == "voice" && isVoicePlaying) {

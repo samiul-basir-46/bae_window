@@ -40,3 +40,9 @@ class PartnerDataUpdated extends HomeEvent {
   final Map<String, dynamic> data;
   const PartnerDataUpdated(this.data);
 }
+
+/// Internal event — fired when the shared couple document changes
+class CoupleDataUpdated extends HomeEvent {
+  final Map<String, dynamic> data;
+  const CoupleDataUpdated(this.data);
+}
