@@ -3,17 +3,12 @@ import 'dart:developer' as dev;
 import 'dart:io';
 import 'package:http/http.dart' as http;
 
-/// Service to upload images to Cloudinary using unsigned upload preset.
-/// No API key/secret is required on the client side.
 class CloudinaryService {
   static const String _cloudName = 'dpvo4otoj';
   static const String _uploadPreset = 'bae_window_avatars';
   static const String _uploadUrl =
       'https://api.cloudinary.com/v1_1/$_cloudName/image/upload';
 
-  /// Uploads an image file to Cloudinary.
-  ///
-  /// Returns the [secure_url] on success, or `null` on failure.
   static Future<String?> uploadImage(File imageFile) async {
     try {
       dev.log(
@@ -22,11 +17,7 @@ class CloudinaryService {
       );
 
       final request = http.MultipartRequest('POST', Uri.parse(_uploadUrl));
-
-      // Add the upload preset (unsigned mode — no API key needed)
       request.fields['upload_preset'] = _uploadPreset;
-
-      // Attach the image file
       request.files.add(
         await http.MultipartFile.fromPath('file', imageFile.path),
       );

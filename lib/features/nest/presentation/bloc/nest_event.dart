@@ -27,3 +27,17 @@ class ChangeThemeEvent extends NestEvent {
 class SwapConnectionAvatarsEvent extends NestEvent {
   const SwapConnectionAvatarsEvent();
 }
+
+/// Internal event fired whenever the current user's Firestore profile changes.
+class NestUserDataUpdated extends NestEvent {
+  final Map<String, dynamic> data;
+
+  const NestUserDataUpdated(this.data);
+}
+
+/// Internal event fired whenever the partner's Firestore profile changes.
+class NestPartnerDataUpdated extends NestEvent {
+  final Map<String, dynamic> data;
+
+  const NestPartnerDataUpdated(this.data);
+}
