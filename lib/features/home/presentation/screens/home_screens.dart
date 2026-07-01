@@ -135,6 +135,7 @@ class HomeScreenView extends StatelessWidget {
                             imageUrl: state.livePeekImageUrl,
                             drawingUrl: state.livePeekDrawingUrl,
                             voiceUrl: state.livePeekVoiceUrl,
+                            partnerName: state.partnerName ?? 'Bae',
                             snapType: state.latestSnapType,
                             onTap: () {
                               const SwitchTabNotification(1).dispatch(context);

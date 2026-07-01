@@ -4,6 +4,8 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     
     <application
         android:label="bea_window_app"
@@ -51,9 +53,10 @@
         </receiver>
 
         <service
-            android:name=".BaeWindowWidgetStackService"
+            android:name=".WidgetVoicePlaybackService"
             android:exported="false"
-            android:permission="android.permission.BIND_REMOTEVIEWS" />
+            android:foregroundServiceType="mediaPlayback"
+            android:stopWithTask="false" />
 
         <!-- Home Screen Action Dock Widget Receiver -->
         <receiver

@@ -10,6 +10,7 @@ class LivePeekCard extends StatefulWidget {
   final String imageUrl;
   final String drawingUrl;
   final String voiceUrl;
+  final String partnerName;
   final String? snapType;
   final VoidCallback onTap;
 
@@ -18,6 +19,7 @@ class LivePeekCard extends StatefulWidget {
     required this.imageUrl,
     required this.drawingUrl,
     required this.voiceUrl,
+    required this.partnerName,
     this.snapType,
     required this.onTap,
   });
@@ -31,6 +33,11 @@ class _LivePeekCardState extends State<LivePeekCard> {
   late int _currentPage;
   final AudioPlayer _voicePlayer = AudioPlayer();
   bool _isVoicePlaying = false;
+
+  String get _partnerName {
+    final name = widget.partnerName.trim();
+    return name.isEmpty ? 'Bae' : name;
+  }
 
   int _pageForType(String? type) {
     switch (type?.toLowerCase()) {
@@ -381,7 +388,9 @@ class _LivePeekCardState extends State<LivePeekCard> {
             ),
             UIHelper.verticalSpace(12.h),
             Text(
-              hasVoice ? "Voice message from Bae" : "No Voice Notes Yet",
+              hasVoice
+                  ? "Voice message from $_partnerName"
+                  : "No Voice Notes Yet",
               style: GoogleFonts.dmSans(
                 color: Colors.white,
                 fontSize: 13.sp,
@@ -479,15 +488,15 @@ class _LivePeekCardState extends State<LivePeekCard> {
     switch (index) {
       case 0:
         return hasSnap
-            ? "Captured recently by Bae"
+            ? "Captured recently by $_partnerName"
             : "No Snaps Yet ✦ Send one!";
       case 1:
         return hasDrawing
-            ? "Drawn recently by Bae"
+            ? "Drawn recently by $_partnerName"
             : "Interactive Partner Sketches";
       case 2:
         return hasVoice
-            ? "Latest voice message from Bae"
+            ? "Latest voice message from $_partnerName"
             : "Listen to latest messages";
       default:
         return "";
