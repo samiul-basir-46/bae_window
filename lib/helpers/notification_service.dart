@@ -11,6 +11,10 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get_storage/get_storage.dart';
 
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:googleapis_auth/auth_io.dart' as auth;
+import 'package:http/http.dart' as http;
+
 import '../constants/app_constants.dart';
 import '../firebase_options.dart';
 import 'all_routes.dart';
@@ -239,6 +243,14 @@ class PushNotificationService {
         'completedAt': FieldValue.serverTimestamp(),
       },
     }, SetOptions(merge: true));
+
+    final senderName = await _getSenderName();
+    unawaited(sendNotificationToPartner(
+      title: '✅ $senderName completed a task',
+      body: taskTitle,
+      type: 'taskCompleted',
+      route: 'tasks',
+    ));
   }
 
   static Future<void> createLoveNoteEvent(String note) async {
@@ -251,6 +263,13 @@ class PushNotificationService {
         'sentAt': FieldValue.serverTimestamp(),
       },
     }, SetOptions(merge: true));
+
+    final senderName = await _getSenderName();
+    unawaited(sendNotificationToPartner(
+      title: '💌 Note from $senderName',
+      body: note,
+      type: 'drawingNote',
+    ));
   }
 
   static Future<void> showRemoteMessage(RemoteMessage message) async {
@@ -326,6 +345,179 @@ class PushNotificationService {
       Future<void>.delayed(const Duration(milliseconds: 800), navigate);
     } else {
       navigate();
+    }
+  }
+
+  static Future<String> _getSenderName() async {
+    final user = _auth.currentUser;
+    if (user == null) return "Your Bae";
+    try {
+      final doc = await _firestore.collection('users').doc(user.uid).get();
+      if (doc.exists) {
+        final data = doc.data();
+        final nickname = data?['nickname'] as String?;
+        if (nickname != null && nickname.isNotEmpty) return nickname;
+        final name = data?['name'] as String?;
+        if (name != null && name.isNotEmpty) return name;
+      }
+    } catch (_) {}
+    return user.displayName ?? "Your Bae";
+  }
+
+  static Future<String?> _getAccessToken() async {
+    try {
+      final serviceAccountJson = await rootBundle.loadString(
+        'assets/service-account.json',
+      );
+      final credentials = auth.ServiceAccountCredentials.fromJson(serviceAccountJson);
+      final scopes = ['https://www.googleapis.com/auth/firebase.messaging'];
+      
+      final client = await auth.clientViaServiceAccount(credentials, scopes);
+      final token = client.credentials.accessToken.data;
+      client.close();
+      return token;
+    } catch (e) {
+      dev.log(
+        'Error getting FCM OAuth2 token. Make sure assets/service-account.json exists.',
+        name: 'PushNotificationService',
+        error: e,
+      );
+      return null;
+    }
+  }
+
+  static Future<List<String>> _getPartnerFcmTokens() async {
+    final user = _auth.currentUser;
+    if (user == null) return [];
+
+    try {
+      final userSnapshot = await _firestore.collection('users').doc(user.uid).get();
+      if (!userSnapshot.exists) return [];
+      
+      final userData = userSnapshot.data();
+      if (userData == null || userData['pairStatus'] != 'paired') return [];
+      
+      final pairId = userData['pairId'] as String?;
+      if (pairId == null || pairId.isEmpty) return [];
+
+      final coupleSnapshot = await _firestore.collection('couples').doc(pairId).get();
+      if (!coupleSnapshot.exists) return [];
+
+      final coupleData = coupleSnapshot.data();
+      if (coupleData == null) return [];
+
+      final user1Uid = coupleData['user1Uid'] as String?;
+      final user2Uid = coupleData['user2Uid'] as String?;
+      final partnerUid = (user1Uid == user.uid) ? user2Uid : user1Uid;
+      if (partnerUid == null || partnerUid.isEmpty) return [];
+
+      final partnerSnapshot = await _firestore.collection('users').doc(partnerUid).get();
+      if (!partnerSnapshot.exists) return [];
+
+      final partnerData = partnerSnapshot.data();
+      if (partnerData == null) return [];
+
+      final tokens = <String>[];
+      if (partnerData['fcmTokens'] is List) {
+        for (final t in partnerData['fcmTokens'] as List) {
+          if (t is String && t.isNotEmpty) {
+            tokens.add(t);
+          }
+        }
+      }
+      final singleToken = partnerData['fcmToken'] as String?;
+      if (singleToken != null && singleToken.isNotEmpty && !tokens.contains(singleToken)) {
+        tokens.add(singleToken);
+      }
+      
+      return tokens;
+    } catch (e) {
+      dev.log(
+        'Error fetching partner FCM tokens',
+        name: 'PushNotificationService',
+        error: e,
+      );
+      return [];
+    }
+  }
+
+  static Future<void> sendNotificationToPartner({
+    required String title,
+    required String body,
+    String? type,
+    String? route,
+  }) async {
+    try {
+      final tokens = await _getPartnerFcmTokens();
+      if (tokens.isEmpty) {
+        dev.log('No partner FCM tokens found to send notification.', name: 'PushNotificationService');
+        return;
+      }
+
+      final accessToken = await _getAccessToken();
+      if (accessToken == null) {
+        dev.log('Could not obtain FCM access token.', name: 'PushNotificationService');
+        return;
+      }
+
+      final projectId = DefaultFirebaseOptions.currentPlatform.projectId;
+      final url = Uri.parse('https://fcm.googleapis.com/v1/projects/$projectId/messages:send');
+
+      for (final token in tokens) {
+        final response = await http.post(
+          url,
+          headers: <String, String>{
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $accessToken',
+          },
+          body: jsonEncode({
+            'message': {
+              'token': token,
+              'notification': {
+                'title': title,
+                'body': body,
+              },
+              'data': {
+                'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+                if (type != null) 'type': type,
+                if (route != null) 'route': route,
+                'title': title,
+                'body': body,
+              },
+              'android': {
+                'priority': 'high',
+                'notification': {
+                  'channel_id': type == 'thinkingPulse' ? pulseChannelId : activityChannelId,
+                  'sound': 'default',
+                }
+              },
+              'apns': {
+                'payload': {
+                  'aps': {
+                    'sound': 'default',
+                    'badge': 1,
+                  }
+                }
+              }
+            }
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          dev.log('FCM v1 notification sent to token: $token', name: 'PushNotificationService');
+        } else {
+          dev.log(
+            'FCM v1 failed to send notification: ${response.statusCode} - ${response.body}',
+            name: 'PushNotificationService',
+          );
+        }
+      }
+    } catch (e) {
+      dev.log(
+        'Error sending FCM v1 notification to partner',
+        name: 'PushNotificationService',
+        error: e,
+      );
     }
   }
 

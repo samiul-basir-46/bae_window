@@ -46,6 +46,7 @@ dependencies:
   share_plus: ^13.2.0
   home_widget: ^0.9.3
   app_links: ^6.4.0
+  googleapis_auth: ^1.6.0
 
 
 
@@ -80,6 +81,7 @@ flutter:
     - assets/icons/
     - assets/lottie/
     - assets/images/
+    - assets/service-account.json
   
   fonts:
     - family: DMSans
