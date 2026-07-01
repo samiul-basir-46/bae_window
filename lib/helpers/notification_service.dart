@@ -400,7 +400,7 @@ class PushNotificationService {
 
   static Future<String> getSenderName() async {
     final user = _auth.currentUser;
-    if (user == null) return "Your Bae";
+    if (user == null) return "Partner";
     try {
       final doc = await _firestore.collection('users').doc(user.uid).get();
       if (doc.exists) {
@@ -411,7 +411,7 @@ class PushNotificationService {
         if (name != null && name.isNotEmpty) return name;
       }
     } catch (_) {}
-    return user.displayName ?? "Your Bae";
+    return user.displayName ?? "Partner";
   }
 
   static String? _cachedAccessToken;

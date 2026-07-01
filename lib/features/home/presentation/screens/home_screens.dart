@@ -203,7 +203,9 @@ class HomeScreenView extends StatelessWidget {
                             if (state.questionOfTheDay != null) ...[
                               UIHelper.verticalSpace(24.h),
                               QuestionOfTheDayCard(
-                                  question: state.questionOfTheDay!),
+                                question: state.questionOfTheDay!,
+                                partnerName: state.partnerName,
+                              ),
                             ],
                             if (state.checkInLogs.isNotEmpty) ...[
                               UIHelper.verticalSpace(24.h),

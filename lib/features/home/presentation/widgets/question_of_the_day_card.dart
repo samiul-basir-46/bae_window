@@ -4,12 +4,20 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../bloc/home_bloc.dart';
+import '../bloc/home_event.dart';
 import '../bloc/home_state.dart';
 
 class QuestionOfTheDayCard extends StatelessWidget {
   final TriviaQuestion question;
+  final String? partnerName;
 
-  const QuestionOfTheDayCard({super.key, required this.question});
+  const QuestionOfTheDayCard({
+    super.key,
+    required this.question,
+    this.partnerName,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -97,10 +105,14 @@ class QuestionOfTheDayCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      onPressed: () {
+                       onPressed: () {
+                        context.read<HomeBloc>().add(
+                          AnswerQuestionTogetherEvent(question.questionText),
+                        );
+                         final displayPartnerName = partnerName != null && partnerName!.isNotEmpty ? partnerName : 'partner';
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Loading Trivia Session..."),
+                          SnackBar(
+                            content: Text("Trivia invitation sent to $displayPartnerName!"),
                             backgroundColor: AppColors.primaryPink,
                           ),
                         );

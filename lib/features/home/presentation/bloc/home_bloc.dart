@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'home_event.dart';
 import 'home_state.dart';
 import 'package:bea_window_app/helpers/widget_helper.dart';
+import 'package:bea_window_app/helpers/notification_service.dart';
 
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
   static const MethodChannel _pulseChannel = MethodChannel('bea_window/pulse');
@@ -38,6 +39,30 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   int _partnerPulseTrackingStartedAtMs =
       DateTime.now().toUtc().millisecondsSinceEpoch;
 
+  static const List<String> _englishQuestions = [
+    "What is one small thing I did recently that made you feel loved?",
+    "If we could travel anywhere in the world together tomorrow, where would we go?",
+    "What is your absolute favorite memory of us together?",
+    "What was the first thing that attracted you to me?",
+    "What song always reminds you of our relationship?",
+    "If we had a whole free day together with no responsibilities, how would we spend it?",
+    "What is a habit of mine that you secretly find cute or endearing?",
+    "What is one dream or goal you hope we can achieve together in the next few years?",
+    "What is your favorite way to receive affection from me (words, touch, gifts, etc.)?",
+    "If you could describe our relationship in just three words, what would they be?",
+    "What is the best piece of advice about love or relationships you've ever heard?",
+    "Which movie or show character reminds you most of me and why?",
+  ];
+
+  static TriviaQuestion _getTriviaQuestionForToday() {
+    final dayOfYear = DateTime.now().difference(DateTime(DateTime.now().year, 1, 1)).inDays;
+    final index = dayOfYear % _englishQuestions.length;
+    return TriviaQuestion(
+      questionText: _englishQuestions[index],
+      isAnswered: false,
+    );
+  }
+
   HomeBloc() : super(const HomeInitial()) {
     on<LoadHomeDataEvent>(_onLoadHomeData);
     on<UpdateUserMoodEvent>(_onUpdateUserMood);
@@ -45,6 +70,28 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<UserDataUpdated>(_onUserDataUpdated);
     on<PartnerDataUpdated>(_onPartnerDataUpdated);
     on<CoupleDataUpdated>(_onCoupleDataUpdated);
+    on<AnswerQuestionTogetherEvent>(_onAnswerQuestionTogether);
+  }
+
+  Future<void> _onAnswerQuestionTogether(
+    AnswerQuestionTogetherEvent event,
+    Emitter<HomeState> emit,
+  ) async {
+    try {
+      final senderName = await PushNotificationService.getSenderName();
+      // Send a high-priority FCM notification to partner
+      await PushNotificationService.sendNotificationToPartner(
+        title: "💬 Trivia Time with $senderName",
+        body: "$senderName wants to answer today's question together!",
+        type: "triviaInvitation",
+        extraData: {
+          'questionText': event.questionText,
+          'senderName': senderName,
+        },
+      );
+    } catch (e) {
+      dev.log('Error sending trivia invitation notification: $e', name: 'HomeBloc');
+    }
   }
 
   Future<void> _onLoadHomeData(
@@ -427,11 +474,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       latestSnapType: latestSnapType,
       relationshipPulse: relationshipPulse,
       questionOfTheDay: _isPaired
-          ? const TriviaQuestion(
-              questionText:
-                  "আমাদের প্রথম ডেটের কোন মুহূর্তটি তোমার সবচেয়ে প্রিয়?",
-              isAnswered: false,
-            )
+          ? _getTriviaQuestionForToday()
           : null,
       checkInLogs: const [],
       nextSpecialDay: daysTogether != null

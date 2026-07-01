@@ -46,3 +46,9 @@ class CoupleDataUpdated extends HomeEvent {
   final Map<String, dynamic> data;
   const CoupleDataUpdated(this.data);
 }
+
+class AnswerQuestionTogetherEvent extends HomeEvent {
+  final String questionText;
+  const AnswerQuestionTogetherEvent(this.questionText);
+}
+
