@@ -1,24 +1,60 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
+import 'package:bea_window_app/helpers/all_routes.dart';
+import '../bloc/home_action_bloc.dart';
+import '../bloc/home_action_event.dart';
 
 class HomeTopHeader extends StatelessWidget {
   final String userAvatarUrl;
-  final String partnerAvatarUrl;
-  final String partnerName;
-  final bool isPartnerOnline;
-  final int daysTogether;
+  final String? partnerAvatarUrl;
+  final String? partnerName;
+  final bool? isPartnerOnline;
+  final int? daysTogether;
+  final bool isPaired;
 
   const HomeTopHeader({
     super.key,
     required this.userAvatarUrl,
-    required this.partnerAvatarUrl,
-    required this.partnerName,
-    required this.isPartnerOnline,
-    required this.daysTogether,
+    required this.isPaired,
+    this.partnerAvatarUrl,
+    this.partnerName,
+    this.isPartnerOnline,
+    this.daysTogether,
   });
+
+  Future<void> _selectRelationshipDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.primaryPink,
+              onPrimary: Colors.white,
+              surface: AppColors.navBgColor,
+              onSurface: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      final formattedDate = DateFormat('MMM d, yyyy').format(picked);
+      if (!context.mounted) return;
+      context
+          .read<HomeActionBloc>()
+          .add(UpdateRelationshipDateRequested(formattedDate));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,30 +64,56 @@ class HomeTopHeader extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // User Avatar (64px)
-            _buildAvatar(userAvatarUrl),
+            // User Avatar
+            _buildAvatar(
+              url: userAvatarUrl,
+              fallbackIcon: Icons.person_rounded,
+            ),
 
             UIHelper.horizontalSpace(16.w),
 
             const PulseHeartWidget(),
 
             UIHelper.horizontalSpace(16.w),
-            BreathingGlowAvatar(
-              avatarUrl: partnerAvatarUrl,
-              isOnline: isPartnerOnline,
-            ),
+
+            // Partner Avatar or Invite CTA
+            if (isPaired && partnerAvatarUrl != null)
+              BreathingGlowAvatar(
+                avatarUrl: partnerAvatarUrl!,
+                isOnline: isPartnerOnline ?? false,
+              )
+            else
+              GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(context, Routes.pairingScreen);
+                },
+                child: _buildInviteAvatar(),
+              ),
           ],
         ),
         UIHelper.verticalSpace(12.h),
-        Opacity(
-          opacity: 0.6,
-          child: Text(
-            "$daysTogether Days Together ❤️",
-            style: GoogleFonts.dmSans(
-              fontSize: 13.sp,
-              fontWeight: FontWeight.w500,
-              color: Colors.white,
-              letterSpacing: 0.5,
+        GestureDetector(
+          onTap: () {
+            if (!isPaired) {
+              Navigator.pushNamed(context, Routes.pairingScreen);
+            } else if (daysTogether == null) {
+              _selectRelationshipDate(context);
+            }
+          },
+          child: Opacity(
+            opacity: 0.6,
+            child: Text(
+              isPaired
+                  ? (daysTogether != null
+                      ? "$daysTogether Days Together ❤️"
+                      : "Set Anniversary Date 📅")
+                  : "Solo Mode ✦ Invite your partner",
+              style: GoogleFonts.dmSans(
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+                letterSpacing: 0.5,
+              ),
             ),
           ),
         ),
@@ -59,7 +121,7 @@ class HomeTopHeader extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatar(String url) {
+  Widget _buildAvatar({required String url, required IconData fallbackIcon}) {
     return Container(
       width: 64.w,
       height: 64.h,
@@ -79,18 +141,54 @@ class HomeTopHeader extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(32.r),
-        child: Image.network(
-          url,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => Container(
-            color: AppColors.navBgColor,
-            child: Icon(
-              Icons.person_rounded,
-              color: Colors.white.withValues(alpha: 0.5),
-              size: 28.sp,
-            ),
-          ),
+        child: url.isNotEmpty
+            ? Image.network(
+                url,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: AppColors.navBgColor,
+                  child: Icon(
+                    fallbackIcon,
+                    color: Colors.white.withValues(alpha: 0.5),
+                    size: 28.sp,
+                  ),
+                ),
+              )
+            : Container(
+                color: AppColors.navBgColor,
+                child: Icon(
+                  fallbackIcon,
+                  color: Colors.white.withValues(alpha: 0.5),
+                  size: 28.sp,
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildInviteAvatar() {
+    return Container(
+      width: 64.w,
+      height: 64.h,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: AppColors.primaryPink.withValues(alpha: 0.3),
+          width: 2.w,
         ),
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primaryPink.withValues(alpha: 0.08),
+            AppColors.primaryPurple.withValues(alpha: 0.08),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Icon(
+        Icons.person_add_rounded,
+        color: AppColors.primaryPink.withValues(alpha: 0.6),
+        size: 26.sp,
       ),
     );
   }
@@ -183,18 +281,27 @@ class _BreathingGlowAvatarState extends State<BreathingGlowAvatar>
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(32.r),
-              child: Image.network(
-                widget.avatarUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  color: AppColors.navBgColor,
-                  child: Icon(
-                    Icons.person_3_rounded,
-                    color: Colors.white.withValues(alpha: 0.5),
-                    size: 28.sp,
-                  ),
-                ),
-              ),
+              child: widget.avatarUrl.isNotEmpty
+                  ? Image.network(
+                      widget.avatarUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        color: AppColors.navBgColor,
+                        child: Icon(
+                          Icons.person_3_rounded,
+                          color: Colors.white.withValues(alpha: 0.5),
+                          size: 28.sp,
+                        ),
+                      ),
+                    )
+                  : Container(
+                      color: AppColors.navBgColor,
+                      child: Icon(
+                        Icons.person_3_rounded,
+                        color: Colors.white.withValues(alpha: 0.5),
+                        size: 28.sp,
+                      ),
+                    ),
             ),
           ),
         );

@@ -1,0 +1,496 @@
+import 'dart:math';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:email_otp/email_otp.dart';
+import 'package:intl/intl.dart';
+
+class FirebaseAuthService {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  final EmailOTP _emailOtp = EmailOTP();
+
+  /// Send OTP code to user's email
+  Future<bool> sendOtp(String email) async {
+    _emailOtp.setConfig(
+      appEmail: "auth@beawindow.com",
+      appName: "Bea Window",
+      userEmail: email,
+      otpLength: 6,
+      otpType: OTPType.digitsOnly,
+    );
+    return await _emailOtp.sendOTP();
+  }
+
+  /// Verify OTP code entered by user
+  Future<bool> verifyOtp(String otp) async {
+    return await _emailOtp.verifyOTP(otp: otp);
+  }
+
+  /// Send email verification link
+  Future<void> sendEmailVerification() async {
+    final user = _auth.currentUser;
+    if (user != null) {
+      await user.sendEmailVerification();
+    }
+  }
+
+  /// Reload current user profile to refresh status like emailVerified
+  Future<void> reloadUser() async {
+    final user = _auth.currentUser;
+    if (user != null) {
+      await user.reload();
+    }
+  }
+
+  /// Check if the current user's email is verified
+  bool isEmailVerified() {
+    final user = _auth.currentUser;
+    return user?.emailVerified ?? false;
+  }
+
+  /// Sign in user with Email and Password
+  Future<UserCredential> signInWithEmailAndPassword({
+    required String email,
+    required String password,
+  }) async {
+    return await _auth.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+  }
+
+  /// Register user with Email and Password
+  Future<UserCredential> signUpWithEmailAndPassword({
+    required String email,
+    required String password,
+    required String name,
+  }) async {
+    final credential = await _auth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+    if (credential.user != null) {
+      await credential.user!.updateDisplayName(name);
+    }
+    return credential;
+  }
+
+  /// Save user profile details to Firestore
+  Future<void> saveUserProfile({
+    required String uid,
+    required String name,
+    required String email,
+  }) async {
+    await _firestore.collection('users').doc(uid).set({
+      'uid': uid,
+      'name': name,
+      'email': email,
+      'createdAt': FieldValue.serverTimestamp(),
+      'bio': 'Hey there! I am using Bea Window.',
+      'profilePicture': '',
+      'profileComplete': false,
+      'pairStatus': 'none',
+    }, SetOptions(merge: true));
+  }
+
+  /// Complete profile setup (nickname + avatar URL)
+  /// Avatar upload is handled externally (e.g., via CloudinaryService)
+  /// and the resulting URL is passed here.
+  Future<void> saveProfileSetup({
+    required String nickname,
+    required String avatarUrl,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('No authenticated user found.');
+
+    await _firestore.collection('users').doc(user.uid).set({
+      'nickname': nickname,
+      'profilePicture': avatarUrl,
+      'profileComplete': true,
+    }, SetOptions(merge: true));
+
+    if (avatarUrl.isNotEmpty) {
+      await user.updatePhotoURL(avatarUrl);
+    }
+  }
+
+  /// Generate a unique 6-character invite code
+  Future<String> generateInviteCode() async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('No authenticated user found.');
+
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final random = Random();
+    String code;
+    bool codeExists = true;
+
+    do {
+      code = List.generate(6, (index) => chars[random.nextInt(chars.length)])
+          .join();
+      final doc = await _firestore.collection('pairing_codes').doc(code).get();
+      codeExists = doc.exists;
+    } while (codeExists);
+
+    await _firestore.collection('pairing_codes').doc(code).set({
+      'createdBy': user.uid,
+      'createdAt': FieldValue.serverTimestamp(),
+      'used': false,
+    });
+
+    await _firestore.collection('users').doc(user.uid).set({
+      'inviteCode': code,
+    }, SetOptions(merge: true));
+
+    return code;
+  }
+
+  /// Join with partner's invite code
+  Future<void> joinWithCode(String code) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('No authenticated user found.');
+
+    final codeDoc =
+        await _firestore.collection('pairing_codes').doc(code).get();
+    if (!codeDoc.exists) {
+      throw Exception('Invalid verification code.');
+    }
+
+    final data = codeDoc.data()!;
+    if (data['used'] == true) {
+      throw Exception('This code has already been used.');
+    }
+
+    final partnerUid = data['createdBy'] as String;
+    if (partnerUid == user.uid) {
+      throw Exception('You cannot pair with your own invite code.');
+    }
+
+    final coupleId = '${partnerUid}_${user.uid}';
+
+    await _firestore.collection('couples').doc(coupleId).set({
+      'user1Uid': partnerUid,
+      'user2Uid': user.uid,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    await _firestore.collection('pairing_codes').doc(code).set({
+      'used': true,
+    }, SetOptions(merge: true));
+
+    await _firestore.collection('users').doc(user.uid).set({
+      'pairId': coupleId,
+      'pairStatus': 'paired',
+    }, SetOptions(merge: true));
+
+    await _firestore.collection('users').doc(partnerUid).set({
+      'pairId': coupleId,
+      'pairStatus': 'paired',
+    }, SetOptions(merge: true));
+  }
+
+  /// Skip pairing step
+  Future<void> skipPairing() async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('No authenticated user found.');
+
+    await _firestore.collection('users').doc(user.uid).set({
+      'pairStatus': 'unpaired',
+    }, SetOptions(merge: true));
+  }
+
+  /// Retrieve user profile details from Firestore
+  Future<Map<String, dynamic>?> getUserProfile(String uid) async {
+    final doc = await _firestore.collection('users').doc(uid).get();
+    return doc.exists ? doc.data() : null;
+  }
+
+  /// Update user profile details in Firestore & Firebase Auth
+  Future<void> updateUserProfile(
+    String uid, {
+    String? name,
+    String? nickname,
+    String? relationshipStartDate,
+    String? avatarUrl,
+  }) async {
+    final updates = <String, dynamic>{};
+    if (name != null) {
+      updates['name'] = name;
+      final user = _auth.currentUser;
+      if (user != null) {
+        await user.updateDisplayName(name);
+      }
+    }
+    if (nickname != null) {
+      updates['nickname'] = nickname;
+    }
+    if (relationshipStartDate != null) {
+      await updateRelationshipStartDate(uid, relationshipStartDate);
+    }
+    if (avatarUrl != null) {
+      updates['profilePicture'] = avatarUrl;
+      final user = _auth.currentUser;
+      if (user != null) {
+        await user.updatePhotoURL(avatarUrl);
+      }
+    }
+
+    if (updates.isNotEmpty) {
+      // Fire-and-forget: Firestore offline persistence writes to local cache
+      // immediately, so we don't need to await the server confirmation.
+      // Awaiting can hang indefinitely if the device is offline.
+      _firestore
+          .collection('users')
+          .doc(uid)
+          .set(updates, SetOptions(merge: true));
+    }
+  }
+
+  /// Keep the relationship start date identical for both paired users.
+  Future<void> updateRelationshipStartDate(String uid, String date) async {
+    final userRef = _firestore.collection('users').doc(uid);
+    final userSnapshot = await userRef.get();
+    final userData = userSnapshot.data();
+
+    final batch = _firestore.batch();
+    batch.set(
+      userRef,
+      {'relationshipStartDate': date},
+      SetOptions(merge: true),
+    );
+
+    final isPaired = userData?['pairStatus'] == 'paired';
+    final pairId = userData?['pairId'] as String?;
+
+    if (isPaired && pairId != null) {
+      final coupleSnapshot =
+          await _firestore.collection('couples').doc(pairId).get();
+      final coupleData = coupleSnapshot.data();
+
+      if (coupleData == null) {
+        throw Exception('Paired relationship data was not found.');
+      }
+
+      final user1Uid = coupleData['user1Uid'] as String?;
+      final user2Uid = coupleData['user2Uid'] as String?;
+      final partnerUid = user1Uid == uid
+          ? user2Uid
+          : user2Uid == uid
+              ? user1Uid
+              : null;
+
+      if (partnerUid == null) {
+        throw Exception('Partner could not be resolved for this account.');
+      }
+
+      batch.set(
+        _firestore.collection('users').doc(partnerUid),
+        {'relationshipStartDate': date},
+        SetOptions(merge: true),
+      );
+    }
+
+    await batch.commit();
+  }
+
+  /// Returns a real-time stream of a user's Firestore document
+  Stream<DocumentSnapshot<Map<String, dynamic>>> userStream(String uid) {
+    return _firestore.collection('users').doc(uid).snapshots();
+  }
+
+  Future<Map<String, dynamic>?> getCoupleData(String pairId) async {
+    final doc = await _firestore.collection('couples').doc(pairId).get();
+    return doc.exists ? doc.data() : null;
+  }
+
+  Stream<DocumentSnapshot<Map<String, dynamic>>> coupleStream(String pairId) {
+    return _firestore.collection('couples').doc(pairId).snapshots();
+  }
+
+  /// Get partner's UID from a couple document
+  /// The coupleId format is "{user1Uid}_{user2Uid}"
+  Future<String?> getPartnerUid(String coupleId) async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+
+    try {
+      final doc = await _firestore.collection('couples').doc(coupleId).get();
+      if (!doc.exists || doc.data() == null) return null;
+
+      final data = doc.data()!;
+      final user1 = data['user1Uid'] as String?;
+      final user2 = data['user2Uid'] as String?;
+
+      // Return the UID that is NOT the current user
+      if (user1 == user.uid) return user2;
+      if (user2 == user.uid) return user1;
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Update current user's mood in Firestore
+  Future<void> updateMood({required String emoji, required String text}) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    final userRef = _firestore.collection('users').doc(user.uid);
+    final userData = (await userRef.get()).data();
+    final batch = _firestore.batch();
+    batch.set(
+        userRef,
+        {
+          'mood': {'emoji': emoji, 'text': text},
+          ..._weeklyEngagementUpdate(),
+        },
+        SetOptions(merge: true));
+    _addCoupleEngagement(batch, userData, user.uid);
+    await batch.commit();
+  }
+
+  Future<void> updateBatteryLevel(int level) async {
+    final user = _auth.currentUser;
+    if (user == null || level < 0 || level > 100) return;
+
+    await _firestore.collection('users').doc(user.uid).set({
+      'batteryLevel': level,
+      'batteryUpdatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Send a real-time pulse event through the current user's profile stream.
+  Future<void> sendPulse() async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('No authenticated user found.');
+
+    final userRef = _firestore.collection('users').doc(user.uid);
+    final userData = (await userRef.get()).data();
+    if (userData?['pairStatus'] != 'paired' || userData?['pairId'] == null) {
+      throw Exception('Pair with your partner before sending a pulse.');
+    }
+
+    final batch = _firestore.batch();
+    batch.set(
+        userRef,
+        {
+          'latestPulse': {
+            'id': '${user.uid}_${DateTime.now().microsecondsSinceEpoch}',
+            'sentAtClientMs': DateTime.now().toUtc().millisecondsSinceEpoch,
+            'sentAt': FieldValue.serverTimestamp(),
+          },
+          ..._weeklyEngagementUpdate(),
+        },
+        SetOptions(merge: true));
+    _addCoupleEngagement(batch, userData, user.uid);
+    await batch.commit();
+  }
+
+  /// Update current user's latest snap in Firestore
+  Future<void> updateLatestSnap({
+    required String snapUrl,
+    String? snapType,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    final userRef = _firestore.collection('users').doc(user.uid);
+    final existingData = (await userRef.get()).data();
+    final updates = <String, dynamic>{};
+
+    // Preserve the last item written by older app versions before the shared
+    // legacy field is overwritten by a different content type.
+    final legacyUrl = existingData?['latestSnapUrl'] as String? ?? '';
+    final legacyType =
+        (existingData?['latestSnapType'] as String? ?? 'Image').toLowerCase();
+    if (legacyUrl.isNotEmpty) {
+      final String legacyUrlField;
+      final String legacyTimeField;
+
+      switch (legacyType) {
+        case 'draw':
+          legacyUrlField = 'latestDrawingUrl';
+          legacyTimeField = 'latestDrawingTime';
+        case 'voice':
+          legacyUrlField = 'latestVoiceUrl';
+          legacyTimeField = 'latestVoiceTime';
+        default:
+          legacyUrlField = 'latestImageUrl';
+          legacyTimeField = 'latestImageTime';
+      }
+
+      final existingLegacySpecificUrl =
+          existingData?[legacyUrlField] as String? ?? '';
+      if (existingLegacySpecificUrl.isEmpty) {
+        updates[legacyUrlField] = legacyUrl;
+        final legacyTime = existingData?['lastSnapTime'];
+        if (legacyTime != null) {
+          updates[legacyTimeField] = legacyTime;
+        }
+      }
+    }
+
+    final normalizedType = (snapType ?? 'Image').toLowerCase();
+    final String contentUrlField;
+    final String contentTimeField;
+
+    switch (normalizedType) {
+      case 'draw':
+        contentUrlField = 'latestDrawingUrl';
+        contentTimeField = 'latestDrawingTime';
+      case 'voice':
+        contentUrlField = 'latestVoiceUrl';
+        contentTimeField = 'latestVoiceTime';
+      default:
+        contentUrlField = 'latestImageUrl';
+        contentTimeField = 'latestImageTime';
+    }
+
+    updates.addAll({
+      contentUrlField: snapUrl,
+      contentTimeField: FieldValue.serverTimestamp(),
+      // Keep these legacy fields for the home-screen widget and old clients.
+      'latestSnapUrl': snapUrl,
+      'latestSnapType': snapType ?? 'Image',
+      'lastSnapTime': FieldValue.serverTimestamp(),
+      ..._weeklyEngagementUpdate(),
+    });
+
+    final batch = _firestore.batch();
+    batch.set(userRef, updates, SetOptions(merge: true));
+    _addCoupleEngagement(batch, existingData, user.uid);
+    await batch.commit();
+  }
+
+  Map<String, dynamic> _weeklyEngagementUpdate() {
+    final dayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    return {
+      'weeklyEngagement': {
+        dayKey: FieldValue.increment(1),
+      },
+    };
+  }
+
+  void _addCoupleEngagement(
+    WriteBatch batch,
+    Map<String, dynamic>? userData,
+    String uid,
+  ) {
+    if (userData?['pairStatus'] != 'paired') return;
+    final pairId = userData?['pairId'] as String?;
+    if (pairId == null) return;
+
+    final dayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    batch.set(
+      _firestore.collection('couples').doc(pairId),
+      {
+        'weeklyEngagement': {
+          uid: {
+            dayKey: FieldValue.increment(1),
+          },
+        },
+      },
+      SetOptions(merge: true),
+    );
+  }
+}

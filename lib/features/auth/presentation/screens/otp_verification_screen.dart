@@ -13,10 +13,16 @@ import '../bloc/auth_bloc.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String email;
+  final bool isFromSignUp;
+  final String? name;
+  final String? password;
 
   const OtpVerificationScreen({
     super.key,
     required this.email,
+    this.isFromSignUp = false,
+    this.name,
+    this.password,
   });
 
   @override
@@ -28,6 +34,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
   final List<TextEditingController> _controllers =
       List.generate(6, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
+  String? _errorMessage;
   
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
@@ -109,24 +116,29 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
   void _verifyOtp() {
     final otp = _controllers.map((c) => c.text).join();
     if (otp.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please enter all 6 digits'),
-          backgroundColor: const Color(0xFFB03085),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
+      setState(() {
+        _errorMessage = 'Please enter all 6 digits';
+      });
       return;
     }
 
-    context.read<AuthBloc>().add(VerifyOtpRequestedEvent(otp));
+    context.read<AuthBloc>().add(VerifyOtpRequestedEvent(
+          otp: otp,
+          name: widget.name,
+          email: widget.isFromSignUp ? widget.email : null,
+          password: widget.password,
+        ));
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
+        if (state is VerifyOtpLoading) {
+          setState(() {
+            _errorMessage = null;
+          });
+        }
         if (state is VerifyOtpSuccess) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -138,17 +150,12 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
           );
           Navigator.pushReplacementNamed(
             context,
-            Routes.resetPasswordScreen,
+            widget.isFromSignUp ? Routes.navigationScreen : Routes.resetPasswordScreen,
           );
         } else if (state is VerifyOtpFailure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.errorMessage),
-              backgroundColor: const Color(0xFFB03085),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          );
+          setState(() {
+            _errorMessage = state.errorMessage;
+          });
         }
       },
       builder: (context, state) {
@@ -187,6 +194,18 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                           ),
                           UIHelper.verticalSpace(36.h),
                           _buildOtpRow(),
+                          if (_errorMessage != null) ...[
+                            UIHelper.verticalSpace(16.h),
+                            Text(
+                              _errorMessage!,
+                              style: GoogleFonts.dmSans(
+                                color: const Color(0xFFE060A0),
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
                           UIHelper.verticalSpace(36.h),
                           CustomAuthButton(
                             label: 'Verify Code',
@@ -232,6 +251,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
               controller: _controllers[index],
               focusNode: _focusNodes[index],
               keyboardType: TextInputType.number,
+              cursorColor: Colors.white,
               inputFormatters: [
                 LengthLimitingTextInputFormatter(1),
                 FilteringTextInputFormatter.digitsOnly,

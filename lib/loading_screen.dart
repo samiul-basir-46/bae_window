@@ -2,6 +2,12 @@ import 'dart:async';
 import 'package:bea_window_app/features/auth/presentation/screens/login_screen.dart';
 import 'package:bea_window_app/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:bea_window_app/features/splash/presentation/screens/splash_screen.dart';
+import 'package:bea_window_app/features/auth/presentation/screens/email_verification_screen.dart';
+import 'package:bea_window_app/features/auth/presentation/screens/profile_setup_screen.dart';
+import 'package:bea_window_app/features/auth/presentation/screens/pairing_screen.dart';
+import 'package:bea_window_app/navigation_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'constants/app_constants.dart';
 import 'helpers/di.dart';
@@ -18,7 +24,7 @@ final class Loading extends StatefulWidget {
 
 class _LoadingState extends State<Loading> {
   bool _isLoading = true;
-  bool isFirstTime = true;
+  Widget _initialScreen = const LoginScreen();
   Timer? _timer;
 
   @override
@@ -28,36 +34,92 @@ class _LoadingState extends State<Loading> {
     super.initState();
     _timer = Timer(const Duration(seconds: 35), () {
       if (_isLoading) {
-        // Only log out if internet is connected but loading is taking too long
         _handleLogout();
       }
     });
   }
 
   loadInitialData() async {
-    //AutoAppUpdateUtil.instance.checkAppUpdate();
     await setInitValue();
 
-    if (appData.read(kKeyIsLoggedIn)) {
-      String token = appData.read(kKeyAccessToken);
-      DioSingleton.instance.update(token);
-      await performPostLoginActions();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        await user.reload().timeout(const Duration(seconds: 5));
+      } catch (_) {}
+
+      final refreshedUser = FirebaseAuth.instance.currentUser;
+      if (refreshedUser != null && !refreshedUser.emailVerified) {
+        _initialScreen = const EmailVerificationScreen();
+      } else if (refreshedUser != null) {
+        Map<String, dynamic>? data;
+        try {
+          final doc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(refreshedUser.uid)
+              .get(const GetOptions(source: Source.cache));
+          if (doc.exists && doc.data() != null) {
+            data = doc.data()!;
+          }
+        } catch (_) {}
+
+        if (data == null) {
+          try {
+            final doc = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(refreshedUser.uid)
+                .get(const GetOptions(source: Source.server))
+                .timeout(const Duration(seconds: 8));
+            if (doc.exists && doc.data() != null) {
+              data = doc.data()!;
+            }
+          } catch (_) {}
+        }
+
+        if (data != null) {
+          final isProfileComplete = data['profileComplete'] as bool? ?? false;
+          if (!isProfileComplete) {
+            _initialScreen = const ProfileSetupScreen();
+          } else {
+            final pairStatus = data['pairStatus'] as String? ?? 'none';
+            if (pairStatus == 'paired' || pairStatus == 'unpaired') {
+              _initialScreen = const NavigationScreen();
+            } else {
+              _initialScreen = const PairingScreen();
+            }
+          }
+        } else {
+          if (appData.read(kKeyIsLoggedIn) == true) {
+            _initialScreen = const NavigationScreen();
+          } else {
+            _initialScreen = const ProfileSetupScreen();
+          }
+        }
+      }
     } else {
-      //  NotificationService().cancelAllNotifications();
+      _initialScreen = appData.read(kKeyfirstTime)
+          ? const OnboardingScreen()
+          : const LoginScreen();
     }
-    setState(() {
-      _timer!.cancel();
-      _isLoading = false;
-    });
+
+    if (appData.read(kKeyIsLoggedIn)) {
+      final token = appData.read(kKeyAccessToken)?.toString() ?? '';
+      if (token.isNotEmpty) {
+        DioSingleton.instance.update(token);
+      }
+      await performPostLoginActions();
+    }
+
+    if (mounted) {
+      setState(() {
+        _timer?.cancel();
+        _isLoading = false;
+      });
+    }
   }
 
   void _handleLogout() {
     appData.write(kKeyIsLoggedIn, false);
-
-    // Navigator.pushReplacement(
-    //   context,
-    //   MaterialPageRoute(builder: (context) => LogInScreen()),
-    // );
   }
 
   @override
@@ -65,11 +127,7 @@ class _LoadingState extends State<Loading> {
     if (_isLoading) {
       return const SplashScreen();
     } else {
-      return appData.read(kKeyIsLoggedIn)
-          ? const LoginScreen()
-          : appData.read(kKeyfirstTime)
-              ? const OnboardingScreen()
-              : const LoginScreen();
+      return _initialScreen;
     }
   }
 }

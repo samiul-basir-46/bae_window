@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
 import 'package:bea_window_app/common_widgets/custom_auth_text_field.dart';
+import 'package:bea_window_app/constants/validator.dart';
 import '../../../../common_widgets/custom_auth_button.dart';
 import '../widgets/auth_background_blobs.dart';
 import '../widgets/auth_header.dart';
@@ -24,6 +25,9 @@ class _SignUpScreenState extends State<SignUpScreen>
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  String? _blocErrorMessage;
   int _passwordStrength = 0;
 
   late AnimationController _fadeCtrl;
@@ -62,6 +66,7 @@ class _SignUpScreenState extends State<SignUpScreen>
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _fadeCtrl.dispose();
     super.dispose();
   }
@@ -84,22 +89,30 @@ class _SignUpScreenState extends State<SignUpScreen>
   Widget build(BuildContext context) {
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
+        if (state is SignUpLoading || state is AuthLoading) {
+          setState(() {
+            _blocErrorMessage = null;
+          });
+        }
         if (state is AuthSuccess) {
           Navigator.pushReplacementNamed(context, '/couple_link');
         } else if (state is AuthFailure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.errorMessage),
-              backgroundColor: const Color(0xFFB03085),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
+          setState(() {
+            _blocErrorMessage = state.errorMessage;
+          });
+        } else if (state is SignUpSuccess) {
+          Navigator.pushReplacementNamed(
+            context,
+            Routes.emailVerificationScreen,
           );
+        } else if (state is SignUpFailure) {
+          setState(() {
+            _blocErrorMessage = state.errorMessage;
+          });
         }
       },
       builder: (context, state) {
-        final isLoading = state is AuthLoading;
+        final isLoading = state is AuthLoading || state is SignUpLoading;
         return Scaffold(
           backgroundColor: const Color(0xFF0D0D10),
           body: Stack(
@@ -112,46 +125,83 @@ class _SignUpScreenState extends State<SignUpScreen>
                     position: _slideAnim,
                     child: SingleChildScrollView(
                       padding: EdgeInsets.symmetric(horizontal: 28.w),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          UIHelper.verticalSpace(48.h),
-                          const AuthHeader(
-                            logoIcon: Icons.favorite_rounded,
-                            eyebrow: 'New beginning',
-                            headline: 'Create your\nwindow ✦',
-                            subtitle: 'Just for the two of you — private & precious.',
-                          ),
-                          UIHelper.verticalSpace(32.h),
-                          CustomAuthTextField(
-                            controller: _nameController,
-                            hintText: 'Your name',
-                            prefixIcon: Icons.person_outline_rounded,
-                            keyboardType: TextInputType.name,
-                          ),
-                          UIHelper.verticalSpace(12.h),
-                          CustomAuthTextField(
-                            controller: _emailController,
-                            hintText: 'Email address',
-                            prefixIcon: Icons.mail_outline_rounded,
-                            keyboardType: TextInputType.emailAddress,
-                          ),
-                          UIHelper.verticalSpace(12.h),
-                          CustomAuthTextField(
-                            controller: _passwordController,
-                            hintText: 'Create password',
-                            prefixIcon: Icons.lock_outline_rounded,
-                            isPassword: true,
-                          ),
-                          UIHelper.verticalSpace(10.h),
-                          _buildStrengthBar(),
-                          UIHelper.verticalSpace(20.h),
-                          CustomAuthButton(
-                            label: 'Create Account',
-                            isLoading: isLoading,
-                            showArrow: true,
-                            onTap: () {},
-                          ),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            UIHelper.verticalSpace(48.h),
+                            const AuthHeader(
+                              logoIcon: Icons.favorite_rounded,
+                              eyebrow: 'New beginning',
+                              headline: 'Create your\nwindow ✦',
+                              subtitle:
+                                  'Just for the two of you — private & precious.',
+                            ),
+                            UIHelper.verticalSpace(32.h),
+                            CustomAuthTextField(
+                              controller: _nameController,
+                              hintText: 'Your name',
+                              prefixIcon: Icons.person_outline_rounded,
+                              keyboardType: TextInputType.name,
+                              validator: nameValidator,
+                            ),
+                            UIHelper.verticalSpace(12.h),
+                            CustomAuthTextField(
+                              controller: _emailController,
+                              hintText: 'Email address',
+                              prefixIcon: Icons.mail_outline_rounded,
+                              keyboardType: TextInputType.emailAddress,
+                              validator: emailValidator,
+                            ),
+                            UIHelper.verticalSpace(12.h),
+                            CustomAuthTextField(
+                              controller: _passwordController,
+                              hintText: 'Create password',
+                              prefixIcon: Icons.lock_outline_rounded,
+                              isPassword: true,
+                              validator: passwordValidator,
+                            ),
+                            UIHelper.verticalSpace(12.h),
+                            CustomAuthTextField(
+                              controller: _confirmPasswordController,
+                              hintText: 'Confirm password',
+                              prefixIcon: Icons.lock_outline_rounded,
+                              isPassword: true,
+                              validator: (val) =>
+                                  confirmPasswordValidator(val, _passwordController.text),
+                            ),
+                            UIHelper.verticalSpace(10.h),
+                            _buildStrengthBar(),
+                            if (_blocErrorMessage != null) ...[
+                              UIHelper.verticalSpace(12.h),
+                              Text(
+                                _blocErrorMessage!,
+                                style: GoogleFonts.dmSans(
+                                  color: const Color(0xFFE060A0),
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                            UIHelper.verticalSpace(20.h),
+                            CustomAuthButton(
+                              label: 'Create Account',
+                              isLoading: isLoading,
+                              showArrow: true,
+                              onTap: () {
+                                if (_formKey.currentState?.validate() ?? false) {
+                                  context.read<AuthBloc>().add(
+                                        SignUpRequestedEvent(
+                                          name: _nameController.text.trim(),
+                                          email: _emailController.text.trim(),
+                                          password: _passwordController.text,
+                                        ),
+                                      );
+                                }
+                              },
+                            ),
                           UIHelper.verticalSpace(20.h),
                           _buildOrDivider(),
                           UIHelper.verticalSpace(16.h),
@@ -178,14 +228,13 @@ class _SignUpScreenState extends State<SignUpScreen>
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
         );
       },
     );
   }
-
-
 
   Widget _buildStrengthBar() {
     if (_passwordController.text.isEmpty) return const SizedBox.shrink();
@@ -210,7 +259,7 @@ class _SignUpScreenState extends State<SignUpScreen>
           }),
         ),
         if (_strengthLabel.isNotEmpty) ...[
-         UIHelper.verticalSpace(6.h),
+          UIHelper.verticalSpace(6.h),
           Text(
             _strengthLabel,
             style: GoogleFonts.dmSans(

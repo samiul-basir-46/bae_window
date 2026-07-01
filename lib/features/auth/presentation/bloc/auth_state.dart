@@ -38,3 +38,52 @@ class VerifyOtpFailure extends AuthState {
   VerifyOtpFailure(this.errorMessage);
 }
 
+class SignUpLoading extends AuthState {}
+
+class SignUpSuccess extends AuthState {}
+
+class SignUpFailure extends AuthState {
+  final String errorMessage;
+
+  SignUpFailure(this.errorMessage);
+}
+
+class EmailVerificationPending extends AuthState {}
+
+class EmailVerificationSuccess extends AuthState {}
+
+class EmailVerificationFailure extends AuthState {
+  final String errorMessage;
+
+  EmailVerificationFailure(this.errorMessage);
+}
+
+class ProfileSetupPendingState extends AuthState {}
+
+class PairingPendingState extends AuthState {}
+
+class ProfileSetupLoading extends AuthState {}
+
+class ProfileSetupSuccess extends AuthState {}
+
+class ProfileSetupFailure extends AuthState {
+  final String errorMessage;
+  ProfileSetupFailure(this.errorMessage);
+}
+
+class PairingCodeGenerated extends AuthState {
+  final String code;
+  PairingCodeGenerated(this.code);
+}
+
+class PairingInProgress extends AuthState {}
+
+class PairingSuccess extends AuthState {}
+
+class PairingFailure extends AuthState {
+  final String errorMessage;
+  PairingFailure(this.errorMessage);
+}
+
+class PairingSkipped extends AuthState {}
+

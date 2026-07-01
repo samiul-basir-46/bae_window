@@ -46,6 +46,7 @@ class _CustomAuthTextFieldState extends State<CustomAuthTextField> {
       textInputAction: widget.textInputAction,
       onFieldSubmitted: widget.onFieldSubmitted,
       validator: widget.validator,
+      cursorColor: Colors.white,
       style: GoogleFonts.dmSans(color: Colors.white, fontSize: 14.sp),
       decoration: InputDecoration(
         hintText: widget.hintText,
@@ -92,7 +93,8 @@ class _CustomAuthTextFieldState extends State<CustomAuthTextField> {
           borderRadius: BorderRadius.circular(14.r),
           borderSide: const BorderSide(color: Color(0xFFE060A0)),
         ),
-        errorStyle: GoogleFonts.dmSans(color: const Color(0xFFE060A0), fontSize: 12.sp),
+        errorStyle:
+            GoogleFonts.dmSans(color: const Color(0xFFE060A0), fontSize: 12.sp),
         contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
       ),
     );

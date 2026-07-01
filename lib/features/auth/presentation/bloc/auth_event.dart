@@ -19,5 +19,65 @@ class ForgotPasswordRequestedEvent extends AuthEvent {
 
 class VerifyOtpRequestedEvent extends AuthEvent {
   final String otp;
-  const VerifyOtpRequestedEvent(this.otp);
+  final String? name;
+  final String? email;
+  final String? password;
+  const VerifyOtpRequestedEvent({
+    required this.otp,
+    this.name,
+    this.email,
+    this.password,
+  });
+}
+
+class SignUpRequestedEvent extends AuthEvent {
+  final String name;
+  final String email;
+  final String password;
+  const SignUpRequestedEvent({
+    required this.name,
+    required this.email,
+    required this.password,
+  });
+}
+
+class LoginRequestedEvent extends AuthEvent {
+  final String email;
+  final String password;
+  const LoginRequestedEvent({
+    required this.email,
+    required this.password,
+  });
+}
+
+class CheckEmailVerificationRequested extends AuthEvent {
+  const CheckEmailVerificationRequested();
+}
+
+class ResendVerificationEmailRequested extends AuthEvent {
+  const ResendVerificationEmailRequested();
+}
+
+class SaveProfileRequested extends AuthEvent {
+  final String nickname;
+  final String? avatarUrl;
+  final File? avatarFile;
+  const SaveProfileRequested({
+    required this.nickname,
+    this.avatarUrl,
+    this.avatarFile,
+  });
+}
+
+class GenerateInviteCodeRequested extends AuthEvent {
+  const GenerateInviteCodeRequested();
+}
+
+class JoinWithCodeRequested extends AuthEvent {
+  final String code;
+  const JoinWithCodeRequested(this.code);
+}
+
+class SkipPairingRequested extends AuthEvent {
+  const SkipPairingRequested();
 }

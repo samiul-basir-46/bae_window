@@ -9,6 +9,7 @@ import 'package:bea_window_app/features/story/presentation/screens/story_screen.
 import 'package:bea_window_app/features/space/presentation/screens/space_screen.dart';
 import 'package:bea_window_app/features/nest/presentation/screens/nest_screen.dart';
 import 'helpers/helper_methods.dart';
+import 'helpers/deep_link_helper.dart';
 
 class SwitchTabNotification extends Notification {
   final int index;
@@ -38,6 +39,16 @@ class _NavigationScreenState extends State<NavigationScreen> {
       const SpaceScreen(),
       const NestScreen(),
     ];
+    // Start listening for widget deep links
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      DeepLinkHelper.init(context);
+    });
+  }
+
+  @override
+  void dispose() {
+    DeepLinkHelper.dispose();
+    super.dispose();
   }
 
 
