@@ -1,3 +1,4 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -7,11 +8,17 @@ import 'quick_action_dock.dart';
 
 class LivePeekCard extends StatefulWidget {
   final String imageUrl;
+  final String drawingUrl;
+  final String voiceUrl;
+  final String? snapType;
   final VoidCallback onTap;
 
   const LivePeekCard({
     super.key,
     required this.imageUrl,
+    required this.drawingUrl,
+    required this.voiceUrl,
+    this.snapType,
     required this.onTap,
   });
 
@@ -20,18 +27,107 @@ class LivePeekCard extends StatefulWidget {
 }
 
 class _LivePeekCardState extends State<LivePeekCard> {
-  final PageController _pageController = PageController();
-  int _currentPage = 0;
+  late final PageController _pageController;
+  late int _currentPage;
+  final AudioPlayer _voicePlayer = AudioPlayer();
+  bool _isVoicePlaying = false;
+
+  int _pageForType(String? type) {
+    switch (type?.toLowerCase()) {
+      case 'draw':
+        return 1;
+      case 'voice':
+        return 2;
+      default:
+        return 0;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _currentPage = _pageForType(widget.snapType);
+    _pageController = PageController(initialPage: _currentPage);
+    _voicePlayer.onPlayerComplete.listen((_) {
+      if (mounted) {
+        setState(() {
+          _isVoicePlaying = false;
+        });
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant LivePeekCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final contentChanged = widget.imageUrl != oldWidget.imageUrl ||
+        widget.drawingUrl != oldWidget.drawingUrl ||
+        widget.voiceUrl != oldWidget.voiceUrl ||
+        widget.snapType != oldWidget.snapType;
+
+    if (widget.voiceUrl != oldWidget.voiceUrl && _isVoicePlaying) {
+      _voicePlayer.stop();
+      _isVoicePlaying = false;
+    }
+
+    if (contentChanged &&
+        (widget.imageUrl.isNotEmpty ||
+            widget.drawingUrl.isNotEmpty ||
+            widget.voiceUrl.isNotEmpty)) {
+      final targetPage = _pageForType(widget.snapType);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_pageController.hasClients) return;
+        _pageController.animateToPage(
+          targetPage,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeOutCubic,
+        );
+      });
+    }
+  }
 
   @override
   void dispose() {
     _pageController.dispose();
+    _voicePlayer.dispose();
     super.dispose();
+  }
+
+  Future<void> _toggleVoicePlayback() async {
+    if (widget.voiceUrl.isEmpty) return;
+
+    try {
+      if (_isVoicePlaying) {
+        await _voicePlayer.stop();
+        if (mounted) {
+          setState(() {
+            _isVoicePlaying = false;
+          });
+        }
+      } else {
+        await _voicePlayer.play(UrlSource(widget.voiceUrl));
+        if (mounted) {
+          setState(() {
+            _isVoicePlaying = true;
+          });
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not play voice message: $e'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool hasImage = widget.imageUrl.isNotEmpty;
+    final bool hasSnap = widget.imageUrl.isNotEmpty;
+    final bool hasDrawing = widget.drawingUrl.isNotEmpty;
+    final bool hasVoice = widget.voiceUrl.isNotEmpty;
 
     return Container(
       height: 330.h,
@@ -60,13 +156,13 @@ class _LivePeekCardState extends State<LivePeekCard> {
               },
               children: [
                 // Slide 1: Snaps (Pictures)
-                _buildSnapPage(hasImage),
-                
+                _buildSnapPage(hasSnap),
+
                 // Slide 2: Sketches & Drawings
-                _buildDrawPage(hasImage),
-                
+                _buildDrawPage(hasDrawing),
+
                 // Slide 3: Voice Notes Player
-                _buildVoicePage(),
+                _buildVoicePage(hasVoice),
               ],
             ),
           ),
@@ -99,7 +195,8 @@ class _LivePeekCardState extends State<LivePeekCard> {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12.r),
                   child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
                     color: Colors.black.withValues(alpha: 0.65),
                     child: Row(
                       children: [
@@ -135,7 +232,9 @@ class _LivePeekCardState extends State<LivePeekCard> {
                       height: 6.h,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(3.r),
-                        color: isSelected ? _getThemeColorForPage(index) : Colors.white24,
+                        color: isSelected
+                            ? _getThemeColorForPage(index)
+                            : Colors.white24,
                       ),
                     );
                   }),
@@ -167,7 +266,12 @@ class _LivePeekCardState extends State<LivePeekCard> {
                       ),
                       UIHelper.verticalSpace(2.h),
                       Text(
-                        _getMainLabelForPage(_currentPage, hasImage),
+                        _getMainLabelForPage(
+                          _currentPage,
+                          hasSnap,
+                          hasDrawing,
+                          hasVoice,
+                        ),
                         style: GoogleFonts.dmSans(
                           color: Colors.white,
                           fontSize: 14.sp,
@@ -210,40 +314,44 @@ class _LivePeekCardState extends State<LivePeekCard> {
 
   // --- Page builder helpers ---
 
-  Widget _buildSnapPage(bool hasImage) {
+  Widget _buildSnapPage(bool hasSnap) {
     return Container(
       width: double.infinity,
       color: AppColors.navBgColor,
-      child: hasImage
+      child: hasSnap
           ? Image.network(
               widget.imageUrl,
               height: double.infinity,
               width: double.infinity,
               fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => _buildPlaceholder(Icons.camera_alt_outlined, "Tap Snap to capture your first photo"),
+              errorBuilder: (context, error, stackTrace) => _buildPlaceholder(
+                  Icons.camera_alt_outlined,
+                  "Tap Snap to capture your first photo"),
             )
-          : _buildPlaceholder(Icons.camera_alt_outlined, "Tap Snap to capture your first photo"),
+          : _buildPlaceholder(Icons.camera_alt_outlined,
+              "Tap Snap to capture your first photo"),
     );
   }
 
-  Widget _buildDrawPage(bool hasImage) {
-    // In a fully featured version, if the latest snap was a drawing, we can show it here
+  Widget _buildDrawPage(bool hasDrawing) {
     return Container(
       width: double.infinity,
       color: const Color(0xFF1E1E24),
-      child: hasImage && widget.imageUrl.contains("draw_")
+      child: hasDrawing
           ? Image.network(
-              widget.imageUrl,
+              widget.drawingUrl,
               height: double.infinity,
               width: double.infinity,
               fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) => _buildPlaceholder(Icons.brush_outlined, "Draw and share notes on canvas"),
+              errorBuilder: (context, error, stackTrace) => _buildPlaceholder(
+                  Icons.brush_outlined, "Draw and share notes on canvas"),
             )
-          : _buildPlaceholder(Icons.brush_outlined, "Draw and share notes on canvas"),
+          : _buildPlaceholder(
+              Icons.brush_outlined, "Draw and share notes on canvas"),
     );
   }
 
-  Widget _buildVoicePage() {
+  Widget _buildVoicePage(bool hasVoice) {
     return Container(
       width: double.infinity,
       color: const Color(0xFF121420),
@@ -251,23 +359,29 @@ class _LivePeekCardState extends State<LivePeekCard> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 52.w,
-              height: 52.h,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.primaryPurple.withValues(alpha: 0.15),
-                border: Border.all(color: AppColors.primaryPurple.withValues(alpha: 0.3)),
-              ),
-              child: const Icon(
-                Icons.play_arrow_rounded,
-                color: Colors.white,
-                size: 28,
+            GestureDetector(
+              onTap: hasVoice ? _toggleVoicePlayback : null,
+              child: Container(
+                width: 52.w,
+                height: 52.h,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primaryPurple.withValues(alpha: 0.15),
+                  border: Border.all(
+                      color: AppColors.primaryPurple.withValues(alpha: 0.3)),
+                ),
+                child: Icon(
+                  _isVoicePlaying
+                      ? Icons.stop_rounded
+                      : Icons.play_arrow_rounded,
+                  color: hasVoice ? Colors.white : Colors.white38,
+                  size: 28,
+                ),
               ),
             ),
             UIHelper.verticalSpace(12.h),
             Text(
-              "No Voice Notes Yet",
+              hasVoice ? "Voice message from Bae" : "No Voice Notes Yet",
               style: GoogleFonts.dmSans(
                 color: Colors.white,
                 fontSize: 13.sp,
@@ -276,7 +390,7 @@ class _LivePeekCardState extends State<LivePeekCard> {
             ),
             UIHelper.verticalSpace(4.h),
             Text(
-              "Tap Voice to record and send",
+              hasVoice ? "Tap to listen" : "Tap Voice to record and send",
               style: GoogleFonts.dmSans(
                 color: Colors.white30,
                 fontSize: 11.sp,
@@ -356,14 +470,25 @@ class _LivePeekCardState extends State<LivePeekCard> {
     }
   }
 
-  String _getMainLabelForPage(int index, bool hasImage) {
+  String _getMainLabelForPage(
+    int index,
+    bool hasSnap,
+    bool hasDrawing,
+    bool hasVoice,
+  ) {
     switch (index) {
       case 0:
-        return hasImage ? "Captured recently by Bae" : "No Snaps Yet ✦ Send one!";
+        return hasSnap
+            ? "Captured recently by Bae"
+            : "No Snaps Yet ✦ Send one!";
       case 1:
-        return "Interactive Partner Sketches";
+        return hasDrawing
+            ? "Drawn recently by Bae"
+            : "Interactive Partner Sketches";
       case 2:
-        return "Listen to latest messages";
+        return hasVoice
+            ? "Latest voice message from Bae"
+            : "Listen to latest messages";
       default:
         return "";
     }

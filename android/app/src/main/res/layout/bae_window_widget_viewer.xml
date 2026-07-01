@@ -50,7 +50,7 @@
             android:textSize="11sp" />
     </RelativeLayout>
 
-    <!-- Center Frame Container -->
+    <!-- Swipeable image, drawing and voice pages -->
     <FrameLayout
         android:id="@+id/center_container"
         android:layout_width="match_parent"
@@ -58,53 +58,12 @@
         android:layout_above="@+id/footer_layout"
         android:layout_below="@+id/header_layout">
 
-        <!-- Snap Image -->
-        <ImageView
-            android:id="@+id/widget_image"
+        <StackView
+            android:id="@+id/widget_stack"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:scaleType="centerCrop"
-            android:visibility="gone" />
-
-        <!-- Placeholder (No snaps yet) -->
-        <LinearLayout
-            android:id="@+id/widget_placeholder"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:gravity="center"
-            android:orientation="vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="📷"
-                android:textSize="28sp" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Tap to upload a photo"
-                android:textColor="#50FFFFFF"
-                android:textSize="11sp" />
-        </LinearLayout>
-
-        <!-- Badge (top right: "Image" or "Draw") -->
-        <TextView
-            android:id="@+id/badge_text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="top|right"
-            android:layout_margin="8dp"
-            android:background="#B0000000"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="3dp"
-            android:text="Image"
-            android:textColor="#FFFFFF"
-            android:textSize="10sp"
-            android:textStyle="bold"
-            android:visibility="gone" />
+            android:animateFirstView="true"
+            android:loopViews="true" />
     </FrameLayout>
 
     <!-- Footer Row -->

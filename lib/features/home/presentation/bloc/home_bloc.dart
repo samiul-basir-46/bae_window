@@ -57,16 +57,19 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
       // If paired, get partner UID and start listening
       if (_isPaired && pairId != null) {
-        dev.log('HomeBloc: User is paired (coupleId: $pairId). Resolving partner...',
+        dev.log(
+            'HomeBloc: User is paired (coupleId: $pairId). Resolving partner...',
             name: 'HomeBloc');
         _partnerUid = await _authService.getPartnerUid(pairId);
         if (_partnerUid != null) {
-          dev.log('HomeBloc: Partner UID resolved: $_partnerUid', name: 'HomeBloc');
+          dev.log('HomeBloc: Partner UID resolved: $_partnerUid',
+              name: 'HomeBloc');
           // Get partner data once to emit initial state
           _cachedPartnerData = await _authService.getUserProfile(_partnerUid!);
         }
       } else {
-        dev.log('HomeBloc: User is unpaired (status: $pairStatus)', name: 'HomeBloc');
+        dev.log('HomeBloc: User is unpaired (status: $pairStatus)',
+            name: 'HomeBloc');
       }
 
       // Emit initial loaded state
@@ -187,9 +190,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     final userMoodText = moodData?['text'] as String? ?? 'Happy';
 
     final userAvatar = userData['profilePicture'] as String? ?? '';
-    final userName = userData['nickname'] as String? ??
-        userData['name'] as String? ??
-        'You';
+    final userName =
+        userData['nickname'] as String? ?? userData['name'] as String? ?? 'You';
     final inviteCode = userData['inviteCode'] as String?;
 
     // Extract partner info (if paired)
@@ -199,6 +201,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     String? partnerMoodText;
     int? daysTogether;
     String latestSnapUrl = '';
+    String latestImageUrl = '';
+    String latestDrawingUrl = '';
+    String latestVoiceUrl = '';
     String? latestSnapType;
 
     if (_isPaired && _cachedPartnerData != null) {
@@ -215,9 +220,22 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       // Read snap details sent by partner
       latestSnapUrl = partnerData['latestSnapUrl'] as String? ?? '';
       latestSnapType = partnerData['latestSnapType'] as String?;
+      final normalizedType = latestSnapType?.toLowerCase();
+
+      // Separate URLs keep one content type from replacing another. The
+      // legacy fallback preserves the most recently shared pre-migration item.
+      latestImageUrl = partnerData['latestImageUrl'] as String? ??
+          (normalizedType != 'draw' && normalizedType != 'voice'
+              ? latestSnapUrl
+              : '');
+      latestDrawingUrl = partnerData['latestDrawingUrl'] as String? ??
+          (normalizedType == 'draw' ? latestSnapUrl : '');
+      latestVoiceUrl = partnerData['latestVoiceUrl'] as String? ??
+          (normalizedType == 'voice' ? latestSnapUrl : '');
 
       // Calculate days together from relationshipStartDate (checks both own and partner's profile)
-      daysTogether = _calculateDaysTogether(userData) ?? _calculateDaysTogether(partnerData);
+      daysTogether = _calculateDaysTogether(userData) ??
+          _calculateDaysTogether(partnerData);
     }
 
     emit(HomeLoaded(
@@ -233,7 +251,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       partnerMoodEmoji: partnerMoodEmoji,
       partnerMoodText: partnerMoodText,
       inviteCode: inviteCode,
-      livePeekImageUrl: latestSnapUrl,
+      livePeekImageUrl: latestImageUrl,
+      livePeekDrawingUrl: latestDrawingUrl,
+      livePeekVoiceUrl: latestVoiceUrl,
+      latestSnapType: latestSnapType,
       relationshipPulse: _isPaired
           ? const [
               PulseData(day: "M", userCount: 4, partnerCount: 6),
@@ -263,7 +284,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
     // Update Home Screen Widget in background
     try {
-      dev.log('HomeBloc: Calling WidgetHelper.updateWidget(isPaired=$_isPaired, partner=$partnerName, days=$daysTogether, snap=$latestSnapUrl)',
+      dev.log(
+          'HomeBloc: Calling WidgetHelper.updateWidget(isPaired=$_isPaired, partner=$partnerName, days=$daysTogether, snap=$latestSnapUrl)',
           name: 'HomeBloc');
       await WidgetHelper.updateWidget(
         isPaired: _isPaired,
@@ -271,8 +293,12 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         daysTogether: daysTogether,
         latestSnapUrl: latestSnapUrl,
         latestSnapType: latestSnapType,
+        latestImageUrl: latestImageUrl,
+        latestDrawingUrl: latestDrawingUrl,
+        latestVoiceUrl: latestVoiceUrl,
       );
-      dev.log('HomeBloc: WidgetHelper.updateWidget completed successfully', name: 'HomeBloc');
+      dev.log('HomeBloc: WidgetHelper.updateWidget completed successfully',
+          name: 'HomeBloc');
     } catch (e, stack) {
       dev.log('HomeBloc: WidgetHelper.updateWidget FAILED: $e',
           error: e, stackTrace: stack, name: 'HomeBloc');

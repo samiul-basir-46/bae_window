@@ -6,20 +6,32 @@ import 'package:http/http.dart' as http;
 class CloudinaryService {
   static const String _cloudName = 'dpvo4otoj';
   static const String _uploadPreset = 'bae_window_avatars';
-  static const String _uploadUrl =
-      'https://api.cloudinary.com/v1_1/$_cloudName/image/upload';
 
   static Future<String?> uploadImage(File imageFile) async {
+    return _uploadFile(imageFile, resourceType: 'image');
+  }
+
+  /// Cloudinary handles audio files through its video resource endpoint.
+  static Future<String?> uploadAudio(File audioFile) async {
+    return _uploadFile(audioFile, resourceType: 'video');
+  }
+
+  static Future<String?> _uploadFile(
+    File file, {
+    required String resourceType,
+  }) async {
     try {
       dev.log(
-        'CloudinaryService: Starting image upload — ${imageFile.path}',
+        'CloudinaryService: Starting $resourceType upload — ${file.path}',
         name: 'CloudinaryService',
       );
 
-      final request = http.MultipartRequest('POST', Uri.parse(_uploadUrl));
+      final uploadUrl =
+          'https://api.cloudinary.com/v1_1/$_cloudName/$resourceType/upload';
+      final request = http.MultipartRequest('POST', Uri.parse(uploadUrl));
       request.fields['upload_preset'] = _uploadPreset;
       request.files.add(
-        await http.MultipartFile.fromPath('file', imageFile.path),
+        await http.MultipartFile.fromPath('file', file.path),
       );
 
       final streamedResponse = await request.send();

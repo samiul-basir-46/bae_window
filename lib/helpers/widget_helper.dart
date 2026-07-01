@@ -14,6 +14,9 @@ class WidgetHelper {
     required int? daysTogether,
     required String? latestSnapUrl,
     String? latestSnapType,
+    String? latestImageUrl,
+    String? latestDrawingUrl,
+    String? latestVoiceUrl,
     String? avatarLetter,
   }) async {
     final String status = isPaired
@@ -24,11 +27,19 @@ class WidgetHelper {
 
     final String senderName = isPaired ? "from ${partnerName ?? 'Bae'}" : "";
 
-    final String footerDescription = isPaired
-        ? (latestSnapUrl != null && latestSnapUrl.isNotEmpty
-            ? "${partnerName ?? 'Bae'} sent a photo"
-            : "Awaiting first snap")
-        : "Connect with partner";
+    final normalizedType = latestSnapType?.toLowerCase();
+    final String footerDescription;
+    if (!isPaired) {
+      footerDescription = "Connect with partner";
+    } else if (latestSnapUrl == null || latestSnapUrl.isEmpty) {
+      footerDescription = "Awaiting first share";
+    } else if (normalizedType == 'draw') {
+      footerDescription = "${partnerName ?? 'Bae'} sent a drawing";
+    } else if (normalizedType == 'voice') {
+      footerDescription = "${partnerName ?? 'Bae'} sent a voice message";
+    } else {
+      footerDescription = "${partnerName ?? 'Bae'} sent a photo";
+    }
 
     final String timestamp = DateFormat('h:mm a').format(DateTime.now());
 
@@ -60,43 +71,27 @@ class WidgetHelper {
         'dockPartnerStatus', dockPartnerStatus);
     await HomeWidget.saveWidgetData<String>('dockSubtitle', dockSubtitle);
 
-    // Save snap image using app's local storage so Widget can read it
-    if (latestSnapUrl != null && latestSnapUrl.isNotEmpty) {
-      try {
-        final directory = await getApplicationDocumentsDirectory();
-        final filePath = '${directory.path}/latest_snap.png';
+    final resolvedImageUrl = latestImageUrl ??
+        (normalizedType != 'draw' && normalizedType != 'voice'
+            ? latestSnapUrl
+            : null);
+    final resolvedDrawingUrl = latestDrawingUrl ??
+        (normalizedType == 'draw' ? latestSnapUrl : null);
 
-        // ignore: avoid_print
-        print('WidgetHelper: downloading snap from $latestSnapUrl');
-        // ignore: avoid_print
-        print('WidgetHelper: saving to $filePath');
-
-        final response = await http
-            .get(Uri.parse(latestSnapUrl))
-            .timeout(const Duration(seconds: 15));
-        if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
-          final file = File(filePath);
-          await file.writeAsBytes(response.bodyBytes, flush: true);
-
-          // ignore: avoid_print
-          print(
-              'WidgetHelper: snap saved, size=${response.bodyBytes.length} bytes');
-
-          await HomeWidget.saveWidgetData<String>('imagePath', filePath);
-        } else {
-          // ignore: avoid_print
-          print(
-              'WidgetHelper: snap download failed, status ${response.statusCode}, bodyLen=${response.bodyBytes.length}');
-          await HomeWidget.saveWidgetData<String>('imagePath', null);
-        }
-      } catch (e) {
-        // ignore: avoid_print
-        print('WidgetHelper: error downloading/saving snap image — $e');
-        await HomeWidget.saveWidgetData<String>('imagePath', null);
-      }
-    } else {
-      await HomeWidget.saveWidgetData<String>('imagePath', null);
-    }
+    await _cacheWidgetImage(
+      url: resolvedImageUrl,
+      fileName: 'latest_image.png',
+      preferenceKey: 'imagePath',
+    );
+    await _cacheWidgetImage(
+      url: resolvedDrawingUrl,
+      fileName: 'latest_drawing.png',
+      preferenceKey: 'drawingPath',
+    );
+    await HomeWidget.saveWidgetData<String>(
+      'voiceUrl',
+      latestVoiceUrl?.isNotEmpty == true ? latestVoiceUrl : null,
+    );
 
     // Trigger Widget Updates on Android
     await HomeWidget.updateWidget(
@@ -107,5 +102,33 @@ class WidgetHelper {
       name: _androidDockWidgetName,
       androidName: _androidDockWidgetName,
     );
+  }
+
+  static Future<void> _cacheWidgetImage({
+    required String? url,
+    required String fileName,
+    required String preferenceKey,
+  }) async {
+    if (url == null || url.isEmpty) {
+      await HomeWidget.saveWidgetData<String>(preferenceKey, null);
+      return;
+    }
+
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final filePath = '${directory.path}/$fileName';
+      final response =
+          await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
+        final file = File(filePath);
+        await file.writeAsBytes(response.bodyBytes, flush: true);
+        await HomeWidget.saveWidgetData<String>(preferenceKey, filePath);
+      } else {
+        await HomeWidget.saveWidgetData<String>(preferenceKey, null);
+      }
+    } catch (_) {
+      await HomeWidget.saveWidgetData<String>(preferenceKey, null);
+    }
   }
 }

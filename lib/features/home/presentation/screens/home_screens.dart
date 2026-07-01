@@ -133,9 +133,11 @@ class HomeScreenView extends StatelessWidget {
                           UIHelper.verticalSpace(20.h),
                           LivePeekCard(
                             imageUrl: state.livePeekImageUrl,
+                            drawingUrl: state.livePeekDrawingUrl,
+                            voiceUrl: state.livePeekVoiceUrl,
+                            snapType: state.latestSnapType,
                             onTap: () {
-                              const SwitchTabNotification(1)
-                                  .dispatch(context);
+                              const SwitchTabNotification(1).dispatch(context);
                             },
                           ),
                           UIHelper.verticalSpace(24.h),

@@ -125,7 +125,8 @@ class FirebaseAuthService {
     bool codeExists = true;
 
     do {
-      code = List.generate(6, (index) => chars[random.nextInt(chars.length)]).join();
+      code = List.generate(6, (index) => chars[random.nextInt(chars.length)])
+          .join();
       final doc = await _firestore.collection('pairing_codes').doc(code).get();
       codeExists = doc.exists;
     } while (codeExists);
@@ -148,7 +149,8 @@ class FirebaseAuthService {
     final user = _auth.currentUser;
     if (user == null) throw Exception('No authenticated user found.');
 
-    final codeDoc = await _firestore.collection('pairing_codes').doc(code).get();
+    final codeDoc =
+        await _firestore.collection('pairing_codes').doc(code).get();
     if (!codeDoc.exists) {
       throw Exception('Invalid verification code.');
     }
@@ -222,7 +224,7 @@ class FirebaseAuthService {
       updates['nickname'] = nickname;
     }
     if (relationshipStartDate != null) {
-      updates['relationshipStartDate'] = relationshipStartDate;
+      await updateRelationshipStartDate(uid, relationshipStartDate);
     }
     if (avatarUrl != null) {
       updates['profilePicture'] = avatarUrl;
@@ -236,8 +238,58 @@ class FirebaseAuthService {
       // Fire-and-forget: Firestore offline persistence writes to local cache
       // immediately, so we don't need to await the server confirmation.
       // Awaiting can hang indefinitely if the device is offline.
-      _firestore.collection('users').doc(uid).set(updates, SetOptions(merge: true));
+      _firestore
+          .collection('users')
+          .doc(uid)
+          .set(updates, SetOptions(merge: true));
     }
+  }
+
+  /// Keep the relationship start date identical for both paired users.
+  Future<void> updateRelationshipStartDate(String uid, String date) async {
+    final userRef = _firestore.collection('users').doc(uid);
+    final userSnapshot = await userRef.get();
+    final userData = userSnapshot.data();
+
+    final batch = _firestore.batch();
+    batch.set(
+      userRef,
+      {'relationshipStartDate': date},
+      SetOptions(merge: true),
+    );
+
+    final isPaired = userData?['pairStatus'] == 'paired';
+    final pairId = userData?['pairId'] as String?;
+
+    if (isPaired && pairId != null) {
+      final coupleSnapshot =
+          await _firestore.collection('couples').doc(pairId).get();
+      final coupleData = coupleSnapshot.data();
+
+      if (coupleData == null) {
+        throw Exception('Paired relationship data was not found.');
+      }
+
+      final user1Uid = coupleData['user1Uid'] as String?;
+      final user2Uid = coupleData['user2Uid'] as String?;
+      final partnerUid = user1Uid == uid
+          ? user2Uid
+          : user2Uid == uid
+              ? user1Uid
+              : null;
+
+      if (partnerUid == null) {
+        throw Exception('Partner could not be resolved for this account.');
+      }
+
+      batch.set(
+        _firestore.collection('users').doc(partnerUid),
+        {'relationshipStartDate': date},
+        SetOptions(merge: true),
+      );
+    }
+
+    await batch.commit();
   }
 
   /// Returns a real-time stream of a user's Firestore document
@@ -279,14 +331,74 @@ class FirebaseAuthService {
   }
 
   /// Update current user's latest snap in Firestore
-  void updateLatestSnap({required String snapUrl, String? snapType}) {
+  Future<void> updateLatestSnap({
+    required String snapUrl,
+    String? snapType,
+  }) async {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    _firestore.collection('users').doc(user.uid).set({
+    final userRef = _firestore.collection('users').doc(user.uid);
+    final existingData = (await userRef.get()).data();
+    final updates = <String, dynamic>{};
+
+    // Preserve the last item written by older app versions before the shared
+    // legacy field is overwritten by a different content type.
+    final legacyUrl = existingData?['latestSnapUrl'] as String? ?? '';
+    final legacyType =
+        (existingData?['latestSnapType'] as String? ?? 'Image').toLowerCase();
+    if (legacyUrl.isNotEmpty) {
+      final String legacyUrlField;
+      final String legacyTimeField;
+
+      switch (legacyType) {
+        case 'draw':
+          legacyUrlField = 'latestDrawingUrl';
+          legacyTimeField = 'latestDrawingTime';
+        case 'voice':
+          legacyUrlField = 'latestVoiceUrl';
+          legacyTimeField = 'latestVoiceTime';
+        default:
+          legacyUrlField = 'latestImageUrl';
+          legacyTimeField = 'latestImageTime';
+      }
+
+      final existingLegacySpecificUrl =
+          existingData?[legacyUrlField] as String? ?? '';
+      if (existingLegacySpecificUrl.isEmpty) {
+        updates[legacyUrlField] = legacyUrl;
+        final legacyTime = existingData?['lastSnapTime'];
+        if (legacyTime != null) {
+          updates[legacyTimeField] = legacyTime;
+        }
+      }
+    }
+
+    final normalizedType = (snapType ?? 'Image').toLowerCase();
+    final String contentUrlField;
+    final String contentTimeField;
+
+    switch (normalizedType) {
+      case 'draw':
+        contentUrlField = 'latestDrawingUrl';
+        contentTimeField = 'latestDrawingTime';
+      case 'voice':
+        contentUrlField = 'latestVoiceUrl';
+        contentTimeField = 'latestVoiceTime';
+      default:
+        contentUrlField = 'latestImageUrl';
+        contentTimeField = 'latestImageTime';
+    }
+
+    updates.addAll({
+      contentUrlField: snapUrl,
+      contentTimeField: FieldValue.serverTimestamp(),
+      // Keep these legacy fields for the home-screen widget and old clients.
       'latestSnapUrl': snapUrl,
       'latestSnapType': snapType ?? 'Image',
       'lastSnapTime': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    });
+
+    await userRef.set(updates, SetOptions(merge: true));
   }
 }

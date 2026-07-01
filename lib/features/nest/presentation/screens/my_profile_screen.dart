@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -32,7 +33,9 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   bool _isLoading = true;
   bool _isUploadingAvatar = false;
   bool _isSaving = false;
+  bool _isDateDirty = false;
   File? _localAvatarFile;
+  StreamSubscription? _profileSubscription;
 
   @override
   void initState() {
@@ -62,11 +65,29 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       setState(() {
         _isLoading = false;
       });
+
+      if (user != null) {
+        _listenToProfile(user.uid);
+      }
     }
+  }
+
+  void _listenToProfile(String uid) {
+    _profileSubscription?.cancel();
+    _profileSubscription = _authService.userStream(uid).listen((snapshot) {
+      if (!mounted || _isDateDirty) return;
+
+      final latestDate =
+          snapshot.data()?['relationshipStartDate'] as String? ?? '';
+      if (_dateController.text != latestDate) {
+        _dateController.text = latestDate;
+      }
+    });
   }
 
   @override
   void dispose() {
+    _profileSubscription?.cancel();
     _nameController.dispose();
     _nicknameController.dispose();
     _emailController.dispose();
@@ -112,6 +133,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       setState(() {
         _dateController.text =
             "${months[picked.month - 1]} ${picked.day}, ${picked.year}";
+        _isDateDirty = true;
       });
     }
   }
@@ -209,6 +231,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
+
     setState(() {
       _isSaving = true;
     });
@@ -222,6 +245,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       );
 
       if (mounted) {
+        _isDateDirty = false;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -257,7 +281,6 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       }
     }
   }
-
 
   @override
   Widget build(BuildContext context) {

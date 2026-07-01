@@ -46,7 +46,7 @@ class QuickActionDock extends StatelessWidget {
         ScaffoldMessenger.of(context).clearSnackBars();
 
         if (imageUrl != null) {
-          FirebaseAuthService()
+          await FirebaseAuthService()
               .updateLatestSnap(snapUrl: imageUrl, snapType: 'Image');
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -291,13 +291,18 @@ class _DrawingCanvasSheetState extends State<DrawingCanvasSheet> {
                           Navigator.pop(context);
                           return;
                         }
-                        
+
+                        final messenger = ScaffoldMessenger.of(context);
+
                         // Show uploading loader
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        messenger.showSnackBar(
                           const SnackBar(
                             content: Row(
                               children: [
-                                CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(Colors.white)),
+                                CircularProgressIndicator(
+                                  valueColor:
+                                      AlwaysStoppedAnimation(Colors.white),
+                                ),
                                 SizedBox(width: 16),
                                 Text("Uploading drawing to Bae..."),
                               ],
@@ -311,57 +316,87 @@ class _DrawingCanvasSheetState extends State<DrawingCanvasSheet> {
                           // Generate image from points
                           final recorder = ui.PictureRecorder();
                           final canvas = ui.Canvas(recorder);
-                          final paintBg = ui.Paint()..color = const Color(0xFF1E1E24);
-                          
+                          final paintBg = ui.Paint()
+                            ..color = const Color(0xFF1E1E24);
+
                           // Canvas size
                           const canvasWidth = 800.0;
                           const canvasHeight = 800.0;
-                          canvas.drawRect(const Rect.fromLTWH(0, 0, canvasWidth, canvasHeight), paintBg);
+                          canvas.drawRect(
+                            const Rect.fromLTWH(
+                              0,
+                              0,
+                              canvasWidth,
+                              canvasHeight,
+                            ),
+                            paintBg,
+                          );
 
                           // We need to scale points to match our 800x800 canvas
                           for (int i = 0; i < _points.length - 1; i++) {
-                            if (_points[i].offset != null && _points[i + 1].offset != null) {
+                            if (_points[i].offset != null &&
+                                _points[i + 1].offset != null) {
                               final p1 = _points[i].offset!;
                               final p2 = _points[i + 1].offset!;
-                              
+
                               // Create a new fresh paint instance to prevent engine crash
                               final paintLine = ui.Paint()
                                 ..color = _points[i].paint.color
                                 ..strokeCap = ui.StrokeCap.round
                                 ..strokeWidth = _points[i].paint.strokeWidth;
-                                
+
                               canvas.drawLine(p1, p2, paintLine);
                             }
                           }
 
                           final picture = recorder.endRecording();
-                          final img = await picture.toImage(canvasWidth.toInt(), canvasHeight.toInt());
-                          final pngBytes = await img.toByteData(format: ui.ImageByteFormat.png);
+                          final img = await picture.toImage(
+                            canvasWidth.toInt(),
+                            canvasHeight.toInt(),
+                          );
+                          final pngBytes = await img.toByteData(
+                            format: ui.ImageByteFormat.png,
+                          );
 
                           if (pngBytes != null) {
                             final directory = await getTemporaryDirectory();
-                            final filePath = '${directory.path}/draw_${DateTime.now().millisecondsSinceEpoch}.png';
+                            final filePath =
+                                '${directory.path}/draw_${DateTime.now().millisecondsSinceEpoch}.png';
                             final file = File(filePath);
-                            await file.writeAsBytes(pngBytes.buffer.asUint8List());
+                            await file.writeAsBytes(
+                              pngBytes.buffer.asUint8List(),
+                            );
 
-                            final String? imageUrl = await CloudinaryService.uploadImage(file);
-                            
-                            ScaffoldMessenger.of(context).clearSnackBars();
+                            final String? imageUrl =
+                                await CloudinaryService.uploadImage(file);
+
+                            messenger.clearSnackBars();
 
                             if (imageUrl != null) {
-                              FirebaseAuthService().updateLatestSnap(snapUrl: imageUrl, snapType: 'Draw');
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              await FirebaseAuthService().updateLatestSnap(
+                                snapUrl: imageUrl,
+                                snapType: 'Draw',
+                              );
+                              messenger.showSnackBar(
                                 const SnackBar(
-                                  content: Text("Failed to send drawing. Please try again."),
+                                  content: Text("Drawing sent to Bae!"),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            } else {
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    "Failed to send drawing. Please try again.",
+                                  ),
                                   backgroundColor: Colors.redAccent,
                                 ),
                               );
                             }
                           }
                         } catch (e) {
-                          ScaffoldMessenger.of(context).clearSnackBars();
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          messenger.clearSnackBars();
+                          messenger.showSnackBar(
                             SnackBar(
                               content: Text("Drawing error: $e"),
                               backgroundColor: Colors.redAccent,
@@ -565,6 +600,7 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet> {
 
   bool _isRecording = false;
   bool _isPlaying = false;
+  bool _isSendingVoice = false;
   String? _filePath;
   double _recordingProgress = 0.0;
   Timer? _timer;
@@ -648,6 +684,67 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet> {
     setState(() {
       _isPlaying = false;
     });
+  }
+
+  Future<void> _sendVoiceMessage() async {
+    final filePath = _filePath;
+    if (filePath == null || _isSendingVoice) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() {
+      _isSendingVoice = true;
+    });
+
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation(Colors.white),
+            ),
+            SizedBox(width: 16),
+            Text("Uploading voice message to Bae..."),
+          ],
+        ),
+        duration: Duration(seconds: 15),
+      ),
+    );
+
+    Navigator.pop(context);
+
+    try {
+      final voiceUrl = await CloudinaryService.uploadAudio(File(filePath));
+      messenger.clearSnackBars();
+
+      if (voiceUrl == null) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text("Failed to send voice message. Please try again."),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+        return;
+      }
+
+      await FirebaseAuthService().updateLatestSnap(
+        snapUrl: voiceUrl,
+        snapType: 'Voice',
+      );
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text("Voice message sent to Bae!"),
+          backgroundColor: AppColors.primaryPink,
+        ),
+      );
+    } catch (e) {
+      messenger.clearSnackBars();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text("Voice message error: $e"),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
   }
 
   @override
@@ -794,15 +891,7 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet> {
                     borderRadius: BorderRadius.circular(16.r),
                   ),
                 ),
-                onPressed: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Voice Message Sent!"),
-                      backgroundColor: AppColors.primaryPink,
-                    ),
-                  );
-                },
+                onPressed: _isSendingVoice ? null : _sendVoiceMessage,
                 child: Text(
                   "Send Voice Message",
                   style: GoogleFonts.dmSans(

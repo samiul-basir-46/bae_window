@@ -32,6 +32,9 @@ class HomeLoaded extends HomeState {
   final String? inviteCode;
 
   final String livePeekImageUrl;
+  final String livePeekDrawingUrl;
+  final String livePeekVoiceUrl;
+  final String? latestSnapType;
   final String? awarenessMessage;
   final String? awarenessIcon;
   final List<PulseData> relationshipPulse;
@@ -53,6 +56,9 @@ class HomeLoaded extends HomeState {
     this.partnerMoodText,
     this.inviteCode,
     this.livePeekImageUrl = '',
+    this.livePeekDrawingUrl = '',
+    this.livePeekVoiceUrl = '',
+    this.latestSnapType,
     this.awarenessMessage,
     this.awarenessIcon,
     this.relationshipPulse = const [],
@@ -75,6 +81,9 @@ class HomeLoaded extends HomeState {
     String? partnerMoodText,
     String? inviteCode,
     String? livePeekImageUrl,
+    String? livePeekDrawingUrl,
+    String? livePeekVoiceUrl,
+    String? latestSnapType,
     String? awarenessMessage,
     String? awarenessIcon,
     List<PulseData>? relationshipPulse,
@@ -96,6 +105,9 @@ class HomeLoaded extends HomeState {
       partnerMoodText: partnerMoodText ?? this.partnerMoodText,
       inviteCode: inviteCode ?? this.inviteCode,
       livePeekImageUrl: livePeekImageUrl ?? this.livePeekImageUrl,
+      livePeekDrawingUrl: livePeekDrawingUrl ?? this.livePeekDrawingUrl,
+      livePeekVoiceUrl: livePeekVoiceUrl ?? this.livePeekVoiceUrl,
+      latestSnapType: latestSnapType ?? this.latestSnapType,
       awarenessMessage: awarenessMessage ?? this.awarenessMessage,
       awarenessIcon: awarenessIcon ?? this.awarenessIcon,
       relationshipPulse: relationshipPulse ?? this.relationshipPulse,
