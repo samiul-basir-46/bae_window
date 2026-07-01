@@ -40,13 +40,24 @@ class BaeWindowWidgetProvider : AppWidgetProvider() {
                 val latestType = prefs.getString("badgeText", "Image")
                     ?.lowercase()
                     ?: "image"
+                val isVoicePlaying = prefs.getBoolean(
+                    WidgetVoicePlaybackService.PREF_IS_VOICE_PLAYING,
+                    false
+                )
 
                 views.setTextViewText(
                     R.id.status_text,
                     if (isPaired) "CONNECTED" else "SOLO MODE"
                 )
                 views.setTextViewText(R.id.sender_name_top, senderName)
-                views.setTextViewText(R.id.footer_description, footerDescription)
+                views.setTextViewText(
+                    R.id.footer_description,
+                    if (latestType == "voice" && isVoicePlaying) {
+                        "Playing $partnerName's voice note"
+                    } else {
+                        footerDescription
+                    }
+                )
                 views.setTextViewText(R.id.widget_timestamp, timestamp)
                 views.setTextViewText(R.id.avatar_circle, avatarLetter)
                 views.setViewVisibility(R.id.status_dot, if (isPaired) View.VISIBLE else View.GONE)
@@ -70,7 +81,12 @@ class BaeWindowWidgetProvider : AppWidgetProvider() {
 
                     "voice" -> {
                         val voiceUrl = prefs.getString("voiceUrl", null)
-                        bindVoiceContent(views, partnerName, !voiceUrl.isNullOrEmpty())
+                        bindVoiceContent(
+                            views = views,
+                            partnerName = partnerName,
+                            hasVoice = !voiceUrl.isNullOrEmpty(),
+                            isPlaying = isVoicePlaying
+                        )
                         if (!voiceUrl.isNullOrEmpty()) {
                             createVoicePlaybackPendingIntent(
                                 context = context,
@@ -124,6 +140,8 @@ class BaeWindowWidgetProvider : AppWidgetProvider() {
         views.setTextViewText(R.id.widget_content_badge, badge)
         views.setInt(R.id.widget_content_badge, "setBackgroundResource", badgeBackground)
         views.setInt(R.id.widget_content_icon, "setBackgroundResource", iconBackground)
+        views.setViewVisibility(R.id.widget_content_icon, View.VISIBLE)
+        views.setViewVisibility(R.id.widget_voice_action_icon, View.GONE)
 
         val bitmap = imagePath?.let(::loadSmallBitmap)
         if (bitmap != null) {
@@ -144,7 +162,8 @@ class BaeWindowWidgetProvider : AppWidgetProvider() {
     private fun bindVoiceContent(
         views: RemoteViews,
         partnerName: String,
-        hasVoice: Boolean
+        hasVoice: Boolean,
+        isPlaying: Boolean
     ) {
         resetContentViews(views)
         views.setTextViewText(R.id.widget_content_badge, "VOICE")
@@ -159,14 +178,37 @@ class BaeWindowWidgetProvider : AppWidgetProvider() {
             R.drawable.widget_icon_voice
         )
         views.setViewVisibility(R.id.widget_content_placeholder, View.VISIBLE)
-        views.setTextViewText(R.id.widget_content_icon, if (hasVoice) "▶" else "🎙️")
+        views.setViewVisibility(
+            R.id.widget_content_icon,
+            if (hasVoice) View.GONE else View.VISIBLE
+        )
+        views.setViewVisibility(
+            R.id.widget_voice_action_icon,
+            if (hasVoice) View.VISIBLE else View.GONE
+        )
+        views.setImageViewResource(
+            R.id.widget_voice_action_icon,
+            if (isPlaying) android.R.drawable.ic_media_pause
+            else android.R.drawable.ic_media_play
+        )
+        if (!hasVoice) {
+            views.setTextViewText(R.id.widget_content_icon, "🎙️")
+        }
         views.setTextViewText(
             R.id.widget_content_title,
-            if (hasVoice) "Voice note from $partnerName" else "No voice note yet"
+            when {
+                isPlaying -> "Playing $partnerName's voice note"
+                hasVoice -> "Voice note from $partnerName"
+                else -> "No voice note yet"
+            }
         )
         views.setTextViewText(
             R.id.widget_content_subtitle,
-            if (hasVoice) "Tap to play here • app stays closed" else "Record one in Bae Window"
+            when {
+                isPlaying -> "Tap again to stop • app stays closed"
+                hasVoice -> "Tap to play here • app stays closed"
+                else -> "Record one in Bae Window"
+            }
         )
     }
 
@@ -176,6 +218,8 @@ class BaeWindowWidgetProvider : AppWidgetProvider() {
         views.setViewVisibility(R.id.widget_media_scrim, View.GONE)
         views.setViewVisibility(R.id.widget_content_caption, View.GONE)
         views.setViewVisibility(R.id.widget_content_placeholder, View.GONE)
+        views.setViewVisibility(R.id.widget_content_icon, View.VISIBLE)
+        views.setViewVisibility(R.id.widget_voice_action_icon, View.GONE)
     }
 
     private fun createAppLaunchPendingIntent(

@@ -109,6 +109,17 @@
                 android:textColor="#FFFFFF"
                 android:textSize="24sp" />
 
+            <ImageView
+                android:id="@+id/widget_voice_action_icon"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/widget_icon_voice"
+                android:contentDescription="Play or stop voice note"
+                android:padding="12dp"
+                android:src="@android:drawable/ic_media_play"
+                android:tint="#FFFFFF"
+                android:visibility="gone" />
+
             <TextView
                 android:id="@+id/widget_content_title"
                 android:layout_width="wrap_content"

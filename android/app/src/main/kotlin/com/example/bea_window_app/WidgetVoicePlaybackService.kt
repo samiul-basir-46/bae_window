@@ -5,6 +5,8 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
@@ -18,6 +20,7 @@ class WidgetVoicePlaybackService : Service() {
     companion object {
         const val EXTRA_VOICE_URL = "voice_url"
         const val EXTRA_PARTNER_NAME = "partner_name"
+        const val PREF_IS_VOICE_PLAYING = "isVoicePlaying"
 
         private const val TAG = "WidgetVoicePlayback"
         private const val CHANNEL_ID = "widget_voice_playback"
@@ -52,6 +55,7 @@ class WidgetVoicePlaybackService : Service() {
         stopPlayerOnly()
         currentVoiceUrl = voiceUrl
         startForeground(NOTIFICATION_ID, buildNotification(partnerName))
+        updateWidgetPlaybackState(true)
 
         try {
             mediaPlayer = MediaPlayer().apply {
@@ -81,6 +85,7 @@ class WidgetVoicePlaybackService : Service() {
 
     override fun onDestroy() {
         stopPlayerOnly()
+        updateWidgetPlaybackState(false)
         super.onDestroy()
     }
 
@@ -143,6 +148,7 @@ class WidgetVoicePlaybackService : Service() {
 
     private fun stopPlayback() {
         stopPlayerOnly()
+        updateWidgetPlaybackState(false)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             stopForeground(STOP_FOREGROUND_REMOVE)
         } else {
@@ -150,5 +156,24 @@ class WidgetVoicePlaybackService : Service() {
             stopForeground(true)
         }
         stopSelf()
+    }
+
+    private fun updateWidgetPlaybackState(isPlaying: Boolean) {
+        getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(PREF_IS_VOICE_PLAYING, isPlaying)
+            .apply()
+
+        val manager = AppWidgetManager.getInstance(this)
+        val provider = ComponentName(this, BaeWindowWidgetProvider::class.java)
+        val widgetIds = manager.getAppWidgetIds(provider)
+        if (widgetIds.isEmpty()) return
+
+        sendBroadcast(
+            Intent(this, BaeWindowWidgetProvider::class.java).apply {
+                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, widgetIds)
+            }
+        )
     }
 }
