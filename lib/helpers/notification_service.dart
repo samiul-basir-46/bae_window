@@ -19,6 +19,7 @@ import '../constants/app_constants.dart';
 import '../firebase_options.dart';
 import 'all_routes.dart';
 import 'navigation_service.dart';
+import 'widget_helper.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -27,11 +28,13 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   );
   await PushNotificationService.initializeLocalNotifications();
 
-  // Notification payloads are rendered by Android/iOS while backgrounded.
-  // Data-only messages still need a local notification fallback.
   if (message.notification == null) {
     await PushNotificationService.showRemoteMessage(message);
   }
+
+  // Always try to update the home screen widget from the FCM data payload,
+  // even when the app is fully killed.
+  await PushNotificationService.updateWidgetFromMessageData(message.data);
 }
 
 class PushNotificationService {
@@ -49,6 +52,7 @@ class PushNotificationService {
 
   static bool _localNotificationsInitialized = false;
   static bool _listenersInitialized = false;
+  static bool _requestingPermission = false;
   static StreamSubscription<User?>? _authSubscription;
   static StreamSubscription<String>? _tokenSubscription;
 
@@ -158,17 +162,25 @@ class PushNotificationService {
   }
 
   static Future<AuthorizationStatus> requestPermissionAndRegister() async {
-    final settings = await _messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-      provisional: false,
-    );
-    if (settings.authorizationStatus == AuthorizationStatus.authorized ||
-        settings.authorizationStatus == AuthorizationStatus.provisional) {
-      await _registerCurrentToken();
+    if (_requestingPermission) {
+      return AuthorizationStatus.notDetermined;
     }
-    return settings.authorizationStatus;
+    _requestingPermission = true;
+    try {
+      final settings = await _messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+      );
+      if (settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional) {
+        await _registerCurrentToken();
+      }
+      return settings.authorizationStatus;
+    } finally {
+      _requestingPermission = false;
+    }
   }
 
   static Future<void> _registerCurrentToken() async {
@@ -244,7 +256,7 @@ class PushNotificationService {
       },
     }, SetOptions(merge: true));
 
-    final senderName = await _getSenderName();
+    final senderName = await getSenderName();
     unawaited(sendNotificationToPartner(
       title: '✅ $senderName completed a task',
       body: taskTitle,
@@ -264,7 +276,7 @@ class PushNotificationService {
       },
     }, SetOptions(merge: true));
 
-    final senderName = await _getSenderName();
+    final senderName = await getSenderName();
     unawaited(sendNotificationToPartner(
       title: '💌 Note from $senderName',
       body: note,
@@ -327,6 +339,44 @@ class PushNotificationService {
       ),
       payload: jsonEncode(message.data),
     );
+
+    // Update Home Screen Widget
+    await updateWidgetFromMessageData(message.data);
+  }
+
+  /// Updates the home screen widget from FCM data payload.
+  /// Called from both foreground (showRemoteMessage) and background handler.
+  static Future<void> updateWidgetFromMessageData(Map<String, dynamic> data) async {
+    try {
+      final snapUrl = data['latestSnapUrl']?.toString();
+      final snapType = data['latestSnapType']?.toString();
+      final moodEmoji = data['moodEmoji']?.toString();
+      final moodText = data['moodText']?.toString();
+      final battery = int.tryParse(data['batteryLevel']?.toString() ?? '');
+
+      if (snapUrl != null || moodEmoji != null || battery != null) {
+        final partnerName = data['senderName']?.toString() ?? 'Partner';
+        await WidgetHelper.updateWidget(
+          isPaired: true,
+          partnerName: partnerName,
+          daysTogether: null,
+          latestSnapUrl: snapUrl,
+          latestSnapType: snapType,
+          latestImageUrl: (snapType != 'draw' && snapType != 'voice') ? snapUrl : null,
+          latestDrawingUrl: snapType == 'draw' ? snapUrl : null,
+          latestVoiceUrl: snapType == 'voice' ? snapUrl : null,
+          partnerMoodEmoji: moodEmoji,
+          partnerMoodText: moodText,
+          partnerBatteryLevel: battery,
+        );
+      }
+    } catch (e) {
+      dev.log(
+        'Error updating widget from FCM data',
+        name: 'PushNotificationService',
+        error: e,
+      );
+    }
   }
 
   static void _openNotification(Map<String, dynamic> data) {
@@ -348,7 +398,7 @@ class PushNotificationService {
     }
   }
 
-  static Future<String> _getSenderName() async {
+  static Future<String> getSenderName() async {
     final user = _auth.currentUser;
     if (user == null) return "Your Bae";
     try {
@@ -364,7 +414,17 @@ class PushNotificationService {
     return user.displayName ?? "Your Bae";
   }
 
+  static String? _cachedAccessToken;
+  static DateTime? _tokenExpiresAt;
+
   static Future<String?> _getAccessToken() async {
+    // Return cached token if it's still valid (with 60s buffer)
+    if (_cachedAccessToken != null &&
+        _tokenExpiresAt != null &&
+        DateTime.now().isBefore(_tokenExpiresAt!.subtract(const Duration(seconds: 60)))) {
+      return _cachedAccessToken;
+    }
+
     try {
       final serviceAccountJson = await rootBundle.loadString(
         'assets/service-account.json',
@@ -373,15 +433,23 @@ class PushNotificationService {
       final scopes = ['https://www.googleapis.com/auth/firebase.messaging'];
       
       final client = await auth.clientViaServiceAccount(credentials, scopes);
-      final token = client.credentials.accessToken.data;
+      _cachedAccessToken = client.credentials.accessToken.data;
+      _tokenExpiresAt = client.credentials.accessToken.expiry;
       client.close();
-      return token;
-    } catch (e) {
+      dev.log(
+        'FCM access token obtained successfully, expires at $_tokenExpiresAt',
+        name: 'PushNotificationService',
+      );
+      return _cachedAccessToken;
+    } catch (e, stack) {
       dev.log(
         'Error getting FCM OAuth2 token. Make sure assets/service-account.json exists.',
         name: 'PushNotificationService',
         error: e,
+        stackTrace: stack,
       );
+      _cachedAccessToken = null;
+      _tokenExpiresAt = null;
       return null;
     }
   }
@@ -446,6 +514,7 @@ class PushNotificationService {
     required String body,
     String? type,
     String? route,
+    Map<String, String>? extraData,
   }) async {
     try {
       final tokens = await _getPartnerFcmTokens();
@@ -483,6 +552,7 @@ class PushNotificationService {
                 if (route != null) 'route': route,
                 'title': title,
                 'body': body,
+                ...?extraData,
               },
               'android': {
                 'priority': 'high',
@@ -492,10 +562,15 @@ class PushNotificationService {
                 }
               },
               'apns': {
+                'headers': {
+                  'apns-priority': '10',
+                  'apns-push-type': 'alert',
+                },
                 'payload': {
                   'aps': {
                     'sound': 'default',
                     'badge': 1,
+                    'content-available': 1,
                   }
                 }
               }
@@ -515,6 +590,80 @@ class PushNotificationService {
     } catch (e) {
       dev.log(
         'Error sending FCM v1 notification to partner',
+        name: 'PushNotificationService',
+        error: e,
+      );
+    }
+  }
+
+  static Future<void> sendNotificationToSelf({
+    required String title,
+    required String body,
+  }) async {
+    try {
+      final token = await _messaging.getToken();
+      if (token == null || token.isEmpty) {
+        dev.log('No FCM token found for current user.', name: 'PushNotificationService');
+        return;
+      }
+
+      final accessToken = await _getAccessToken();
+      if (accessToken == null) {
+        dev.log('Could not obtain FCM access token.', name: 'PushNotificationService');
+        return;
+      }
+
+      final projectId = DefaultFirebaseOptions.currentPlatform.projectId;
+      final url = Uri.parse('https://fcm.googleapis.com/v1/projects/$projectId/messages:send');
+
+      final response = await http.post(
+        url,
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode({
+          'message': {
+            'token': token,
+            'notification': {
+              'title': title,
+              'body': body,
+            },
+            'data': {
+              'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+              'title': title,
+              'body': body,
+            },
+            'android': {
+              'priority': 'high',
+              'notification': {
+                'channel_id': activityChannelId,
+                'sound': 'default',
+              }
+            },
+            'apns': {
+              'payload': {
+                'aps': {
+                  'sound': 'default',
+                  'badge': 1,
+                }
+              }
+            }
+          }
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        dev.log('FCM v1 test notification sent successfully to self!', name: 'PushNotificationService');
+      } else {
+        dev.log(
+          'FCM v1 failed to send self notification: ${response.statusCode} - ${response.body}',
+          name: 'PushNotificationService',
+        );
+      }
+    } catch (e) {
+      dev.log(
+        'Error sending self FCM notification',
         name: 'PushNotificationService',
         error: e,
       );
