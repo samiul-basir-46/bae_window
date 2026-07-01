@@ -5,15 +5,8 @@ import 'package:bea_window_app/networks/dio/dio.dart';
 class BrevoEmailService {
   final Dio _dio = DioSingleton.instance.dio;
 
-  // Brevo API Key retrieval via dart-define, with a split fallback for compile safety
-  static const String _part1 = "xkeysib-e0b62b1a9f1a0a57be177b949";
-  static const String _part2 = "e2cd0de2c7d97be78a54d528f804597bd71d4b6-TGLV5o2dZtq7z0R3";
-  static const String _defaultKey = "$_part1$_part2";
-
-  static const String _brevoApiKey = String.fromEnvironment(
-    'BREVO_API_KEY',
-    defaultValue: _defaultKey,
-  );
+  static const String _brevoApiKey =
+      "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";
 
   Future<bool> sendVerificationEmail({
     required String recipientEmail,
@@ -45,7 +38,8 @@ class BrevoEmailService {
 
       return response.statusCode == 201 || response.statusCode == 200;
     } catch (e, stack) {
-      dev.log("Error sending email via Brevo: $e", stackTrace: stack, name: "BrevoEmailService");
+      dev.log("Error sending email via Brevo: $e",
+          stackTrace: stack, name: "BrevoEmailService");
       return false;
     }
   }

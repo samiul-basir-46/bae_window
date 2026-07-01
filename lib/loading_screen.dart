@@ -49,25 +49,47 @@ class _LoadingState extends State<Loading> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       Map<String, dynamic>? data;
+      // 1. Try to read from cache first for instant loading
       try {
         final doc = await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
-            .get(const GetOptions(source: Source.server))
-            .timeout(const Duration(seconds: 8));
+            .get(const GetOptions(source: Source.cache));
         if (doc.exists && doc.data() != null) {
-          data = doc.data()!;
+          final cachedData = doc.data()!;
+          final isProfileComplete = cachedData['profileComplete'] as bool? ?? false;
+          final pairStatus = cachedData['pairStatus'] as String? ?? 'none';
+          
+          // If cache says they are fully complete and paired/unpaired, we can use it immediately!
+          if (isProfileComplete && (pairStatus == 'paired' || pairStatus == 'unpaired')) {
+            data = cachedData;
+          }
         }
-      } catch (_) {
+      } catch (_) {}
+
+      // 2. If cache was missing or stale (showed incomplete status), fetch from server
+      if (data == null) {
         try {
           final doc = await FirebaseFirestore.instance
               .collection('users')
               .doc(user.uid)
-              .get(const GetOptions(source: Source.cache));
+              .get(const GetOptions(source: Source.server))
+              .timeout(const Duration(seconds: 15));
           if (doc.exists && doc.data() != null) {
             data = doc.data()!;
           }
-        } catch (_) {}
+        } catch (_) {
+          // If server fetch fails completely (offline), fallback to whatever is in the cache
+          try {
+            final doc = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .get(const GetOptions(source: Source.cache));
+            if (doc.exists && doc.data() != null) {
+              data = doc.data()!;
+            }
+          } catch (_) {}
+        }
       }
 
       final isEmailVerified = data?['isEmailVerified'] as bool? ?? false;
