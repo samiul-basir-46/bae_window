@@ -15,6 +15,7 @@ import '../widgets/connection_card.dart';
 import '../widgets/theme_selector.dart';
 import '../widgets/settings_group.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
+import 'package:bea_window_app/features/space_screen/services/presence_service.dart';
 
 class NestScreen extends StatelessWidget {
   const NestScreen({super.key});
@@ -224,6 +225,10 @@ class NestScreen extends StatelessWidget {
                                 textColor: Colors.redAccent,
                                 onTap: () async {
                                   try {
+                                    final user = FirebaseAuth.instance.currentUser;
+                                    if (user != null) {
+                                      await PresenceService().updateUserPresence(user.uid, false);
+                                    }
                                     await FirebaseAuth.instance.signOut();
                                     await appData.write(kKeyIsLoggedIn, false);
                                     if (context.mounted) {

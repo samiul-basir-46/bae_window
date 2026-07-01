@@ -10,6 +10,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:googleapis_auth/auth_io.dart' as auth;
@@ -58,6 +60,51 @@ class PushNotificationService {
 
   static void registerBackgroundHandler() {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  }
+
+  static Future<void> scheduleSpecialDayNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+  }) async {
+    try {
+      if (scheduledDate.isBefore(DateTime.now())) return;
+
+      tz.initializeTimeZones();
+
+      final androidPlatformChannelSpecifics = AndroidNotificationDetails(
+        activityChannelId,
+        'Bae activity',
+        channelDescription: 'Snaps, drawings, voice, pulse, mood and task updates',
+        importance: Importance.high,
+        priority: Priority.high,
+      );
+
+      final iosPlatformChannelSpecifics = const DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      final platformChannelSpecifics = NotificationDetails(
+        android: androidPlatformChannelSpecifics,
+        iOS: iosPlatformChannelSpecifics,
+      );
+
+      await _localNotifications.zonedSchedule(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: tz.TZDateTime.from(scheduledDate, tz.local),
+        notificationDetails: platformChannelSpecifics,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
+
+      dev.log('Scheduled notification: "$title" at $scheduledDate', name: 'PushNotificationService');
+    } catch (e) {
+      dev.log('Failed to schedule notification: $e', name: 'PushNotificationService');
+    }
   }
 
   static Future<void> initialize() async {

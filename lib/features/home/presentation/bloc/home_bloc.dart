@@ -21,12 +21,16 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   StreamSubscription? _userSub;
   StreamSubscription? _partnerSub;
   StreamSubscription? _coupleSub;
+  StreamSubscription? _specialDaysSub;
+  StreamSubscription? _triviaSub;
   Timer? _batteryTimer;
 
   // Cache the latest data for merging user + partner updates
   Map<String, dynamic>? _cachedUserData;
   Map<String, dynamic>? _cachedPartnerData;
   Map<String, dynamic>? _cachedCoupleData;
+  SpecialDay? _cachedNextSpecialDay;
+  TriviaQuestion? _cachedTriviaQuestion;
   String? _currentUserUid;
   String? _partnerUid;
   String? _pairId;
@@ -71,6 +75,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<PartnerDataUpdated>(_onPartnerDataUpdated);
     on<CoupleDataUpdated>(_onCoupleDataUpdated);
     on<AnswerQuestionTogetherEvent>(_onAnswerQuestionTogether);
+    on<NextSpecialDayUpdated>(_onNextSpecialDayUpdated);
+    on<TriviaDataUpdated>(_onTriviaDataUpdated);
   }
 
   Future<void> _onAnswerQuestionTogether(
@@ -140,6 +146,52 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
           // Get partner data once to emit initial state
           _cachedPartnerData = await _authService.getUserProfile(_partnerUid!);
         }
+
+        // Fetch initial next special day
+        try {
+          final now = DateTime.now();
+          final startOfToday = DateTime(now.year, now.month, now.day);
+          final specialDaysSnap = await FirebaseFirestore.instance
+              .collection('couples')
+              .doc(pairId)
+              .collection('special_days')
+              .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfToday))
+              .orderBy('date', descending: false)
+              .limit(1)
+              .get();
+          if (specialDaysSnap.docs.isNotEmpty) {
+            final docData = specialDaysSnap.docs.first.data();
+            final title = docData['title'] as String? ?? '';
+            final dateVal = docData['date'];
+            DateTime? targetDate;
+            if (dateVal is Timestamp) {
+              targetDate = dateVal.toDate();
+            } else if (dateVal is String) {
+              targetDate = DateTime.tryParse(dateVal);
+            }
+            if (targetDate != null) {
+              _cachedNextSpecialDay = SpecialDay(
+                title: title,
+                targetDate: targetDate,
+              );
+              
+              final morningOfSpecialDay = DateTime(
+                targetDate.year,
+                targetDate.month,
+                targetDate.day,
+                9, // 9:00 AM
+              );
+              PushNotificationService.scheduleSpecialDayNotification(
+                id: 9999,
+                title: "🎉 Today is a Special Day!",
+                body: "Don't forget: $title is today! ❤️",
+                scheduledDate: morningOfSpecialDay,
+              );
+            }
+          } else {
+            _cachedNextSpecialDay = null;
+          }
+        } catch (_) {}
       } else {
         dev.log('HomeBloc: User is unpaired (status: $pairStatus)',
             name: 'HomeBloc');
@@ -155,6 +207,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       }
       if (_pairId != null) {
         _startCoupleListener(_pairId!);
+        _startSpecialDaysListener(_pairId!);
+        _startTriviaListener(_pairId!);
       }
       _startBatterySync();
     } catch (e, stack) {
@@ -253,6 +307,12 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       _partnerSub = null;
       await _coupleSub?.cancel();
       _coupleSub = null;
+      await _specialDaysSub?.cancel();
+      _specialDaysSub = null;
+      await _triviaSub?.cancel();
+      _triviaSub = null;
+      _cachedNextSpecialDay = null;
+      _cachedTriviaQuestion = null;
       _clearPartnerContentCache();
     } else {
       _isPaired = shouldBePaired;
@@ -264,6 +324,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   Future<void> _resolveAndListenPartner(String pairId) async {
     _cachedCoupleData = await _authService.getCoupleData(pairId);
     _startCoupleListener(pairId);
+    _startSpecialDaysListener(pairId);
+    _startTriviaListener(pairId);
     final resolvedPartnerUid = await _authService.getPartnerUid(pairId);
     if (resolvedPartnerUid != _partnerUid) {
       _clearPartnerContentCache();
@@ -457,40 +519,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       );
     }
 
-    SpecialDay? nextSpecialDay;
-    if (_isPaired && _pairId != null) {
-      try {
-        final now = DateTime.now();
-        final startOfToday = DateTime(now.year, now.month, now.day);
-        final specialDaysSnap = await FirebaseFirestore.instance
-            .collection('couples')
-            .doc(_pairId)
-            .collection('special_days')
-            .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfToday))
-            .orderBy('date', descending: false)
-            .limit(1)
-            .get();
-        if (specialDaysSnap.docs.isNotEmpty) {
-          final docData = specialDaysSnap.docs.first.data();
-          final title = docData['title'] as String? ?? '';
-          final dateVal = docData['date'];
-          DateTime? targetDate;
-          if (dateVal is Timestamp) {
-            targetDate = dateVal.toDate();
-          } else if (dateVal is String) {
-            targetDate = DateTime.tryParse(dateVal);
-          }
-          if (targetDate != null) {
-            nextSpecialDay = SpecialDay(
-              title: title,
-              targetDate: targetDate,
-            );
-          }
-        }
-      } catch (e) {
-        dev.log('HomeBloc: Error fetching next special day: $e', name: 'HomeBloc');
-      }
-    }
+    final nextSpecialDay = _cachedNextSpecialDay;
 
     emit(HomeLoaded(
       isPaired: _isPaired,
@@ -510,9 +539,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       livePeekVoiceUrl: latestVoiceUrl,
       latestSnapType: latestSnapType,
       relationshipPulse: relationshipPulse,
-      questionOfTheDay: _isPaired
-          ? _getTriviaQuestionForToday()
-          : null,
+      questionOfTheDay: _cachedTriviaQuestion ?? (_isPaired ? _getTriviaQuestionForToday() : null),
       checkInLogs: const [],
       nextSpecialDay: nextSpecialDay,
       coupleId: _pairId,
@@ -601,11 +628,133 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     return value is num ? value.toInt() : 0;
   }
 
+  void _startSpecialDaysListener(String pairId) {
+    _specialDaysSub?.cancel();
+    final now = DateTime.now();
+    final startOfToday = DateTime(now.year, now.month, now.day);
+    _specialDaysSub = FirebaseFirestore.instance
+        .collection('couples')
+        .doc(pairId)
+        .collection('special_days')
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfToday))
+        .orderBy('date', descending: false)
+        .limit(1)
+        .snapshots()
+        .listen((snapshot) {
+      SpecialDay? nextSpecialDay;
+      if (snapshot.docs.isNotEmpty) {
+        final docData = snapshot.docs.first.data();
+        final title = docData['title'] as String? ?? '';
+        final dateVal = docData['date'];
+        DateTime? targetDate;
+        if (dateVal is Timestamp) {
+          targetDate = dateVal.toDate();
+        } else if (dateVal is String) {
+          targetDate = DateTime.tryParse(dateVal);
+        }
+        if (targetDate != null) {
+          nextSpecialDay = SpecialDay(
+            title: title,
+            targetDate: targetDate,
+          );
+        }
+      }
+      add(NextSpecialDayUpdated(nextSpecialDay));
+    }, onError: (e) {
+      dev.log('HomeBloc: Special days stream error: $e', name: 'HomeBloc');
+    });
+  }
+
+  void _onNextSpecialDayUpdated(
+    NextSpecialDayUpdated event,
+    Emitter<HomeState> emit,
+  ) {
+    _cachedNextSpecialDay = event.nextSpecialDay as SpecialDay?;
+    if (state is HomeLoaded) {
+      emit((state as HomeLoaded).copyWith(
+        nextSpecialDay: _cachedNextSpecialDay,
+      ));
+    }
+
+    if (_cachedNextSpecialDay != null) {
+      final targetDate = _cachedNextSpecialDay!.targetDate;
+      final morningOfSpecialDay = DateTime(
+        targetDate.year,
+        targetDate.month,
+        targetDate.day,
+        9, // 9:00 AM
+      );
+      PushNotificationService.scheduleSpecialDayNotification(
+        id: 9999,
+        title: "🎉 Today is a Special Day!",
+        body: "Don't forget: ${_cachedNextSpecialDay!.title} is today! ❤️",
+        scheduledDate: morningOfSpecialDay,
+      );
+    }
+  }
+
+  void _startTriviaListener(String pairId) {
+    _triviaSub?.cancel();
+    final dateYmd = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    _triviaSub = FirebaseFirestore.instance
+        .collection('couples')
+        .doc(pairId)
+        .collection('trivia')
+        .doc(dateYmd)
+        .snapshots()
+        .listen((snapshot) {
+      TriviaQuestion? question;
+      if (snapshot.exists && snapshot.data() != null) {
+        final data = snapshot.data()!;
+        final questionText = data['question'] as String? ?? '';
+        final answers = data['answers'] as Map<dynamic, dynamic>? ?? {};
+        final currentUserUid = FirebaseAuth.instance.currentUser?.uid;
+
+        final hasUserAnswered = currentUserUid != null && answers.containsKey(currentUserUid);
+        final userAnswer = currentUserUid != null ? answers[currentUserUid]?.toString() : null;
+
+        String? partnerAnswer;
+        for (final entry in answers.entries) {
+          if (entry.key != currentUserUid) {
+            partnerAnswer = entry.value?.toString();
+            break;
+          }
+        }
+        final hasPartnerAnswered = partnerAnswer != null && partnerAnswer.isNotEmpty;
+
+        question = TriviaQuestion(
+          questionText: questionText,
+          isAnswered: hasUserAnswered,
+          userAnswer: userAnswer,
+          partnerAnswer: partnerAnswer,
+          hasPartnerAnswered: hasPartnerAnswered,
+        );
+      }
+      add(TriviaDataUpdated(question));
+    }, onError: (e) {
+      dev.log('HomeBloc: Trivia stream error: $e', name: 'HomeBloc');
+    });
+  }
+
+  void _onTriviaDataUpdated(
+    TriviaDataUpdated event,
+    Emitter<HomeState> emit,
+  ) {
+    _cachedTriviaQuestion = event.question;
+    if (state is HomeLoaded) {
+      emit((state as HomeLoaded).copyWith(
+        questionOfTheDay: _cachedTriviaQuestion ?? _getTriviaQuestionForToday(),
+      ));
+    }
+  }
+
   @override
   Future<void> close() {
     _userSub?.cancel();
     _partnerSub?.cancel();
     _coupleSub?.cancel();
+    _specialDaysSub?.cancel();
+    _triviaSub?.cancel();
     _batteryTimer?.cancel();
     return super.close();
   }

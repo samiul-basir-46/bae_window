@@ -142,10 +142,16 @@ class PulseData {
 class TriviaQuestion {
   final String questionText;
   final bool isAnswered;
+  final String? userAnswer;
+  final String? partnerAnswer;
+  final bool hasPartnerAnswered;
 
   const TriviaQuestion({
     required this.questionText,
     required this.isAnswered,
+    this.userAnswer,
+    this.partnerAnswer,
+    this.hasPartnerAnswered = false,
   });
 }
 

@@ -39,104 +39,127 @@ class SpecialDayScreen extends StatelessWidget {
             ),
           ),
         ),
-        body: BlocBuilder<SpecialDayBloc, SpecialDayState>(
-          builder: (context, state) {
-            if (state is SpecialDayLoading || state is SpecialDayInitial) {
-              return const Center(child: CircularProgressIndicator(color: AppColors.primaryPink));
-            }
-
-            if (state is SpecialDaysLoaded) {
-            final days = state.days;
-
-            if (days.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "No Special Days Added Yet",
-                      style: GoogleFonts.dmSans(
-                        color: Colors.white70,
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    UIHelper.verticalSpace(8.h),
-                    Text(
-                      "Add your first important date together!",
-                      style: GoogleFonts.dmSans(
-                        color: Colors.white30,
-                        fontSize: 12.sp,
-                      ),
-                    ),
-                    UIHelper.verticalSpace(24.h),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryPink,
-                        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16.r),
-                        ),
-                      ),
-                      icon: const Icon(Icons.add_rounded, color: Colors.white),
-                      label: Text(
-                        "Add Special Day",
-                        style: GoogleFonts.dmSans(color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
-                      onPressed: () => _openAddScreen(context),
-                    ),
-                  ],
+        body: BlocListener<SpecialDayBloc, SpecialDayState>(
+          listener: (context, state) {
+            if (state is SpecialDaySuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: AppColors.primaryPink,
+                ),
+              );
+            } else if (state is SpecialDayFailure) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.error),
+                  backgroundColor: Colors.redAccent,
                 ),
               );
             }
+          },
+          child: BlocBuilder<SpecialDayBloc, SpecialDayState>(
+            buildWhen: (previous, current) =>
+                current is SpecialDaysLoaded ||
+                current is SpecialDayLoading ||
+                current is SpecialDayInitial,
+            builder: (context, state) {
+              if (state is SpecialDayLoading || state is SpecialDayInitial) {
+                return const Center(child: CircularProgressIndicator(color: AppColors.primaryPink));
+              }
 
-            return Column(
-              children: [
-                Expanded(
-                  child: ListView.builder(
-                    padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-                    itemCount: days.length,
-                    itemBuilder: (context, index) {
-                      final day = days[index];
-                      return _buildDayCard(context, day);
-                    },
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.all(24.w),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryPink,
-                        padding: EdgeInsets.symmetric(vertical: 14.h),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16.r),
+              if (state is SpecialDaysLoaded) {
+                final days = state.days;
+
+                if (days.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "No Special Days Added Yet",
+                          style: GoogleFonts.dmSans(
+                            color: Colors.white70,
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      icon: const Icon(Icons.add_rounded, color: Colors.white),
-                      label: Text(
-                        "Add New Special Day",
-                        style: GoogleFonts.dmSans(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14.sp,
+                        UIHelper.verticalSpace(8.h),
+                        Text(
+                          "Add your first important date together!",
+                          style: GoogleFonts.dmSans(
+                            color: Colors.white30,
+                            fontSize: 12.sp,
+                          ),
                         ),
-                      ),
-                      onPressed: () => _openAddScreen(context),
+                        UIHelper.verticalSpace(24.h),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryPink,
+                            padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16.r),
+                            ),
+                          ),
+                          icon: const Icon(Icons.add_rounded, color: Colors.white),
+                          label: Text(
+                            "Add Special Day",
+                            style: GoogleFonts.dmSans(color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
+                          onPressed: () => _openAddScreen(context),
+                        ),
+                      ],
                     ),
-                  ),
-                ),
-              ],
-            );
-          }
+                  );
+                }
 
-          return const SizedBox.shrink();
-        },
+                return Column(
+                  children: [
+                    Expanded(
+                      child: ListView.builder(
+                        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+                        itemCount: days.length,
+                        itemBuilder: (context, index) {
+                          final day = days[index];
+                          return _buildDayCard(context, day);
+                        },
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(24.w),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryPink,
+                            padding: EdgeInsets.symmetric(vertical: 14.h),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16.r),
+                            ),
+                          ),
+                          icon: const Icon(Icons.add_rounded, color: Colors.white),
+                          label: Text(
+                            "Add New Special Day",
+                            style: GoogleFonts.dmSans(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14.sp,
+                            ),
+                          ),
+                          onPressed: () => _openAddScreen(context),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   void _openAddScreen(BuildContext context) {
     Navigator.push(

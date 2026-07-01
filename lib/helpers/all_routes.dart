@@ -14,7 +14,7 @@ import 'package:bea_window_app/navigation_screen.dart';
 
 // Space Feature Screens
 import 'package:bea_window_app/features/space/presentation/screens/vault_screen.dart';
-import 'package:bea_window_app/features/space/presentation/screens/bucket_list_screen.dart';
+import 'package:bea_window_app/features/space_screen/presentation/bucket_list_screen.dart';
 import 'package:bea_window_app/features/space/presentation/screens/tasks_screen.dart';
 import 'package:bea_window_app/features/space/presentation/screens/love_note_screen.dart';
 import 'package:bea_window_app/features/trivia/presentation/trivia_screen.dart';
