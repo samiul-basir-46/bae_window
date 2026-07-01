@@ -10,6 +10,7 @@ class DeepLinkHelper {
   static Future<void> init(BuildContext context) async {
     // 1. Handle launch from widget click (app was closed)
     final Uri? launchedUri = await _appLinks.getInitialLink();
+    if (!context.mounted) return;
     if (launchedUri != null) {
       _handleUri(context, launchedUri);
     }
@@ -17,7 +18,9 @@ class DeepLinkHelper {
     // 2. Handle clicks while app is in background/foreground
     _widgetClickSubscription?.cancel();
     _widgetClickSubscription = _appLinks.uriLinkStream.listen((Uri uri) {
-      _handleUri(context, uri);
+      if (context.mounted) {
+        _handleUri(context, uri);
+      }
     });
   }
 
@@ -30,6 +33,9 @@ class DeepLinkHelper {
     final path = uri.host; // "camera", "draw", "pulse", "voice"
 
     switch (path) {
+      case 'home':
+        const SwitchTabNotification(0).dispatch(context);
+        break;
       case 'camera':
         // Navigate to StoryScreen/Camera
         const SwitchTabNotification(1).dispatch(context);

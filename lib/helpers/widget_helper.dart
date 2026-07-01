@@ -75,8 +75,8 @@ class WidgetHelper {
         (normalizedType != 'draw' && normalizedType != 'voice'
             ? latestSnapUrl
             : null);
-    final resolvedDrawingUrl = latestDrawingUrl ??
-        (normalizedType == 'draw' ? latestSnapUrl : null);
+    final resolvedDrawingUrl =
+        latestDrawingUrl ?? (normalizedType == 'draw' ? latestSnapUrl : null);
 
     await _cacheWidgetImage(
       url: resolvedImageUrl,

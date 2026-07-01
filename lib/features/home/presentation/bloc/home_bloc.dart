@@ -18,7 +18,11 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   Map<String, dynamic>? _cachedUserData;
   Map<String, dynamic>? _cachedPartnerData;
   String? _partnerUid;
+  String? _pairId;
   bool _isPaired = false;
+  String _latestPartnerImageUrl = '';
+  String _latestPartnerDrawingUrl = '';
+  String _latestPartnerVoiceUrl = '';
 
   HomeBloc() : super(const HomeInitial()) {
     on<LoadHomeDataEvent>(_onLoadHomeData);
@@ -54,6 +58,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       final pairStatus = userData['pairStatus'] as String? ?? 'none';
       final pairId = userData['pairId'] as String?;
       _isPaired = pairStatus == 'paired' && pairId != null;
+      _pairId = _isPaired ? pairId : null;
+      _clearPartnerContentCache();
 
       // If paired, get partner UID and start listening
       if (_isPaired && pairId != null) {
@@ -124,24 +130,42 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     // Check if pairing status changed (e.g. partner just joined)
     final newPairStatus = event.data['pairStatus'] as String? ?? 'none';
     final newPairId = event.data['pairId'] as String?;
-    final wasPaired = _isPaired;
-    _isPaired = newPairStatus == 'paired' && newPairId != null;
+    final shouldBePaired = newPairStatus == 'paired' && newPairId != null;
 
-    // If just became paired, start partner listener
-    if (_isPaired && !wasPaired && newPairId != null) {
+    if (shouldBePaired && newPairId != _pairId) {
       dev.log('HomeBloc: Pairing detected in real-time! Resolving partner...',
           name: 'HomeBloc');
-      _resolveAndListenPartner(newPairId);
+      _isPaired = true;
+      _pairId = newPairId;
+      await _resolveAndListenPartner(newPairId);
+    } else if (!shouldBePaired && _isPaired) {
+      _isPaired = false;
+      _pairId = null;
+      _partnerUid = null;
+      _cachedPartnerData = null;
+      await _partnerSub?.cancel();
+      _partnerSub = null;
+      _clearPartnerContentCache();
+    } else {
+      _isPaired = shouldBePaired;
     }
 
     await _emitLoadedState(emit);
   }
 
   Future<void> _resolveAndListenPartner(String pairId) async {
-    _partnerUid = await _authService.getPartnerUid(pairId);
+    final resolvedPartnerUid = await _authService.getPartnerUid(pairId);
+    if (resolvedPartnerUid != _partnerUid) {
+      _clearPartnerContentCache();
+    }
+    _partnerUid = resolvedPartnerUid;
     if (_partnerUid != null) {
       _cachedPartnerData = await _authService.getUserProfile(_partnerUid!);
       _startPartnerListener(_partnerUid!);
+    } else {
+      _cachedPartnerData = null;
+      await _partnerSub?.cancel();
+      _partnerSub = null;
     }
   }
 
@@ -179,6 +203,12 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         awarenessIcon: event.icon,
       ));
     }
+  }
+
+  void _clearPartnerContentCache() {
+    _latestPartnerImageUrl = '';
+    _latestPartnerDrawingUrl = '';
+    _latestPartnerVoiceUrl = '';
   }
 
   Future<void> _emitLoadedState(Emitter<HomeState> emit) async {
@@ -224,14 +254,31 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
       // Separate URLs keep one content type from replacing another. The
       // legacy fallback preserves the most recently shared pre-migration item.
-      latestImageUrl = partnerData['latestImageUrl'] as String? ??
-          (normalizedType != 'draw' && normalizedType != 'voice'
-              ? latestSnapUrl
-              : '');
-      latestDrawingUrl = partnerData['latestDrawingUrl'] as String? ??
-          (normalizedType == 'draw' ? latestSnapUrl : '');
-      latestVoiceUrl = partnerData['latestVoiceUrl'] as String? ??
-          (normalizedType == 'voice' ? latestSnapUrl : '');
+      final directImageUrl = partnerData['latestImageUrl'] as String? ?? '';
+      final directDrawingUrl = partnerData['latestDrawingUrl'] as String? ?? '';
+      final directVoiceUrl = partnerData['latestVoiceUrl'] as String? ?? '';
+
+      if (directImageUrl.isNotEmpty) {
+        _latestPartnerImageUrl = directImageUrl;
+      } else if (normalizedType != 'draw' &&
+          normalizedType != 'voice' &&
+          latestSnapUrl.isNotEmpty) {
+        _latestPartnerImageUrl = latestSnapUrl;
+      }
+      if (directDrawingUrl.isNotEmpty) {
+        _latestPartnerDrawingUrl = directDrawingUrl;
+      } else if (normalizedType == 'draw' && latestSnapUrl.isNotEmpty) {
+        _latestPartnerDrawingUrl = latestSnapUrl;
+      }
+      if (directVoiceUrl.isNotEmpty) {
+        _latestPartnerVoiceUrl = directVoiceUrl;
+      } else if (normalizedType == 'voice' && latestSnapUrl.isNotEmpty) {
+        _latestPartnerVoiceUrl = latestSnapUrl;
+      }
+
+      latestImageUrl = _latestPartnerImageUrl;
+      latestDrawingUrl = _latestPartnerDrawingUrl;
+      latestVoiceUrl = _latestPartnerVoiceUrl;
 
       // Calculate days together from relationshipStartDate (checks both own and partner's profile)
       daysTogether = _calculateDaysTogether(userData) ??

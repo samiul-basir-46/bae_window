@@ -50,6 +50,11 @@
                 android:resource="@xml/bae_window_widget_info" />
         </receiver>
 
+        <service
+            android:name=".BaeWindowWidgetStackService"
+            android:exported="false"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
+
         <!-- Home Screen Action Dock Widget Receiver -->
         <receiver
             android:name=".BaeWindowWidgetDockProvider"

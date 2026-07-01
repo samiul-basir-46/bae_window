@@ -1,6 +1,5 @@
 package com.example.bea_window_app
 
-import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -12,7 +11,7 @@ import android.widget.RemoteViewsService
 import java.io.File
 
 class BaeWindowWidgetStackService : RemoteViewsService() {
-    override fun onGetViewFactory(intent: Intent): RemoteViewsFactory {
+    override fun onGetViewFactory(intent: Intent): RemoteViewsService.RemoteViewsFactory {
         return BaeWindowWidgetStackFactory(applicationContext)
     }
 }
@@ -42,8 +41,7 @@ private class BaeWindowWidgetStackFactory(
                 badge = "Image",
                 icon = "📷",
                 emptyTitle = "No photo yet",
-                emptySubtitle = "Open Bae Window to share a photo",
-                scaleType = "setScaleType"
+                emptySubtitle = "Open Bae Window to share a photo"
             )
 
             1 -> bindVisualPage(
@@ -52,8 +50,7 @@ private class BaeWindowWidgetStackFactory(
                 badge = "Draw",
                 icon = "🎨",
                 emptyTitle = "No drawing yet",
-                emptySubtitle = "Open Bae Window to draw something",
-                scaleType = "setScaleType"
+                emptySubtitle = "Open Bae Window to draw something"
             )
 
             else -> bindVoicePage(views)
@@ -62,7 +59,6 @@ private class BaeWindowWidgetStackFactory(
         val fillInIntent = Intent().apply {
             action = Intent.ACTION_VIEW
             data = Uri.parse("baewindow://home")
-            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, 0)
         }
         views.setOnClickFillInIntent(R.id.widget_page_root, fillInIntent)
         return views
@@ -74,8 +70,7 @@ private class BaeWindowWidgetStackFactory(
         badge: String,
         icon: String,
         emptyTitle: String,
-        emptySubtitle: String,
-        scaleType: String
+        emptySubtitle: String
     ) {
         views.setTextViewText(R.id.widget_page_badge, badge)
         val bitmap = filePath?.let(::loadSmallBitmap)
@@ -84,8 +79,6 @@ private class BaeWindowWidgetStackFactory(
             views.setImageViewBitmap(R.id.widget_page_image, bitmap)
             views.setViewVisibility(R.id.widget_page_image, View.VISIBLE)
             views.setViewVisibility(R.id.widget_page_placeholder, View.GONE)
-            // Kept as an explicit RemoteViews operation for launcher compatibility.
-            views.setString(R.id.widget_page_image, scaleType, "CENTER_CROP")
         } else {
             views.setViewVisibility(R.id.widget_page_image, View.GONE)
             views.setViewVisibility(R.id.widget_page_placeholder, View.VISIBLE)
