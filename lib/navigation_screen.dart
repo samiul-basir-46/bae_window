@@ -6,10 +6,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/features/home/presentation/screens/home_screens.dart';
 import 'package:bea_window_app/features/story/presentation/screens/story_screen.dart';
-import 'package:bea_window_app/features/space/presentation/screens/space_screen.dart';
+import 'package:bea_window_app/features/space_screen/presentation/space_screen.dart';
 import 'package:bea_window_app/features/nest/presentation/screens/nest_screen.dart';
 import 'helpers/helper_methods.dart';
 import 'helpers/deep_link_helper.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:bea_window_app/features/space_screen/services/presence_service.dart';
 
 class SwitchTabNotification extends Notification {
   final int index;
@@ -23,7 +25,7 @@ class NavigationScreen extends StatefulWidget {
   State<NavigationScreen> createState() => _NavigationScreenState();
 }
 
-class _NavigationScreenState extends State<NavigationScreen> {
+class _NavigationScreenState extends State<NavigationScreen> with WidgetsBindingObserver {
   int _currentIndex = 0;
   bool _isNavbarVisible = true;
 
@@ -33,6 +35,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _screens = [
       const HomeScreen(),
       const StoryScreen(),
@@ -43,12 +46,28 @@ class _NavigationScreenState extends State<NavigationScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       DeepLinkHelper.init(context);
     });
+    // Set initial presence to online
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      PresenceService().updateUserPresence(user.uid, true);
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     DeepLinkHelper.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final isOnline = state == AppLifecycleState.resumed;
+      PresenceService().updateUserPresence(user.uid, isOnline);
+    }
   }
 
 

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'home_state.dart';
 
 @immutable
 abstract class HomeEvent {
@@ -46,3 +47,19 @@ class CoupleDataUpdated extends HomeEvent {
   final Map<String, dynamic> data;
   const CoupleDataUpdated(this.data);
 }
+
+class AnswerQuestionTogetherEvent extends HomeEvent {
+  final String questionText;
+  const AnswerQuestionTogetherEvent(this.questionText);
+}
+
+class NextSpecialDayUpdated extends HomeEvent {
+  final dynamic nextSpecialDay; // Using dynamic or SpecialDay from home_state.dart
+  const NextSpecialDayUpdated(this.nextSpecialDay);
+}
+
+class TriviaDataUpdated extends HomeEvent {
+  final TriviaQuestion? question;
+  const TriviaDataUpdated(this.question);
+}
+

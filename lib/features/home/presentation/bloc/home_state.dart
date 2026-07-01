@@ -41,6 +41,7 @@ class HomeLoaded extends HomeState {
   final TriviaQuestion? questionOfTheDay;
   final List<CheckInLog> checkInLogs;
   final SpecialDay? nextSpecialDay;
+  final String? coupleId;
 
   const HomeLoaded({
     required this.isPaired,
@@ -65,6 +66,7 @@ class HomeLoaded extends HomeState {
     this.questionOfTheDay,
     this.checkInLogs = const [],
     this.nextSpecialDay,
+    this.coupleId,
   });
 
   HomeLoaded copyWith({
@@ -90,6 +92,7 @@ class HomeLoaded extends HomeState {
     TriviaQuestion? questionOfTheDay,
     List<CheckInLog>? checkInLogs,
     SpecialDay? nextSpecialDay,
+    String? coupleId,
   }) {
     return HomeLoaded(
       isPaired: isPaired ?? this.isPaired,
@@ -114,6 +117,7 @@ class HomeLoaded extends HomeState {
       questionOfTheDay: questionOfTheDay ?? this.questionOfTheDay,
       checkInLogs: checkInLogs ?? this.checkInLogs,
       nextSpecialDay: nextSpecialDay ?? this.nextSpecialDay,
+      coupleId: coupleId ?? this.coupleId,
     );
   }
 }
@@ -138,10 +142,16 @@ class PulseData {
 class TriviaQuestion {
   final String questionText;
   final bool isAnswered;
+  final String? userAnswer;
+  final String? partnerAnswer;
+  final bool hasPartnerAnswered;
 
   const TriviaQuestion({
     required this.questionText,
     required this.isAnswered,
+    this.userAnswer,
+    this.partnerAnswer,
+    this.hasPartnerAnswered = false,
   });
 }
 

@@ -1,8 +1,11 @@
+import 'dart:async';
+import 'dart:developer' as dev;
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:email_otp/email_otp.dart';
 import 'package:intl/intl.dart';
+import '../../../helpers/notification_service.dart';
 
 class FirebaseAuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -347,6 +350,22 @@ class FirebaseAuthService {
         SetOptions(merge: true));
     _addCoupleEngagement(batch, userData, user.uid);
     await batch.commit();
+
+    try {
+      final senderName = await PushNotificationService.getSenderName();
+      unawaited(PushNotificationService.sendNotificationToPartner(
+        title: '$emoji $senderName\'s mood changed',
+        body: text,
+        type: 'moodCheckIn',
+        extraData: {
+          'moodEmoji': emoji,
+          'moodText': text,
+          'senderName': senderName,
+        },
+      ));
+    } catch (e) {
+      dev.log('Error triggering mood FCM notification client-side: $e');
+    }
   }
 
   Future<void> updateBatteryLevel(int level) async {
@@ -384,6 +403,17 @@ class FirebaseAuthService {
         SetOptions(merge: true));
     _addCoupleEngagement(batch, userData, user.uid);
     await batch.commit();
+
+    try {
+      final senderName = await PushNotificationService.getSenderName();
+      unawaited(PushNotificationService.sendNotificationToPartner(
+        title: '💖 $senderName is thinking of you',
+        body: 'Your $senderName just sent a love pulse.',
+        type: 'thinkingPulse',
+      ));
+    } catch (e) {
+      dev.log('Error triggering pulse FCM notification client-side: $e');
+    }
   }
 
   /// Update current user's latest snap in Firestore
@@ -460,6 +490,44 @@ class FirebaseAuthService {
     batch.set(userRef, updates, SetOptions(merge: true));
     _addCoupleEngagement(batch, existingData, user.uid);
     await batch.commit();
+
+    try {
+      final senderName = await PushNotificationService.getSenderName();
+      final type = snapType ?? 'Image';
+      final String title;
+      final String body;
+
+      switch (type.toLowerCase()) {
+        case 'draw':
+          title = '✏️ Drawing from $senderName';
+          body = 'Your Bae shared a new drawing with you.';
+          break;
+        case 'voice':
+          title = '🎙️ Voice from $senderName';
+          body = 'A new voice fragment is waiting for you.';
+          break;
+        default:
+          title = '📸 Snap from $senderName';
+          body = 'Your Bae sent you a fresh moment.';
+      }
+
+      unawaited(PushNotificationService.sendNotificationToPartner(
+        title: title,
+        body: body,
+        type: type.toLowerCase() == 'draw'
+            ? 'drawingNote'
+            : type.toLowerCase() == 'voice'
+                ? 'voiceFragment'
+                : 'newSnap',
+        extraData: {
+          'latestSnapUrl': snapUrl,
+          'latestSnapType': type,
+          'senderName': senderName,
+        },
+      ));
+    } catch (e) {
+      dev.log('Error triggering snap FCM notification client-side: $e');
+    }
   }
 
   Map<String, dynamic> _weeklyEngagementUpdate() {

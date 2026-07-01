@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -8,27 +7,46 @@ import 'package:bea_window_app/helpers/all_routes.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
 import '../widgets/auth_background_blobs.dart';
 import '../widgets/auth_header.dart';
-import '../bloc/auth_bloc.dart';
+import '../bloc/email_verification_cubit.dart';
+import '../bloc/email_verification_state.dart';
 import 'package:bea_window_app/helpers/di.dart';
 import 'package:bea_window_app/constants/app_constants.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-class EmailVerificationScreen extends StatefulWidget {
+class EmailVerificationScreen extends StatelessWidget {
   const EmailVerificationScreen({super.key});
 
   @override
-  State<EmailVerificationScreen> createState() =>
-      _EmailVerificationScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider<EmailVerificationCubit>(
+      create: (context) {
+        final cubit = EmailVerificationCubit();
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          cubit.sendVerificationEmail(
+            uid: user.uid,
+            email: user.email ?? '',
+            name: user.displayName ?? 'Partner',
+          );
+        }
+        return cubit;
+      },
+      child: const EmailVerificationView(),
+    );
+  }
 }
 
-class _EmailVerificationScreenState extends State<EmailVerificationScreen>
-    with SingleTickerProviderStateMixin {
+class EmailVerificationView extends StatefulWidget {
+  const EmailVerificationView({super.key});
+
+  @override
+  State<EmailVerificationView> createState() => _EmailVerificationViewState();
+}
+
+class _EmailVerificationViewState extends State<EmailVerificationView> with SingleTickerProviderStateMixin {
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
-
-  Timer? _cooldownTimer;
-  int _secondsRemaining = 0;
   String? _errorMessage;
 
   @override
@@ -43,79 +61,68 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
       begin: const Offset(0, 0.06),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOutCubic));
-
-    _startCooldown(60); // 60 seconds cooldown initially
-  }
-
-  void _startCooldown(int seconds) {
-    setState(() {
-      _secondsRemaining = seconds;
-    });
-    _cooldownTimer?.cancel();
-    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_secondsRemaining > 0) {
-        setState(() {
-          _secondsRemaining--;
-        });
-      } else {
-        _cooldownTimer?.cancel();
-      }
-    });
   }
 
   @override
   void dispose() {
-    _cooldownTimer?.cancel();
     _fadeCtrl.dispose();
     super.dispose();
   }
 
   void _checkVerification() {
-    context.read<AuthBloc>().add(const CheckEmailVerificationRequested());
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      context.read<EmailVerificationCubit>().checkVerificationStatus(uid: user.uid);
+    }
   }
 
   void _resendEmail() {
-    if (_secondsRemaining == 0) {
-      context.read<AuthBloc>().add(const ResendVerificationEmailRequested());
-      _startCooldown(60); // Reset 60s cooldown
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      context.read<EmailVerificationCubit>().sendVerificationEmail(
+        uid: user.uid,
+        email: user.email ?? '',
+        name: user.displayName ?? 'Partner',
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<AuthBloc, AuthState>(
+    final user = FirebaseAuth.instance.currentUser;
+    final emailAddress = user?.email ?? 'your email';
+
+    return BlocConsumer<EmailVerificationCubit, EmailVerificationState>(
       listener: (context, state) {
-        if (state is EmailVerificationPending) {
-          setState(() {
-            _errorMessage = null;
-          });
-        } else if (state is EmailVerificationSuccess) {
+        if (state is EmailVerificationVerified) {
           appData.write(kKeyIsLoggedIn, true);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
                 children: [
-                  Icon(Icons.check_circle_outline_rounded,
-                      color: Colors.white, size: 20.sp),
+                  Icon(Icons.check_circle_outline_rounded, color: Colors.white, size: 20.sp),
                   SizedBox(width: 8.w),
                   const Text("Email verified successfully! Welcome."),
                 ],
               ),
               backgroundColor: const Color(0xFF4CD964),
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           );
           Navigator.pushReplacementNamed(context, Routes.profileSetupScreen);
-        } else if (state is EmailVerificationFailure) {
+        } else if (state is EmailVerificationFailed) {
           setState(() {
             _errorMessage = state.errorMessage;
+          });
+        } else {
+          setState(() {
+            _errorMessage = null;
           });
         }
       },
       builder: (context, state) {
-        final isLoading = state is AuthLoading;
+        final isLoading = state is EmailVerificationVerifying || state is EmailVerificationSending;
 
         return Scaffold(
           backgroundColor: const Color(0xFF0D0D10),
@@ -133,12 +140,12 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           UIHelper.verticalSpace(52.h),
-                          const AuthHeader(
+                          AuthHeader(
                             logoIcon: Icons.mark_email_read_outlined,
                             eyebrow: 'Verify Email Address',
                             headline: 'Verify your\nemail ✦',
                             subtitle:
-                                'We have sent a verification link to your email. Please check your inbox and click the link to verify your account, then click the button below.',
+                                'We have sent a verification link to $emailAddress using Brevo. Please check your inbox and click the link to verify your account, then click the button below.',
                           ),
                           UIHelper.verticalSpace(40.h),
                           CustomAuthButton(
@@ -147,7 +154,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
                             onTap: _checkVerification,
                           ),
                           UIHelper.verticalSpace(20.h),
-                          _buildResendButton(),
+                          _buildResendButton(state),
                           if (_errorMessage != null) ...[
                             UIHelper.verticalSpace(16.h),
                             Text(
@@ -167,12 +174,10 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
                               try {
                                 await FirebaseAuth.instance.signOut();
                                 appData.write(kKeyIsLoggedIn, false);
-                                if (mounted) {
-                                  navigator.pushNamedAndRemoveUntil(
-                                    Routes.loginScreen,
-                                    (route) => false,
-                                  );
-                                }
+                                navigator.pushNamedAndRemoveUntil(
+                                  Routes.loginScreen,
+                                  (route) => false,
+                                );
                               } catch (e) {
                                 setState(() {
                                   _errorMessage = "Failed to sign out: $e";
@@ -203,8 +208,10 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
     );
   }
 
-  Widget _buildResendButton() {
-    final canResend = _secondsRemaining == 0;
+  Widget _buildResendButton(EmailVerificationState state) {
+    final int cooldownSeconds = state is EmailVerificationCooldown ? state.secondsRemaining : 0;
+    final canResend = cooldownSeconds == 0 && state is! EmailVerificationSending;
+
     return GestureDetector(
       onTap: canResend ? _resendEmail : null,
       child: Container(
@@ -223,10 +230,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
           child: Text(
             canResend
                 ? 'Resend Email'
-                : 'Resend in ${_secondsRemaining.toString().padLeft(2, '0')}s',
+                : 'Resend in ${cooldownSeconds.toString().padLeft(2, '0')}s',
             style: GoogleFonts.dmSans(
-              color:
-                  canResend ? const Color(0xFF9090A8) : const Color(0xFF555568),
+              color: canResend ? const Color(0xFF9090A8) : const Color(0xFF555568),
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
             ),

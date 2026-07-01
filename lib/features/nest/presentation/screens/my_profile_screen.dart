@@ -13,6 +13,7 @@ import 'package:bea_window_app/features/auth/services/cloudinary_service.dart';
 
 import '../widgets/profile_avatar.dart';
 import '../widgets/profile_form_field.dart';
+import 'package:bea_window_app/common_widgets/custom_date_picker.dart';
 
 class MyProfileScreen extends StatefulWidget {
   const MyProfileScreen({super.key});
@@ -96,24 +97,11 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   }
 
   Future<void> _selectDate() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
+    final DateTime? picked = await CustomDatePicker.show(
+      context,
       initialDate: DateTime(2025, 2, 14),
-      firstDate: DateTime(2000),
+      firstDate: DateTime(1980),
       lastDate: DateTime.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: AppColors.primaryPink,
-              onPrimary: Colors.white,
-              surface: AppColors.navBgColor,
-              onSurface: Colors.white,
-            ),
-          ),
-          child: child!,
-        );
-      },
     );
     if (picked != null) {
       final months = [
@@ -230,7 +218,6 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   Future<void> _saveProfile() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-
 
     setState(() {
       _isSaving = true;

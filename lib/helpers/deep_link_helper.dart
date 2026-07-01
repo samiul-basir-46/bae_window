@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:app_links/app_links.dart';
 import 'package:bea_window_app/navigation_screen.dart';
+import 'package:bea_window_app/helpers/all_routes.dart';
 
 class DeepLinkHelper {
   static StreamSubscription? _widgetClickSubscription;
@@ -47,6 +48,17 @@ class DeepLinkHelper {
       case 'pulse':
         // Navigate to HomeScreen/Pulse
         const SwitchTabNotification(0).dispatch(context);
+        break;
+      case 'verify':
+        final token = uri.queryParameters['token'];
+        final uid = uri.queryParameters['uid'];
+        if (token != null && uid != null) {
+          Navigator.pushNamed(
+            context,
+            Routes.verifyingScreen,
+            arguments: {'token': token, 'uid': uid},
+          );
+        }
         break;
       case 'voice':
         // Navigate to SpaceScreen/Voice or NestScreen
