@@ -1,7 +1,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#1A151A"
+    android:background="@drawable/widget_background"
     android:orientation="horizontal"
     android:gravity="center_vertical"
     android:paddingHorizontal="16dp"
@@ -19,6 +19,8 @@
             android:id="@+id/dock_partner_status"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
             android:text="Bae's Phone"
             android:textColor="#FFFFFF"
             android:textSize="13sp"
@@ -29,7 +31,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="Waiting for action..."
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Tap an action • app stays closed"
             android:textColor="#60FFFFFF"
             android:textSize="10sp" />
     </LinearLayout>
@@ -51,11 +55,12 @@
         <!-- Button 1: Camera -->
         <ImageButton
             android:id="@+id/btn_camera"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="#20FFFFFF"
-            android:src="@android:drawable/ic_menu_camera"
-            android:padding="8dp"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:background="@drawable/widget_dock_action_background"
+            android:src="@drawable/ic_notification"
+            android:tint="#FFFFFFFF"
+            android:padding="9dp"
             android:scaleType="fitCenter"
             android:layout_marginRight="6dp"
             android:contentDescription="Camera" />
@@ -63,11 +68,12 @@
         <!-- Button 2: Draw -->
         <ImageButton
             android:id="@+id/btn_draw"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="#20FFFFFF"
-            android:src="@android:drawable/ic_menu_edit"
-            android:padding="8dp"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:background="@drawable/widget_dock_action_background"
+            android:src="@drawable/ic_notification"
+            android:tint="#FFFFFFFF"
+            android:padding="9dp"
             android:scaleType="fitCenter"
             android:layout_marginRight="6dp"
             android:contentDescription="Draw" />
@@ -75,11 +81,12 @@
         <!-- Button 3: Pulse -->
         <ImageButton
             android:id="@+id/btn_pulse"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="#20FFFFFF"
-            android:src="@android:drawable/ic_popup_sync"
-            android:padding="8dp"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:background="@drawable/widget_dock_action_background"
+            android:src="@drawable/ic_notification"
+            android:tint="#FFFFFFFF"
+            android:padding="9dp"
             android:scaleType="fitCenter"
             android:layout_marginRight="6dp"
             android:contentDescription="Pulse" />
@@ -87,11 +94,12 @@
         <!-- Button 4: Voice -->
         <ImageButton
             android:id="@+id/btn_voice"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="#20FFFFFF"
-            android:src="@android:drawable/ic_btn_speak_now"
-            android:padding="8dp"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:background="@drawable/widget_dock_action_background"
+            android:src="@drawable/ic_notification"
+            android:tint="#FFFFFFFF"
+            android:padding="9dp"
             android:scaleType="fitCenter"
             android:contentDescription="Voice" />
     </LinearLayout>

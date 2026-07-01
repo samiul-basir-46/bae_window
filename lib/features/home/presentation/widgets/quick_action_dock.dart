@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart' hide Image;
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -11,8 +12,9 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
-import 'package:bea_window_app/features/auth/services/cloudinary_service.dart';
-import 'package:bea_window_app/features/auth/services/firebase_auth_service.dart';
+import '../bloc/home_action_bloc.dart';
+import '../bloc/home_action_event.dart';
+import '../bloc/home_action_state.dart';
 
 class QuickActionDock extends StatelessWidget {
   const QuickActionDock({super.key});
@@ -24,38 +26,12 @@ class QuickActionDock extends StatelessWidget {
           await picker.pickImage(source: ImageSource.camera, imageQuality: 80);
       if (!context.mounted) return;
       if (image != null) {
-        // Show loading indicator
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Row(
-              children: [
-                CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation(Colors.white)),
-                SizedBox(width: 16),
-                Text("Uploading snap to Bae..."),
-              ],
-            ),
-            duration: Duration(seconds: 8),
-          ),
-        );
-
-        final File file = File(image.path);
-        final String? imageUrl = await CloudinaryService.uploadImage(file);
-
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).clearSnackBars();
-
-        if (imageUrl != null) {
-          await FirebaseAuthService()
-              .updateLatestSnap(snapUrl: imageUrl, snapType: 'Image');
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Failed to upload image. Please try again."),
-              backgroundColor: Colors.redAccent,
-            ),
-          );
-        }
+        context.read<HomeActionBloc>().add(
+              ShareHomeMediaRequested(
+                file: File(image.path),
+                mediaType: HomeMediaType.image,
+              ),
+            );
       }
     } catch (e) {
       if (!context.mounted) return;
@@ -69,87 +45,95 @@ class QuickActionDock extends StatelessWidget {
     }
   }
 
-  Future<void> _handlePulse(BuildContext context) async {
+  void _handlePulse(BuildContext context) {
     HapticFeedback.heavyImpact();
-
-    try {
-      await FirebaseAuthService().sendPulse();
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Pulse sent to your Bae!"),
-          backgroundColor: AppColors.primaryPink,
-          duration: Duration(seconds: 2),
-        ),
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Could not send pulse: $e"),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-    }
+    context.read<HomeActionBloc>().add(const SendHomePulseRequested());
   }
 
   void _showDrawingCanvas(BuildContext context) {
+    final actionBloc = context.read<HomeActionBloc>();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const DrawingCanvasSheet(),
+      builder: (context) => DrawingCanvasSheet(
+        onSend: (file) => actionBloc.add(
+          ShareHomeMediaRequested(
+            file: file,
+            mediaType: HomeMediaType.drawing,
+          ),
+        ),
+      ),
     );
   }
 
   void _showVoiceRecorder(BuildContext context) {
+    final actionBloc = context.read<HomeActionBloc>();
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => const VoiceRecorderSheet(),
+      builder: (context) => VoiceRecorderSheet(
+        onSend: (file) => actionBloc.add(
+          ShareHomeMediaRequested(
+            file: file,
+            mediaType: HomeMediaType.voice,
+          ),
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20.r),
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          padding: EdgeInsets.symmetric(vertical: 6.h, horizontal: 8.w),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.25),
+    return BlocBuilder<HomeActionBloc, HomeActionState>(
+      buildWhen: (previous, current) =>
+          (previous is HomeActionLoading) != (current is HomeActionLoading),
+      builder: (context, state) => IgnorePointer(
+        ignoring: state is HomeActionLoading,
+        child: AnimatedOpacity(
+          opacity: state is HomeActionLoading ? 0.55 : 1,
+          duration: const Duration(milliseconds: 180),
+          child: ClipRRect(
             borderRadius: BorderRadius.circular(20.r),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.1),
-              width: 1.w,
+            child: BackdropFilter(
+              filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+              child: Container(
+                padding: EdgeInsets.symmetric(vertical: 6.h, horizontal: 8.w),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(20.r),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    width: 1.w,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildDockItem(
+                      icon: Icons.camera_alt_rounded,
+                      label: "Snap It",
+                      onTap: () => _handleCamera(context),
+                    ),
+                    _buildDockItem(
+                      icon: Icons.brush_rounded,
+                      label: "Draw",
+                      onTap: () => _showDrawingCanvas(context),
+                    ),
+                    _buildDockItem(
+                      icon: Icons.vibration_rounded,
+                      label: "Pulse",
+                      onTap: () => _handlePulse(context),
+                    ),
+                    _buildDockItem(
+                      icon: Icons.mic_rounded,
+                      label: "Voice",
+                      onTap: () => _showVoiceRecorder(context),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildDockItem(
-                icon: Icons.camera_alt_rounded,
-                label: "Snap It",
-                onTap: () => _handleCamera(context),
-              ),
-              _buildDockItem(
-                icon: Icons.brush_rounded,
-                label: "Draw",
-                onTap: () => _showDrawingCanvas(context),
-              ),
-              _buildDockItem(
-                icon: Icons.vibration_rounded,
-                label: "Pulse",
-                onTap: () => _handlePulse(context),
-              ),
-              _buildDockItem(
-                icon: Icons.mic_rounded,
-                label: "Voice",
-                onTap: () => _showVoiceRecorder(context),
-              ),
-            ],
           ),
         ),
       ),
@@ -216,7 +200,12 @@ class DrawingPoint {
 }
 
 class DrawingCanvasSheet extends StatefulWidget {
-  const DrawingCanvasSheet({super.key});
+  final ValueChanged<File> onSend;
+
+  const DrawingCanvasSheet({
+    super.key,
+    required this.onSend,
+  });
 
   @override
   State<DrawingCanvasSheet> createState() => _DrawingCanvasSheetState();
@@ -313,22 +302,7 @@ class _DrawingCanvasSheetState extends State<DrawingCanvasSheet> {
                         }
 
                         final messenger = ScaffoldMessenger.of(context);
-
-                        // Show uploading loader
-                        messenger.showSnackBar(
-                          const SnackBar(
-                            content: Row(
-                              children: [
-                                CircularProgressIndicator(
-                                  valueColor:
-                                      AlwaysStoppedAnimation(Colors.white),
-                                ),
-                                SizedBox(width: 16),
-                                Text("Uploading drawing to Bae..."),
-                              ],
-                            ),
-                          ),
-                        );
+                        final onSend = widget.onSend;
 
                         Navigator.pop(context);
 
@@ -386,36 +360,9 @@ class _DrawingCanvasSheetState extends State<DrawingCanvasSheet> {
                             await file.writeAsBytes(
                               pngBytes.buffer.asUint8List(),
                             );
-
-                            final String? imageUrl =
-                                await CloudinaryService.uploadImage(file);
-
-                            messenger.clearSnackBars();
-
-                            if (imageUrl != null) {
-                              await FirebaseAuthService().updateLatestSnap(
-                                snapUrl: imageUrl,
-                                snapType: 'Draw',
-                              );
-                              messenger.showSnackBar(
-                                const SnackBar(
-                                  content: Text("Drawing sent to Bae!"),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                            } else {
-                              messenger.showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    "Failed to send drawing. Please try again.",
-                                  ),
-                                  backgroundColor: Colors.redAccent,
-                                ),
-                              );
-                            }
+                            onSend(file);
                           }
                         } catch (e) {
-                          messenger.clearSnackBars();
                           messenger.showSnackBar(
                             SnackBar(
                               content: Text("Drawing error: $e"),
@@ -608,7 +555,12 @@ class CanvasPainter extends CustomPainter {
 }
 
 class VoiceRecorderSheet extends StatefulWidget {
-  const VoiceRecorderSheet({super.key});
+  final ValueChanged<File> onSend;
+
+  const VoiceRecorderSheet({
+    super.key,
+    required this.onSend,
+  });
 
   @override
   State<VoiceRecorderSheet> createState() => _VoiceRecorderSheetState();
@@ -710,61 +662,12 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet> {
     final filePath = _filePath;
     if (filePath == null || _isSendingVoice) return;
 
-    final messenger = ScaffoldMessenger.of(context);
     setState(() {
       _isSendingVoice = true;
     });
-
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Row(
-          children: [
-            CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation(Colors.white),
-            ),
-            SizedBox(width: 16),
-            Text("Uploading voice message to Bae..."),
-          ],
-        ),
-        duration: Duration(seconds: 15),
-      ),
-    );
-
+    final onSend = widget.onSend;
     Navigator.pop(context);
-
-    try {
-      final voiceUrl = await CloudinaryService.uploadAudio(File(filePath));
-      messenger.clearSnackBars();
-
-      if (voiceUrl == null) {
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text("Failed to send voice message. Please try again."),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-        return;
-      }
-
-      await FirebaseAuthService().updateLatestSnap(
-        snapUrl: voiceUrl,
-        snapType: 'Voice',
-      );
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text("Voice message sent to Bae!"),
-          backgroundColor: AppColors.primaryPink,
-        ),
-      );
-    } catch (e) {
-      messenger.clearSnackBars();
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text("Voice message error: $e"),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-    }
+    onSend(File(filePath));
   }
 
   @override

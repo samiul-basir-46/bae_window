@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 import 'package:bea_window_app/features/auth/presentation/screens/login_screen.dart';
 import 'package:bea_window_app/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:bea_window_app/features/splash/presentation/screens/splash_screen.dart';
@@ -29,9 +30,12 @@ class _LoadingState extends State<Loading> {
 
   @override
   void initState() {
-    loadInitialData();
-
     super.initState();
+    loadInitialData();
+    final cachedFcmToken = appData.read<String>(kKeyFCMToken);
+    if (cachedFcmToken != null && cachedFcmToken.isNotEmpty) {
+      log("Cached FCM Token =======> $cachedFcmToken");
+    }
     _timer = Timer(const Duration(seconds: 35), () {
       if (_isLoading) {
         _handleLogout();

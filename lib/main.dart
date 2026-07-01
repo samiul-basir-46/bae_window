@@ -16,6 +16,7 @@ import 'helpers/all_routes.dart';
 import 'helpers/di.dart';
 import 'helpers/helper_methods.dart';
 import 'helpers/navigation_service.dart';
+import 'helpers/notification_service.dart';
 import 'networks/dio/dio.dart';
 
 void main() async {
@@ -23,9 +24,10 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  //await _requestPermissions();
   await GetStorage.init();
   diSetup();
+  PushNotificationService.registerBackgroundHandler();
+  await PushNotificationService.initialize();
   // initiInternetChecker();
   // await LocationService.instance.initialize();
   DioSingleton.instance.create();

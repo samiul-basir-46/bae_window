@@ -91,154 +91,155 @@ class HomeScreenView extends StatelessWidget {
       child: Scaffold(
         backgroundColor: AppColors.softBlack,
         body: Stack(
-        children: [
-          Positioned(
-            top: -100.h,
-            left: -50.w,
-            child: Container(
-              width: 300.w,
-              height: 300.h,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppColors.primaryPink.withValues(alpha: 0.12),
-                    Colors.transparent,
-                  ],
+          children: [
+            Positioned(
+              top: -100.h,
+              left: -50.w,
+              child: Container(
+                width: 300.w,
+                height: 300.h,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppColors.primaryPink.withValues(alpha: 0.12),
+                      Colors.transparent,
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-          Positioned(
-            bottom: 50.h,
-            right: -100.w,
-            child: Container(
-              width: 350.w,
-              height: 350.h,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppColors.primaryPurple.withValues(alpha: 0.08),
-                    Colors.transparent,
-                  ],
+            Positioned(
+              bottom: 50.h,
+              right: -100.w,
+              child: Container(
+                width: 350.w,
+                height: 350.h,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppColors.primaryPurple.withValues(alpha: 0.08),
+                      Colors.transparent,
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-          SafeArea(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.only(
-                  left: 24.w, right: 24.w, top: 16.h, bottom: 120.h),
-              child: BlocBuilder<HomeBloc, HomeState>(
-                builder: (context, state) {
-                  if (state is HomeLoading) {
-                    return SizedBox(
-                      height: 500.h,
-                      child: const Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                              AppColors.primaryPink),
-                        ),
-                      ),
-                    );
-                  } else if (state is HomeLoaded) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        HomeTopHeader(
-                          userAvatarUrl: state.userAvatarUrl,
-                          isPaired: state.isPaired,
-                          partnerAvatarUrl: state.partnerAvatarUrl,
-                          partnerName: state.partnerName,
-                          isPartnerOnline: state.isPartnerOnline,
-                          daysTogether: state.daysTogether,
-                        ),
-                        UIHelper.verticalSpace(28.h),
-                        MoodCard(
-                          moodEmoji: state.userMoodEmoji,
-                          moodText: state.userMoodText,
-                        ),
-
-                        // Partner's mood card (only when paired and partner has mood)
-                        if (state.isPaired &&
-                            state.partnerMoodEmoji != null) ...[
-                          UIHelper.verticalSpace(12.h),
-                          _buildPartnerMoodCard(
-                            partnerName: state.partnerName ?? 'Partner',
-                            emoji: state.partnerMoodEmoji!,
-                            text: state.partnerMoodText ?? '',
+            SafeArea(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.only(
+                    left: 24.w, right: 24.w, top: 16.h, bottom: 120.h),
+                child: BlocBuilder<HomeBloc, HomeState>(
+                  builder: (context, state) {
+                    if (state is HomeLoading) {
+                      return SizedBox(
+                        height: 500.h,
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                                AppColors.primaryPink),
                           ),
-                        ],
-
-                        // When unpaired — show invite partner card
-                        if (!state.isPaired) ...[
-                          UIHelper.verticalSpace(24.h),
-                          _buildInvitePartnerCard(context, state.inviteCode),
-                        ],
-
-                        // Paired-only widgets
-                        if (state.isPaired) ...[
-                          UIHelper.verticalSpace(20.h),
-                          LivePeekCard(
-                            imageUrl: state.livePeekImageUrl,
-                            drawingUrl: state.livePeekDrawingUrl,
-                            voiceUrl: state.livePeekVoiceUrl,
-                            partnerName: state.partnerName ?? 'Bae',
-                            snapType: state.latestSnapType,
-                            onTap: () {
-                              const SwitchTabNotification(1).dispatch(context);
-                            },
+                        ),
+                      );
+                    } else if (state is HomeLoaded) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          HomeTopHeader(
+                            userAvatarUrl: state.userAvatarUrl,
+                            isPaired: state.isPaired,
+                            partnerAvatarUrl: state.partnerAvatarUrl,
+                            partnerName: state.partnerName,
+                            isPartnerOnline: state.isPartnerOnline,
+                            daysTogether: state.daysTogether,
                           ),
-                          UIHelper.verticalSpace(24.h),
-                          if (state.relationshipPulse.isNotEmpty) ...[
-                            UIHelper.verticalSpace(24.h),
-                            RelationshipPulseCard(
-                              data: state.relationshipPulse,
-                              partnerName: state.partnerName ?? 'Bae',
+                          UIHelper.verticalSpace(28.h),
+                          MoodCard(
+                            moodEmoji: state.userMoodEmoji,
+                            moodText: state.userMoodText,
+                          ),
+
+                          // Partner's mood card (only when paired and partner has mood)
+                          if (state.isPaired &&
+                              state.partnerMoodEmoji != null) ...[
+                            UIHelper.verticalSpace(12.h),
+                            _buildPartnerMoodCard(
+                              partnerName: state.partnerName ?? 'Partner',
+                              emoji: state.partnerMoodEmoji!,
+                              text: state.partnerMoodText ?? '',
                             ),
                           ],
-                          if (state.questionOfTheDay != null) ...[
-                            UIHelper.verticalSpace(24.h),
-                            QuestionOfTheDayCard(
-                                question: state.questionOfTheDay!),
-                          ],
-                          if (state.checkInLogs.isNotEmpty) ...[
-                            UIHelper.verticalSpace(24.h),
-                            CheckInLogCard(logs: state.checkInLogs),
-                          ],
-                          if (state.nextSpecialDay != null) ...[
-                            UIHelper.verticalSpace(24.h),
-                            NextSpecialDayCard(
-                                specialDay: state.nextSpecialDay!),
-                          ],
-                        ],
 
-                        // Solo mode — Quick Action Dock still shown
-                        if (!state.isPaired) ...[
-                          UIHelper.verticalSpace(24.h),
-                          const QuickActionDock(),
+                          // When unpaired — show invite partner card
+                          if (!state.isPaired) ...[
+                            UIHelper.verticalSpace(24.h),
+                            _buildInvitePartnerCard(context, state.inviteCode),
+                          ],
+
+                          // Paired-only widgets
+                          if (state.isPaired) ...[
+                            UIHelper.verticalSpace(20.h),
+                            LivePeekCard(
+                              imageUrl: state.livePeekImageUrl,
+                              drawingUrl: state.livePeekDrawingUrl,
+                              voiceUrl: state.livePeekVoiceUrl,
+                              partnerName: state.partnerName ?? 'Bae',
+                              snapType: state.latestSnapType,
+                              onTap: () {
+                                const SwitchTabNotification(1)
+                                    .dispatch(context);
+                              },
+                            ),
+                            UIHelper.verticalSpace(24.h),
+                            if (state.relationshipPulse.isNotEmpty) ...[
+                              UIHelper.verticalSpace(24.h),
+                              RelationshipPulseCard(
+                                data: state.relationshipPulse,
+                                partnerName: state.partnerName ?? 'Bae',
+                              ),
+                            ],
+                            if (state.questionOfTheDay != null) ...[
+                              UIHelper.verticalSpace(24.h),
+                              QuestionOfTheDayCard(
+                                  question: state.questionOfTheDay!),
+                            ],
+                            if (state.checkInLogs.isNotEmpty) ...[
+                              UIHelper.verticalSpace(24.h),
+                              CheckInLogCard(logs: state.checkInLogs),
+                            ],
+                            if (state.nextSpecialDay != null) ...[
+                              UIHelper.verticalSpace(24.h),
+                              NextSpecialDayCard(
+                                  specialDay: state.nextSpecialDay!),
+                            ],
+                          ],
+
+                          // Solo mode — Quick Action Dock still shown
+                          if (!state.isPaired) ...[
+                            UIHelper.verticalSpace(24.h),
+                            const QuickActionDock(),
+                          ],
                         ],
-                      ],
-                    );
-                  } else if (state is HomeError) {
-                    return SizedBox(
-                      height: 500.h,
-                      child: Center(
-                        child: Text(
-                          state.message,
-                          style: const TextStyle(color: Colors.redAccent),
+                      );
+                    } else if (state is HomeError) {
+                      return SizedBox(
+                        height: 500.h,
+                        child: Center(
+                          child: Text(
+                            state.message,
+                            style: const TextStyle(color: Colors.redAccent),
+                          ),
                         ),
-                      ),
-                    );
-                  }
-                  return const SizedBox.shrink();
-                },
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
               ),
             ),
-          ),
-        ],
+          ],
         ),
       ),
     );

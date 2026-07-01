@@ -1,3 +1,6 @@
+import 'dart:developer' as dev;
+
+import 'package:bea_window_app/helpers/notification_service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'space_event.dart';
 import 'space_state.dart';
@@ -45,7 +48,10 @@ class SpaceBloc extends Bloc<SpaceEvent, SpaceState> {
     ));
   }
 
-  void _onSendLoveNote(SendLoveNoteEvent event, Emitter<SpaceState> emit) {
+  Future<void> _onSendLoveNote(
+    SendLoveNoteEvent event,
+    Emitter<SpaceState> emit,
+  ) async {
     final currentState = state;
     if (currentState is SpaceLoaded) {
       final updatedMoments = List<MomentItem>.from(currentState.recentMoments);
@@ -60,10 +66,21 @@ class SpaceBloc extends Bloc<SpaceEvent, SpaceState> {
       );
 
       emit(currentState.copyWith(recentMoments: updatedMoments));
+      try {
+        await PushNotificationService.createLoveNoteEvent(event.note);
+      } catch (e, stack) {
+        dev.log(
+          'Could not create love-note notification event',
+          name: 'SpaceBloc',
+          error: e,
+          stackTrace: stack,
+        );
+      }
     }
   }
 
-  void _onTogglePartnerStatus(TogglePartnerStatusEvent event, Emitter<SpaceState> emit) {
+  void _onTogglePartnerStatus(
+      TogglePartnerStatusEvent event, Emitter<SpaceState> emit) {
     final currentState = state;
     if (currentState is SpaceLoaded) {
       emit(currentState.copyWith(isPartnerOnline: event.isOnline));

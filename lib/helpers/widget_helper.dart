@@ -53,8 +53,9 @@ class WidgetHelper {
 
     final String dockPartnerStatus =
         isPaired ? "${partnerName ?? 'Bae'}'s Phone" : "Bae Window";
-    final String dockSubtitle =
-        isPaired ? "Tap to send something ✨" : "Pair with your partner first";
+    final String dockSubtitle = isPaired
+        ? "Tap an action • app stays closed"
+        : "Pair with your partner first";
 
     await HomeWidget.saveWidgetData<bool>('isPaired', isPaired);
     await HomeWidget.saveWidgetData<String>('status', status);

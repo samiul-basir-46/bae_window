@@ -1,17 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
+import '../bloc/task_notification_cubit.dart';
 
-class TasksScreen extends StatefulWidget {
+class TasksScreen extends StatelessWidget {
   const TasksScreen({super.key});
 
   @override
-  State<TasksScreen> createState() => _TasksScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => TaskNotificationCubit(),
+      child: const _TasksView(),
+    );
+  }
 }
 
-class _TasksScreenState extends State<TasksScreen>
+class _TasksView extends StatefulWidget {
+  const _TasksView();
+
+  @override
+  State<_TasksView> createState() => _TasksViewState();
+}
+
+class _TasksViewState extends State<_TasksView>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
 
@@ -389,7 +403,8 @@ class _TasksScreenState extends State<TasksScreen>
                 value: progress,
                 minHeight: 6.h,
                 backgroundColor: Colors.white.withValues(alpha: 0.05),
-                valueColor: const AlwaysStoppedAnimation<Color>(Colors.blueAccent),
+                valueColor:
+                    const AlwaysStoppedAnimation<Color>(Colors.blueAccent),
               ),
             ),
           ],
@@ -432,6 +447,9 @@ class _TasksScreenState extends State<TasksScreen>
                   _tasks[foundIndex]["completed"] = true;
                 }
               });
+              context.read<TaskNotificationCubit>().notifyTaskCompleted(
+                    task["title"] as String? ?? "Shared task",
+                  );
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text("Task marked as completed!"),

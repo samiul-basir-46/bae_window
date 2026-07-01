@@ -1,129 +1,336 @@
-// import 'dart:developer';
-// import 'dart:io';
+import 'dart:async';
+import 'dart:convert';
+import 'dart:developer' as dev;
+import 'dart:io';
+import 'dart:typed_data';
 
-// import 'package:firebase_messaging/firebase_messaging.dart';
-// import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:get_storage/get_storage.dart';
 
-// import '../constants/app_constants.dart';
-// import 'di.dart';
+import '../constants/app_constants.dart';
+import '../firebase_options.dart';
+import 'all_routes.dart';
+import 'navigation_service.dart';
 
-// class NotificationService {
-//   NotificationService._();
-//   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
-//   static final FlutterLocalNotificationsPlugin _localNotificationsPlugin =
-//       FlutterLocalNotificationsPlugin();
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  await PushNotificationService.initializeLocalNotifications();
 
-//   static Future<void> initialize() async {
-//     // Request permission for iOS
-//     NotificationSettings settings = await _messaging.requestPermission(
-//       alert: true,
-//       badge: true,
-//       sound: true,
-//     );
+  // Notification payloads are rendered by Android/iOS while backgrounded.
+  // Data-only messages still need a local notification fallback.
+  if (message.notification == null) {
+    await PushNotificationService.showRemoteMessage(message);
+  }
+}
 
-//     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-//       log("User granted permission");
-//     } else if (settings.authorizationStatus ==
-//         AuthorizationStatus.provisional) {
-//       log("User granted provisional permission");
-//     } else {
-//       log("User denied permission");
-//     }
+class PushNotificationService {
+  PushNotificationService._();
 
-//     // Initialize local notifications
-//     const AndroidInitializationSettings androidSettings =
-//         AndroidInitializationSettings('@mipmap/ic_launcher');
+  static const String activityChannelId = 'bae_activity';
+  static const String pulseChannelId = 'bae_pulse';
+  static const String quietChannelId = 'bae_quiet';
 
-//     const DarwinInitializationSettings iosSettings =
-//         DarwinInitializationSettings(
-//       requestAlertPermission: true,
-//       requestBadgePermission: true,
-//       requestSoundPermission: true,
-//     );
+  static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static final FirebaseAuth _auth = FirebaseAuth.instance;
+  static final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
 
-//     const InitializationSettings initSettings = InitializationSettings(
-//       android: androidSettings,
-//       iOS: iosSettings,
-//     );
+  static bool _localNotificationsInitialized = false;
+  static bool _listenersInitialized = false;
+  static StreamSubscription<User?>? _authSubscription;
+  static StreamSubscription<String>? _tokenSubscription;
 
-//     await _localNotificationsPlugin.initialize(
-//       initSettings,
-//       onDidReceiveNotificationResponse: (NotificationResponse response) {
-//         log("Notification clicked: ${response.payload}");
-//       },
-//     );
+  static void registerBackgroundHandler() {
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  }
 
-//     await FirebaseMessaging.instance
-//         .setForegroundNotificationPresentationOptions(
-//       alert: true,
-//       badge: true,
-//       sound: true,
-//     );
+  static Future<void> initialize() async {
+    await initializeLocalNotifications();
+    await _messaging.setAutoInitEnabled(true);
+    await _messaging.setForegroundNotificationPresentationOptions(
+      alert: false,
+      badge: false,
+      sound: false,
+    );
 
-//     //FirebaseMessaging.onMessageOpenedApp.listen(handleMessage);
-//     // FirebaseMessaging.instance.getInitialMessage().then(handleMessage);
+    if (!_listenersInitialized) {
+      _listenersInitialized = true;
+      FirebaseMessaging.onMessage.listen(showRemoteMessage);
+      FirebaseMessaging.onMessageOpenedApp.listen(
+        (message) => _openNotification(message.data),
+      );
+      _tokenSubscription = _messaging.onTokenRefresh.listen(_saveToken);
+      _authSubscription = _auth.authStateChanges().listen((user) {
+        if (user != null) {
+          unawaited(requestPermissionAndRegister());
+        }
+      });
+    }
 
-//     // Handle foreground messages
-//     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-//       // getAllNotificationRx.fetchAllNotificationData();
-//       if (message.notification != null && !Platform.isIOS) {
-//         showNotification(
-//           title: message.notification!.title ?? 'No Title',
-//           body: message.notification!.body ?? 'No Body',
-//         );
-//       }
-//     });
+    final initialMessage = await _messaging.getInitialMessage();
+    if (initialMessage != null) {
+      Future<void>.delayed(
+        const Duration(milliseconds: 800),
+        () => _openNotification(initialMessage.data),
+      );
+    }
 
-//     // Handle messages when the app is opened from a terminated state
-//     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-//       log("Message opened: ${message.data}");
-//     });
+    if (_auth.currentUser != null) {
+      await requestPermissionAndRegister();
+    } else if (Platform.isAndroid) {
+      await _registerCurrentToken();
+    }
+  }
 
-//     // Fetch FCM token
-//     await getToken();
+  static Future<void> initializeLocalNotifications() async {
+    if (_localNotificationsInitialized) return;
 
-//     // Fetch APNS token (iOS specific)
-//   }
+    const initializationSettings = InitializationSettings(
+      android: AndroidInitializationSettings('ic_notification'),
+      iOS: DarwinInitializationSettings(
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
+      ),
+    );
+    await _localNotifications.initialize(
+      settings: initializationSettings,
+      onDidReceiveNotificationResponse: (response) {
+        final payload = response.payload;
+        if (payload == null || payload.isEmpty) return;
+        try {
+          _openNotification(
+            Map<String, dynamic>.from(jsonDecode(payload) as Map),
+          );
+        } catch (_) {
+          _openNotification({'route': payload});
+        }
+      },
+    );
 
-//   static Future<void> showNotification({
-//     required String title,
-//     required String body,
-//   }) async {
-//     const AndroidNotificationDetails androidDetails =
-//         AndroidNotificationDetails(
-//       'main_channel', // Channel ID
-//       'Main Channel', // Channel name
-//       importance: Importance.high,
-//       priority: Priority.high,
-//     );
+    final androidPlugin =
+        _localNotifications.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    await androidPlugin?.createNotificationChannel(
+      AndroidNotificationChannel(
+        pulseChannelId,
+        'Love pulse',
+        description: 'Priority love pulses from your Bae',
+        importance: Importance.max,
+        playSound: true,
+        enableVibration: true,
+        vibrationPattern: Int64List.fromList([0, 280, 140, 360]),
+      ),
+    );
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        activityChannelId,
+        'Bae activity',
+        description: 'Snaps, drawings, voice, pulse, mood and task updates',
+        importance: Importance.high,
+        playSound: true,
+        enableVibration: true,
+      ),
+    );
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        quietChannelId,
+        'Quiet hours',
+        description: 'Silent Bae Window notifications during quiet hours',
+        importance: Importance.low,
+        playSound: false,
+        enableVibration: false,
+      ),
+    );
+    _localNotificationsInitialized = true;
+  }
 
-//     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails();
+  static Future<AuthorizationStatus> requestPermissionAndRegister() async {
+    final settings = await _messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+      provisional: false,
+    );
+    if (settings.authorizationStatus == AuthorizationStatus.authorized ||
+        settings.authorizationStatus == AuthorizationStatus.provisional) {
+      await _registerCurrentToken();
+    }
+    return settings.authorizationStatus;
+  }
 
-//     const NotificationDetails platformDetails = NotificationDetails(
-//       android: androidDetails,
-//       iOS: iosDetails,
-//     );
+  static Future<void> _registerCurrentToken() async {
+    try {
+      if (Platform.isIOS) {
+        final apnsToken = await _messaging.getAPNSToken();
+        if (apnsToken == null) {
+          Future<void>.delayed(
+            const Duration(seconds: 3),
+            _registerCurrentToken,
+          );
+          return;
+        }
+      }
+      final token = await _messaging.getToken();
+      if (token != null && token.isNotEmpty) {
+        await _saveToken(token);
+      }
+    } catch (e, stack) {
+      dev.log(
+        'Could not register FCM token',
+        name: 'PushNotificationService',
+        error: e,
+        stackTrace: stack,
+      );
+    }
+  }
 
-//     await _localNotificationsPlugin.show(
-//       0, // Notification ID
-//       title,
-//       body,
-//       platformDetails,
-//     );
-//   }
+  static Future<void> _saveToken(String token) async {
+    dev.log(
+      'FCM Token =================> $token',
+      name: 'PushNotificationService',
+    );
+    await GetStorage().write(kKeyFCMToken, token);
 
-//   static Future<void> getToken() async {
-//     try {
-//       if (Platform.isIOS) {
-//         String? apnsToken = await _messaging.getAPNSToken();
-//         log("APNS Token: $apnsToken");
-//       }
-//       String? token = await _messaging.getToken();
-//       log("Firebase Messaging Token: $token");
-//       appData.write(kKeyFCMToken, token);
-//       // Save token to your backend for sending notifications
-//     } catch (e) {
-//       log("Error fetching token: $e");
-//     }
-//   }
-// }
+    final user = _auth.currentUser;
+    if (user == null) return;
+    await _firestore.collection('users').doc(user.uid).set({
+      'fcmTokens': FieldValue.arrayUnion([token]),
+      'notificationTimezoneOffsetMinutes':
+          DateTime.now().timeZoneOffset.inMinutes,
+      'notificationTokenUpdatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  static Future<Map<String, dynamic>?> loadSettings() async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+    final snapshot = await _firestore.collection('users').doc(user.uid).get();
+    final rawSettings = snapshot.data()?['notificationSettings'];
+    return rawSettings is Map ? Map<String, dynamic>.from(rawSettings) : null;
+  }
+
+  static Future<void> saveSettings(Map<String, dynamic> settings) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    await _firestore.collection('users').doc(user.uid).set({
+      'notificationSettings': settings,
+      'notificationTimezoneOffsetMinutes':
+          DateTime.now().timeZoneOffset.inMinutes,
+      'notificationSettingsUpdatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  static Future<void> createTaskCompletedEvent(String taskTitle) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    await _firestore.collection('users').doc(user.uid).set({
+      'latestTaskCompleted': {
+        'id': '${user.uid}_${DateTime.now().microsecondsSinceEpoch}',
+        'title': taskTitle,
+        'completedAt': FieldValue.serverTimestamp(),
+      },
+    }, SetOptions(merge: true));
+  }
+
+  static Future<void> createLoveNoteEvent(String note) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    await _firestore.collection('users').doc(user.uid).set({
+      'latestLoveNote': {
+        'id': '${user.uid}_${DateTime.now().microsecondsSinceEpoch}',
+        'text': note,
+        'sentAt': FieldValue.serverTimestamp(),
+      },
+    }, SetOptions(merge: true));
+  }
+
+  static Future<void> showRemoteMessage(RemoteMessage message) async {
+    await initializeLocalNotifications();
+    final notification = message.notification;
+    final title = notification?.title ?? message.data['title']?.toString();
+    final body = notification?.body ?? message.data['body']?.toString();
+    if (title == null && body == null) return;
+
+    final isQuiet = message.data['quiet'] == 'true';
+    final isPulse = message.data['type'] == 'thinkingPulse';
+    final channelId = isPulse
+        ? pulseChannelId
+        : isQuiet
+            ? quietChannelId
+            : activityChannelId;
+    await _localNotifications.show(
+      id: message.messageId?.hashCode ??
+          DateTime.now().millisecondsSinceEpoch.remainder(1 << 31),
+      title: title,
+      body: body,
+      notificationDetails: NotificationDetails(
+        android: AndroidNotificationDetails(
+          channelId,
+          isPulse
+              ? 'Love pulse'
+              : isQuiet
+                  ? 'Quiet hours'
+                  : 'Bae activity',
+          channelDescription: isPulse
+              ? 'Priority love pulses from your Bae'
+              : isQuiet
+                  ? 'Silent notifications during quiet hours'
+                  : 'Bae Window partner activity',
+          importance: isPulse
+              ? Importance.max
+              : isQuiet
+                  ? Importance.low
+                  : Importance.high,
+          priority: isPulse
+              ? Priority.max
+              : isQuiet
+                  ? Priority.low
+                  : Priority.high,
+          playSound: isPulse || !isQuiet,
+          enableVibration: isPulse || !isQuiet,
+          vibrationPattern:
+              isPulse ? Int64List.fromList([0, 280, 140, 360]) : null,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: !isQuiet,
+        ),
+      ),
+      payload: jsonEncode(message.data),
+    );
+  }
+
+  static void _openNotification(Map<String, dynamic> data) {
+    final route = data['route']?.toString();
+    final routeName = switch (route) {
+      'tasks' => Routes.tasksScreen,
+      'profile' => Routes.myProfileScreen,
+      _ => Routes.navigationScreen,
+    };
+
+    void navigate() {
+      NavigationService.navigatorKey.currentState?.pushNamed(routeName);
+    }
+
+    if (NavigationService.navigatorKey.currentState == null) {
+      Future<void>.delayed(const Duration(milliseconds: 800), navigate);
+    } else {
+      navigate();
+    }
+  }
+
+  static Future<void> dispose() async {
+    await _authSubscription?.cancel();
+    await _tokenSubscription?.cancel();
+  }
+}
