@@ -4,6 +4,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
+import 'package:bea_window_app/common_widgets/custom_date_picker.dart';
+import 'package:intl/intl.dart';
 
 import '../bloc/space_screen_bloc.dart';
 import '../bloc/space_screen_event.dart';
@@ -14,203 +16,43 @@ class BucketListScreen extends StatelessWidget {
   const BucketListScreen({super.key});
 
   void _showNewGoalModal(BuildContext context) {
-    final titleController = TextEditingController();
-    final descController = TextEditingController();
-    final dateController = TextEditingController();
-
     showDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.8),
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.navBgColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
-        title: Text(
-          "Add New Goal",
-          style: GoogleFonts.dmSans(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                style: GoogleFonts.dmSans(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: "Goal Name",
-                  labelStyle: GoogleFonts.dmSans(color: Colors.white38),
-                  enabledBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white12),
-                  ),
-                  focusedBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.primaryPink),
-                  ),
-                ),
-              ),
-              UIHelper.verticalSpace(12.h),
-              TextField(
-                controller: descController,
-                style: GoogleFonts.dmSans(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: "Description",
-                  labelStyle: GoogleFonts.dmSans(color: Colors.white38),
-                  enabledBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white12),
-                  ),
-                  focusedBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.primaryPink),
-                  ),
-                ),
-              ),
-              UIHelper.verticalSpace(12.h),
-              TextField(
-                controller: dateController,
-                style: GoogleFonts.dmSans(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: "Target Date (e.g. Dec 2026)",
-                  labelStyle: GoogleFonts.dmSans(color: Colors.white38),
-                  enabledBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white12),
-                  ),
-                  focusedBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.primaryPink),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text("Cancel", style: GoogleFonts.dmSans(color: Colors.white54)),
-          ),
-          TextButton(
-            onPressed: () {
-              final name = titleController.text.trim();
-              final desc = descController.text.trim();
-              final date = dateController.text.trim();
-              if (name.isNotEmpty) {
-                final newItem = BucketListItem(
-                  id: '',
-                  title: name,
-                  description: desc.isEmpty ? 'Shared dream waiting to be fulfilled.' : desc,
-                  date: date.isEmpty ? 'TBD' : date,
-                  isCompleted: false,
-                  progress: 0.0,
-                  createdAt: DateTime.now(),
-                );
-                context.read<SpaceScreenBloc>().add(AddBucketItemEvent(newItem));
-                Navigator.pop(dialogContext);
-              }
-            },
-            child: Text(
-              "Add Goal",
-              style: GoogleFonts.dmSans(
-                color: AppColors.primaryPink,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
+      builder: (dialogContext) => _BucketGoalDialog(
+        onSave: (title, desc, date) {
+          final newItem = BucketListItem(
+            id: '',
+            title: title,
+            description:
+                desc.isEmpty ? 'Shared dream waiting to be fulfilled.' : desc,
+            date: date.isEmpty ? 'TBD' : date,
+            isCompleted: false,
+            progress: 0.0,
+            createdAt: DateTime.now(),
+          );
+          context.read<SpaceScreenBloc>().add(AddBucketItemEvent(newItem));
+        },
       ),
     );
   }
 
   void _showEditGoalModal(BuildContext context, BucketListItem item) {
-    final titleController = TextEditingController(text: item.title);
-    final descController = TextEditingController(text: item.description);
-    final dateController = TextEditingController(text: item.date);
-
     showDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.8),
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.navBgColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
-        title: Text(
-          "Edit Goal",
-          style: GoogleFonts.dmSans(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                style: GoogleFonts.dmSans(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: "Goal Name",
-                  labelStyle: GoogleFonts.dmSans(color: Colors.white38),
-                  enabledBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white12),
-                  ),
-                  focusedBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.primaryPink),
-                  ),
-                ),
-              ),
-              UIHelper.verticalSpace(12.h),
-              TextField(
-                controller: descController,
-                style: GoogleFonts.dmSans(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: "Description",
-                  labelStyle: GoogleFonts.dmSans(color: Colors.white38),
-                  enabledBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white12),
-                  ),
-                  focusedBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.primaryPink),
-                  ),
-                ),
-              ),
-              UIHelper.verticalSpace(12.h),
-              TextField(
-                controller: dateController,
-                style: GoogleFonts.dmSans(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: "Target Date (e.g. Dec 2026)",
-                  labelStyle: GoogleFonts.dmSans(color: Colors.white38),
-                  enabledBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white12),
-                  ),
-                  focusedBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.primaryPink),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text("Cancel", style: GoogleFonts.dmSans(color: Colors.white54)),
-          ),
-          TextButton(
-            onPressed: () {
-              final name = titleController.text.trim();
-              final desc = descController.text.trim();
-              final date = dateController.text.trim();
-              if (name.isNotEmpty) {
-                final updatedItem = item.copyWith(
-                  title: name,
-                  description: desc,
-                  date: date,
-                );
-                context.read<SpaceScreenBloc>().add(UpdateBucketItemEvent(updatedItem));
-                Navigator.pop(dialogContext);
-              }
-            },
-            child: Text(
-              "Save",
-              style: GoogleFonts.dmSans(
-                color: AppColors.primaryPink,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
+      builder: (dialogContext) => _BucketGoalDialog(
+        item: item,
+        onSave: (title, desc, date) {
+          final updatedItem = item.copyWith(
+            title: title,
+            description: desc,
+            date: date,
+          );
+          context
+              .read<SpaceScreenBloc>()
+              .add(UpdateBucketItemEvent(updatedItem));
+        },
       ),
     );
   }
@@ -241,9 +83,11 @@ class BucketListScreen extends StatelessWidget {
           SafeArea(
             child: BlocBuilder<SpaceScreenBloc, SpaceScreenState>(
               builder: (context, state) {
-                if (state is SpaceScreenLoading || state is SpaceScreenInitial) {
+                if (state is SpaceScreenLoading ||
+                    state is SpaceScreenInitial) {
                   return const Center(
-                    child: CircularProgressIndicator(color: AppColors.primaryPink),
+                    child:
+                        CircularProgressIndicator(color: AppColors.primaryPink),
                   );
                 } else if (state is SpaceScreenLoaded) {
                   final list = state.bucketList;
@@ -257,7 +101,8 @@ class BucketListScreen extends StatelessWidget {
                             ? Center(
                                 child: Text(
                                   "No goals in your shared bucket list yet! ✨",
-                                  style: GoogleFonts.dmSans(color: Colors.white38, fontSize: 13.sp),
+                                  style: GoogleFonts.dmSans(
+                                      color: Colors.white38, fontSize: 13.sp),
                                 ),
                               )
                             : ListView.builder(
@@ -281,7 +126,8 @@ class BucketListScreen extends StatelessWidget {
                   return Center(
                     child: Text(
                       state.message,
-                      style: GoogleFonts.dmSans(color: Colors.redAccent, fontSize: 14.sp),
+                      style: GoogleFonts.dmSans(
+                          color: Colors.redAccent, fontSize: 14.sp),
                     ),
                   );
                 }
@@ -360,7 +206,8 @@ class BucketListScreen extends StatelessWidget {
             children: [
               Hero(
                 tag: "hero-bucket-list-icon",
-                child: Icon(Icons.favorite_border_rounded, color: AppColors.primaryPink, size: 20.sp),
+                child: Icon(Icons.favorite_border_rounded,
+                    color: AppColors.primaryPink, size: 20.sp),
               ),
               SizedBox(width: 8.w),
               Text(
@@ -429,13 +276,18 @@ class BucketListScreen extends StatelessWidget {
                       ),
                     ),
                     IconButton(
-                      icon: Icon(Icons.edit_rounded, color: Colors.white24, size: 14.sp),
+                      icon: Icon(Icons.edit_rounded,
+                          color: Colors.white24, size: 14.sp),
                       onPressed: () => _showEditGoalModal(context, item),
                     ),
                     IconButton(
-                      icon: Icon(Icons.delete_outline_rounded, color: Colors.redAccent.withValues(alpha: 0.6), size: 14.sp),
+                      icon: Icon(Icons.delete_outline_rounded,
+                          color: Colors.redAccent.withValues(alpha: 0.6),
+                          size: 14.sp),
                       onPressed: () {
-                        context.read<SpaceScreenBloc>().add(DeleteBucketItemEvent(item.id));
+                        context
+                            .read<SpaceScreenBloc>()
+                            .add(DeleteBucketItemEvent(item.id));
                       },
                     ),
                   ],
@@ -472,7 +324,9 @@ class BucketListScreen extends StatelessWidget {
                 isCompleted: nextCompleted,
                 progress: nextProgress,
               );
-              context.read<SpaceScreenBloc>().add(UpdateBucketItemEvent(updatedItem));
+              context
+                  .read<SpaceScreenBloc>()
+                  .add(UpdateBucketItemEvent(updatedItem));
             },
             child: Stack(
               alignment: Alignment.center,
@@ -491,13 +345,291 @@ class BucketListScreen extends StatelessWidget {
                 ),
                 Icon(
                   isCompleted ? Icons.check_rounded : Icons.star_border_rounded,
-                  color: isCompleted ? Colors.greenAccent : AppColors.primaryPink,
+                  color:
+                      isCompleted ? Colors.greenAccent : AppColors.primaryPink,
                   size: 16.sp,
                 ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _BucketGoalDialog extends StatefulWidget {
+  final BucketListItem? item;
+  final Function(String title, String desc, String date) onSave;
+
+  const _BucketGoalDialog({
+    this.item,
+    required this.onSave,
+  });
+
+  @override
+  State<_BucketGoalDialog> createState() => _BucketGoalDialogState();
+}
+
+class _BucketGoalDialogState extends State<_BucketGoalDialog> {
+  late final TextEditingController _titleController;
+  late final TextEditingController _descController;
+  DateTime? _selectedDate;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: widget.item?.title ?? '');
+    _descController =
+        TextEditingController(text: widget.item?.description ?? '');
+    if (widget.item?.date != null && widget.item!.date != 'TBD') {
+      try {
+        _selectedDate = DateFormat('MMM d, yyyy').parse(widget.item!.date);
+      } catch (_) {
+        _selectedDate = DateTime.tryParse(widget.item!.date);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await CustomDatePicker.show(
+      context,
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: DateTime(DateTime.now().year),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isEdit = widget.item != null;
+    final dateText = _selectedDate != null
+        ? DateFormat('MMM d, yyyy').format(_selectedDate!)
+        : 'Select Target Date';
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: EdgeInsets.symmetric(horizontal: 20.w),
+      child: Container(
+        padding: EdgeInsets.all(24.r),
+        decoration: BoxDecoration(
+          color: AppColors.navBgColor,
+          borderRadius: BorderRadius.circular(28.r),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.08),
+            width: 1.w,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.5),
+              blurRadius: 20.r,
+              spreadRadius: 2.r,
+            ),
+          ],
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isEdit ? "Edit Goal" : "Add New Goal",
+                style: GoogleFonts.dmSans(
+                  color: Colors.white,
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              UIHelper.verticalSpace(16.h),
+
+              // Goal Name Input
+              Text(
+                "GOAL NAME",
+                style: GoogleFonts.dmSans(
+                    color: Colors.white38,
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.bold),
+              ),
+              UIHelper.verticalSpace(6.h),
+              TextField(
+                controller: _titleController,
+                cursorColor: Colors.white,
+                style: GoogleFonts.dmSans(color: Colors.white, fontSize: 14.sp),
+                decoration: InputDecoration(
+                  hintText: "Enter goal name...",
+                  hintStyle: GoogleFonts.dmSans(
+                      color: const Color(0xFF555568), fontSize: 14.sp),
+                  filled: true,
+                  fillColor: Colors.white.withValues(alpha: 0.04),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14.r),
+                    borderSide:
+                        BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14.r),
+                    borderSide:
+                        BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14.r),
+                    borderSide: const BorderSide(color: Color(0xFFD94E98)),
+                  ),
+                ),
+              ),
+              UIHelper.verticalSpace(16.h),
+
+              // Description Input
+              Text(
+                "DESCRIPTION",
+                style: GoogleFonts.dmSans(
+                    color: Colors.white38,
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.bold),
+              ),
+              UIHelper.verticalSpace(6.h),
+              TextField(
+                controller: _descController,
+                cursorColor: Colors.white,
+                maxLines: 3,
+                style: GoogleFonts.dmSans(color: Colors.white, fontSize: 14.sp),
+                decoration: InputDecoration(
+                  hintText: "Enter description...",
+                  hintStyle: GoogleFonts.dmSans(
+                      color: const Color(0xFF555568), fontSize: 14.sp),
+                  filled: true,
+                  fillColor: Colors.white.withValues(alpha: 0.04),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14.r),
+                    borderSide:
+                        BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14.r),
+                    borderSide:
+                        BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14.r),
+                    borderSide: const BorderSide(color: Color(0xFFD94E98)),
+                  ),
+                ),
+              ),
+              UIHelper.verticalSpace(16.h),
+
+              // Target Date Selector Button
+              Text(
+                "TARGET DATE",
+                style: GoogleFonts.dmSans(
+                    color: Colors.white38,
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.bold),
+              ),
+              UIHelper.verticalSpace(6.h),
+              GestureDetector(
+                onTap: _pickDate,
+                child: Container(
+                  width: double.infinity,
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(14.r),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.08),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        dateText,
+                        style: GoogleFonts.dmSans(
+                          color: _selectedDate != null
+                              ? Colors.white
+                              : const Color(0xFF555568),
+                          fontSize: 14.sp,
+                        ),
+                      ),
+                      Icon(
+                        Icons.calendar_today_rounded,
+                        color: AppColors.primaryPink,
+                        size: 18.sp,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              UIHelper.verticalSpace(24.h),
+
+              // Buttons
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(
+                      "Cancel",
+                      style: GoogleFonts.dmSans(
+                        color: Colors.white54,
+                        fontSize: 13.sp,
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryPink,
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 24.w, vertical: 12.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                    ),
+                    onPressed: () {
+                      final name = _titleController.text.trim();
+                      final desc = _descController.text.trim();
+                      if (name.isNotEmpty) {
+                        widget.onSave(
+                            name,
+                            desc,
+                            _selectedDate != null
+                                ? DateFormat('MMM d, yyyy')
+                                    .format(_selectedDate!)
+                                : '');
+                        Navigator.pop(context);
+                      }
+                    },
+                    child: Text(
+                      isEdit ? "Save Changes" : "Add Goal",
+                      style: GoogleFonts.dmSans(
+                        color: Colors.white,
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

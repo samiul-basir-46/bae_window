@@ -12,6 +12,7 @@ import 'widgets/live_status_indicator.dart';
 import 'widgets/love_connection_card.dart';
 import 'widgets/quick_action_grid.dart';
 import 'widgets/activity_feed.dart';
+import 'package:bea_window_app/common_widgets/custom_date_picker.dart';
 
 class SpaceScreen extends StatelessWidget {
   const SpaceScreen({super.key});
@@ -30,25 +31,11 @@ class SpaceScreenView extends StatelessWidget {
 
   Future<void> _selectAnniversary(BuildContext context, DateTime? currentDate) async {
     final now = DateTime.now();
-    final pickedDate = await showDatePicker(
-      context: context,
+    final pickedDate = await CustomDatePicker.show(
+      context,
       initialDate: currentDate ?? now,
       firstDate: DateTime(1900),
       lastDate: DateTime(now.year + 50),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: AppColors.primaryPink,
-              onPrimary: Colors.white,
-              surface: AppColors.navBgColor,
-              onSurface: Colors.white,
-            ),
-            dialogBackgroundColor: AppColors.softBlack,
-          ),
-          child: child!,
-        );
-      },
     );
 
     if (pickedDate != null && context.mounted) {

@@ -273,6 +273,7 @@ class _TriviaScreenState extends State<TriviaScreen> {
           TextFormField(
             controller: _answerController,
             maxLines: 4,
+            cursorColor: AppColors.primaryPink,
             style: GoogleFonts.dmSans(color: Colors.white, fontSize: 14.sp),
             decoration: InputDecoration(
               hintText: "Type your answer here...",

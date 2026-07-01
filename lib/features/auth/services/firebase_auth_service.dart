@@ -408,7 +408,7 @@ class FirebaseAuthService {
       final senderName = await PushNotificationService.getSenderName();
       unawaited(PushNotificationService.sendNotificationToPartner(
         title: '💖 $senderName is thinking of you',
-        body: 'Your Bae just sent a love pulse.',
+        body: 'Your $senderName just sent a love pulse.',
         type: 'thinkingPulse',
       ));
     } catch (e) {
