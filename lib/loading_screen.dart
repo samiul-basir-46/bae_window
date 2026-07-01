@@ -48,38 +48,33 @@ class _LoadingState extends State<Loading> {
 
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
+      Map<String, dynamic>? data;
       try {
-        await user.reload().timeout(const Duration(seconds: 5));
-      } catch (_) {}
-
-      final refreshedUser = FirebaseAuth.instance.currentUser;
-      if (refreshedUser != null && !refreshedUser.emailVerified) {
-        _initialScreen = const EmailVerificationScreen();
-      } else if (refreshedUser != null) {
-        Map<String, dynamic>? data;
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get(const GetOptions(source: Source.server))
+            .timeout(const Duration(seconds: 8));
+        if (doc.exists && doc.data() != null) {
+          data = doc.data()!;
+        }
+      } catch (_) {
         try {
           final doc = await FirebaseFirestore.instance
               .collection('users')
-              .doc(refreshedUser.uid)
+              .doc(user.uid)
               .get(const GetOptions(source: Source.cache));
           if (doc.exists && doc.data() != null) {
             data = doc.data()!;
           }
         } catch (_) {}
+      }
 
-        if (data == null) {
-          try {
-            final doc = await FirebaseFirestore.instance
-                .collection('users')
-                .doc(refreshedUser.uid)
-                .get(const GetOptions(source: Source.server))
-                .timeout(const Duration(seconds: 8));
-            if (doc.exists && doc.data() != null) {
-              data = doc.data()!;
-            }
-          } catch (_) {}
-        }
+      final isEmailVerified = data?['isEmailVerified'] as bool? ?? false;
 
+      if (!isEmailVerified) {
+        _initialScreen = const EmailVerificationScreen();
+      } else {
         if (data != null) {
           final isProfileComplete = data['profileComplete'] as bool? ?? false;
           if (!isProfileComplete) {
