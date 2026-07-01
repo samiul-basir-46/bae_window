@@ -84,9 +84,11 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         title: "💬 Trivia Time with $senderName",
         body: "$senderName wants to answer today's question together!",
         type: "triviaInvitation",
+        route: "trivia",
         extraData: {
           'questionText': event.questionText,
           'senderName': senderName,
+          'coupleId': _pairId ?? '',
         },
       );
     } catch (e) {
@@ -455,6 +457,41 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       );
     }
 
+    SpecialDay? nextSpecialDay;
+    if (_isPaired && _pairId != null) {
+      try {
+        final now = DateTime.now();
+        final startOfToday = DateTime(now.year, now.month, now.day);
+        final specialDaysSnap = await FirebaseFirestore.instance
+            .collection('couples')
+            .doc(_pairId)
+            .collection('special_days')
+            .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfToday))
+            .orderBy('date', descending: false)
+            .limit(1)
+            .get();
+        if (specialDaysSnap.docs.isNotEmpty) {
+          final docData = specialDaysSnap.docs.first.data();
+          final title = docData['title'] as String? ?? '';
+          final dateVal = docData['date'];
+          DateTime? targetDate;
+          if (dateVal is Timestamp) {
+            targetDate = dateVal.toDate();
+          } else if (dateVal is String) {
+            targetDate = DateTime.tryParse(dateVal);
+          }
+          if (targetDate != null) {
+            nextSpecialDay = SpecialDay(
+              title: title,
+              targetDate: targetDate,
+            );
+          }
+        }
+      } catch (e) {
+        dev.log('HomeBloc: Error fetching next special day: $e', name: 'HomeBloc');
+      }
+    }
+
     emit(HomeLoaded(
       isPaired: _isPaired,
       userAvatarUrl: userAvatar,
@@ -477,12 +514,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
           ? _getTriviaQuestionForToday()
           : null,
       checkInLogs: const [],
-      nextSpecialDay: daysTogether != null
-          ? SpecialDay(
-              title: "Next Milestone",
-              targetDate: DateTime.now().add(const Duration(days: 30)),
-            )
-          : null,
+      nextSpecialDay: nextSpecialDay,
+      coupleId: _pairId,
     ));
 
     // Update Home Screen Widget in background

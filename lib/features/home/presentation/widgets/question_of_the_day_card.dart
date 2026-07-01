@@ -8,14 +8,17 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/home_bloc.dart';
 import '../bloc/home_event.dart';
 import '../bloc/home_state.dart';
+import 'package:bea_window_app/helpers/all_routes.dart';
 
 class QuestionOfTheDayCard extends StatelessWidget {
   final TriviaQuestion question;
   final String? partnerName;
+  final String coupleId;
 
   const QuestionOfTheDayCard({
     super.key,
     required this.question,
+    required this.coupleId,
     this.partnerName,
   });
 
@@ -115,6 +118,14 @@ class QuestionOfTheDayCard extends StatelessWidget {
                             content: Text("Trivia invitation sent to $displayPartnerName!"),
                             backgroundColor: AppColors.primaryPink,
                           ),
+                        );
+                        Navigator.pushNamed(
+                          context,
+                          Routes.triviaScreen,
+                          arguments: {
+                            'coupleId': coupleId,
+                            'questionText': question.questionText,
+                          },
                         );
                       },
                       child: Text(

@@ -381,6 +381,29 @@ class PushNotificationService {
 
   static void _openNotification(Map<String, dynamic> data) {
     final route = data['route']?.toString();
+
+    if (route == 'trivia') {
+      final questionText = data['questionText']?.toString() ?? '';
+      final coupleId = data['coupleId']?.toString() ?? '';
+
+      void navigate() {
+        NavigationService.navigatorKey.currentState?.pushNamed(
+          Routes.triviaScreen,
+          arguments: {
+            'coupleId': coupleId,
+            'questionText': questionText,
+          },
+        );
+      }
+
+      if (NavigationService.navigatorKey.currentState == null) {
+        Future<void>.delayed(const Duration(milliseconds: 800), navigate);
+      } else {
+        navigate();
+      }
+      return;
+    }
+
     final routeName = switch (route) {
       'tasks' => Routes.tasksScreen,
       'profile' => Routes.myProfileScreen,

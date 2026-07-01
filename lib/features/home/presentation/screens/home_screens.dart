@@ -204,6 +204,7 @@ class HomeScreenView extends StatelessWidget {
                               UIHelper.verticalSpace(24.h),
                               QuestionOfTheDayCard(
                                 question: state.questionOfTheDay!,
+                                coupleId: state.coupleId ?? '',
                                 partnerName: state.partnerName,
                               ),
                             ],
@@ -213,8 +214,102 @@ class HomeScreenView extends StatelessWidget {
                             ],
                             if (state.nextSpecialDay != null) ...[
                               UIHelper.verticalSpace(24.h),
-                              NextSpecialDayCard(
-                                  specialDay: state.nextSpecialDay!),
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    Routes.specialDayScreen,
+                                    arguments: state.coupleId ?? '',
+                                  );
+                                },
+                                child: NextSpecialDayCard(
+                                    specialDay: state.nextSpecialDay!),
+                              ),
+                            ] else if (state.isPaired) ...[
+                              UIHelper.verticalSpace(24.h),
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    Routes.specialDayScreen,
+                                    arguments: state.coupleId ?? '',
+                                  );
+                                },
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(24.r),
+                                  child: BackdropFilter(
+                                    filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                                    child: Container(
+                                      width: double.infinity,
+                                      padding: EdgeInsets.all(20.w),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.03),
+                                        borderRadius: BorderRadius.circular(24.r),
+                                        border: Border.all(
+                                          color: Colors.white.withValues(alpha: 0.05),
+                                          width: 1.w,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Padding(
+                                            padding: EdgeInsets.only(left: 4.w, bottom: 8.h),
+                                            child: Text(
+                                              "SPECIAL DAYS",
+                                              style: GoogleFonts.dmSans(
+                                                color: Colors.white38,
+                                                fontSize: 11.sp,
+                                                fontWeight: FontWeight.w700,
+                                                letterSpacing: 1.5,
+                                              ),
+                                            ),
+                                          ),
+                                          Row(
+                                            children: [
+                                              Container(
+                                                padding: EdgeInsets.all(10.w),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.primaryPink.withValues(alpha: 0.1),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: Text(
+                                                  "📅",
+                                                  style: TextStyle(fontSize: 18.sp),
+                                                ),
+                                              ),
+                                              SizedBox(width: 14.w),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      "No upcoming special days",
+                                                      style: GoogleFonts.dmSans(
+                                                        color: Colors.white,
+                                                        fontSize: 14.sp,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                    UIHelper.verticalSpace(2.h),
+                                                    Text(
+                                                      "Tap to add anniversaries, birthdays, and milestones! 🎉",
+                                                      style: GoogleFonts.dmSans(
+                                                        color: Colors.white38,
+                                                        fontSize: 11.sp,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ],
                           ],
 

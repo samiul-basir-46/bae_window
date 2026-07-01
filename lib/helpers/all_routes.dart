@@ -17,6 +17,8 @@ import 'package:bea_window_app/features/space/presentation/screens/vault_screen.
 import 'package:bea_window_app/features/space/presentation/screens/bucket_list_screen.dart';
 import 'package:bea_window_app/features/space/presentation/screens/tasks_screen.dart';
 import 'package:bea_window_app/features/space/presentation/screens/love_note_screen.dart';
+import 'package:bea_window_app/features/trivia/presentation/trivia_screen.dart';
+import 'package:bea_window_app/features/special_day/presentation/special_day_screen.dart';
 
 // Nest Feature Screens
 import 'package:bea_window_app/features/nest/presentation/screens/my_profile_screen.dart';
@@ -48,6 +50,8 @@ final class Routes {
   static const String bucketListScreen = '/bucketList';
   static const String tasksScreen = '/tasks';
   static const String loveNoteScreen = '/loveNote';
+  static const String triviaScreen = '/trivia';
+  static const String specialDayScreen = '/specialDay';
 
   // Nest Routes
   static const String myProfileScreen = '/myProfile';
@@ -180,6 +184,32 @@ final class RouteGenerator {
                 builder: (context) => LoveNoteScreen(onSend: onSendCallback))
             : _FadedTransitionRoute(
                 widget: LoveNoteScreen(onSend: onSendCallback),
+                settings: settings);
+
+      case Routes.specialDayScreen:
+        final coupleId = settings.arguments as String? ?? '';
+        return defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(
+                builder: (context) => SpecialDayScreen(coupleId: coupleId))
+            : _FadedTransitionRoute(
+                widget: SpecialDayScreen(coupleId: coupleId),
+                settings: settings);
+
+      case Routes.triviaScreen:
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        final coupleId = args['coupleId'] as String? ?? '';
+        final questionText = args['questionText'] as String? ?? '';
+        return defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(
+                builder: (context) => TriviaScreen(
+                      coupleId: coupleId,
+                      questionText: questionText,
+                    ))
+            : _FadedTransitionRoute(
+                widget: TriviaScreen(
+                  coupleId: coupleId,
+                  questionText: questionText,
+                ),
                 settings: settings);
 
       // Nest Routes
