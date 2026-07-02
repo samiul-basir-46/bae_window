@@ -3,7 +3,6 @@ import 'dart:developer' as dev;
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:email_otp/email_otp.dart';
 import 'package:intl/intl.dart';
 import '../../../helpers/notification_service.dart';
 
@@ -11,24 +10,7 @@ class FirebaseAuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  final EmailOTP _emailOtp = EmailOTP();
-
-  /// Send OTP code to user's email
-  Future<bool> sendOtp(String email) async {
-    _emailOtp.setConfig(
-      appEmail: "auth@beawindow.com",
-      appName: "Bea Window",
-      userEmail: email,
-      otpLength: 6,
-      otpType: OTPType.digitsOnly,
-    );
-    return await _emailOtp.sendOTP();
-  }
-
-  /// Verify OTP code entered by user
-  Future<bool> verifyOtp(String otp) async {
-    return await _emailOtp.verifyOTP(otp: otp);
-  }
+  User? get currentUser => _auth.currentUser;
 
   /// Send email verification link
   Future<void> sendEmailVerification() async {
@@ -36,6 +18,11 @@ class FirebaseAuthService {
     if (user != null) {
       await user.sendEmailVerification();
     }
+  }
+
+  /// Send password reset email
+  Future<void> sendPasswordResetEmail(String email) async {
+    await _auth.sendPasswordResetEmail(email: email);
   }
 
   /// Reload current user profile to refresh status like emailVerified
@@ -500,7 +487,7 @@ class FirebaseAuthService {
       switch (type.toLowerCase()) {
         case 'draw':
           title = '✏️ Drawing from $senderName';
-          body = 'Your Bae shared a new drawing with you.';
+          body = 'Your $senderName shared a new drawing with you.';
           break;
         case 'voice':
           title = '🎙️ Voice from $senderName';
@@ -508,7 +495,7 @@ class FirebaseAuthService {
           break;
         default:
           title = '📸 Snap from $senderName';
-          body = 'Your Bae sent you a fresh moment.';
+          body = 'Your $senderName sent you a fresh moment.';
       }
 
       unawaited(PushNotificationService.sendNotificationToPartner(

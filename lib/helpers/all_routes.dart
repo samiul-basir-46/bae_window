@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:bea_window_app/features/auth/presentation/screens/login_screen.dart';
 import 'package:bea_window_app/features/auth/presentation/screens/signup_screen.dart';
 import 'package:bea_window_app/features/auth/presentation/screens/forgot_password_screen.dart';
-import 'package:bea_window_app/features/auth/presentation/screens/otp_verification_screen.dart';
+
 import 'package:bea_window_app/features/auth/presentation/screens/reset_password_screen.dart';
 import 'package:bea_window_app/features/auth/presentation/screens/email_verification_screen.dart';
 import 'package:bea_window_app/features/auth/presentation/screens/profile_setup_screen.dart';
@@ -37,7 +37,7 @@ final class Routes {
   static const String loginScreen = '/logIn';
   static const String signUpScreen = '/signUp';
   static const String forgotPasswordScreen = '/forgotPassword';
-  static const String otpVerificationScreen = '/otpVerification';
+
   static const String resetPasswordScreen = '/resetPassword';
   static const String onboardingScreen = '/onboarding';
   static const String navigationScreen = '/navigation';
@@ -94,39 +94,7 @@ final class RouteGenerator {
             : _FadedTransitionRoute(
                 widget: const ForgotPasswordScreen(), settings: settings);
 
-      case Routes.otpVerificationScreen:
-        final args = settings.arguments;
-        final String email;
-        final bool isFromSignUp;
-        final String? name;
-        final String? password;
-        if (args is Map<String, dynamic>) {
-          email = args['email'] as String? ?? '';
-          isFromSignUp = args['isFromSignUp'] as bool? ?? false;
-          name = args['name'] as String?;
-          password = args['password'] as String?;
-        } else {
-          email = args as String? ?? '';
-          isFromSignUp = false;
-          name = null;
-          password = null;
-        }
-        return defaultTargetPlatform == TargetPlatform.iOS
-            ? CupertinoPageRoute(
-                builder: (context) => OtpVerificationScreen(
-                      email: email,
-                      isFromSignUp: isFromSignUp,
-                      name: name,
-                      password: password,
-                    ))
-            : _FadedTransitionRoute(
-                widget: OtpVerificationScreen(
-                  email: email,
-                  isFromSignUp: isFromSignUp,
-                  name: name,
-                  password: password,
-                ),
-                settings: settings);
+
 
       case Routes.emailVerificationScreen:
         return defaultTargetPlatform == TargetPlatform.iOS

@@ -18,7 +18,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<GoogleSignInRequestedEvent>(_onGoogleSignInRequested);
     on<AppleSignInRequestedEvent>(_onAppleSignInRequested);
     on<ForgotPasswordRequestedEvent>(_onForgotPasswordRequested);
-    on<VerifyOtpRequestedEvent>(_onVerifyOtpRequested);
     on<SignUpRequestedEvent>(_onSignUpRequested);
     on<LoginRequestedEvent>(_onLoginRequested);
     on<CheckEmailVerificationRequested>(_onCheckEmailVerificationRequested);
@@ -44,47 +43,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         name: event.name,
       );
       if (credential.user != null) {
-        try {
-          dev.log(
-              'Firebase user created successfully (UID: ${credential.user!.uid}). Sending verification email...',
-              name: 'AuthBloc');
-          
-          await _authService
-              .sendEmailVerification()
-              .timeout(const Duration(seconds: 10));
-              
-          dev.log(
-              'Verification email sent successfully to: ${event.email}',
-              name: 'AuthBloc');
-        } catch (emailErr) {
-          if (emailErr is TimeoutException || emailErr.toString().contains('TimeoutException')) {
-            dev.log(
-                'Timeout occurred (10 seconds) while sending verification email to: ${event.email}. Continuing signup.',
-                error: emailErr,
-                name: 'AuthBloc');
-          } else {
-            dev.log(
-                'Failed to send verification email to: ${event.email}. Error: $emailErr. Continuing signup.',
-                error: emailErr,
-                name: 'AuthBloc');
-          }
-        }
-
-        dev.log('Triggering profile save to Firestore in background...',
-            name: 'AuthBloc');
-        _authService
-            .saveUserProfile(
+        dev.log('Sending verification email...', name: 'AuthBloc');
+        await _authService.sendEmailVerification();
+        dev.log('Triggering profile save to Firestore...', name: 'AuthBloc');
+        await _authService.saveUserProfile(
           uid: credential.user!.uid,
           name: event.name,
           email: event.email,
-        )
-            .then((_) {
-          dev.log('Profile saved to Firestore in background.',
-              name: 'AuthBloc');
-        }).catchError((err) {
-          dev.log('Firestore write failed in background: $err',
-              name: 'AuthBloc');
-        });
+        );
       }
       emit(SignUpSuccess());
     } on FirebaseAuthException catch (e, stack) {
@@ -232,33 +198,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(ForgotPasswordLoading());
     try {
-      final success = await _authService.sendOtp(event.email);
-      if (success) {
-        emit(ForgotPasswordSuccess());
-      } else {
-        emit(ForgotPasswordFailure("Failed to send verification code. Please check your email."));
-      }
+      await _authService.sendPasswordResetEmail(event.email);
+      emit(ForgotPasswordSuccess());
     } catch (e) {
       emit(ForgotPasswordFailure(e.toString()));
     }
   }
 
-  Future<void> _onVerifyOtpRequested(
-    VerifyOtpRequestedEvent event,
-    Emitter<AuthState> emit,
-  ) async {
-    emit(VerifyOtpLoading());
-    try {
-      final isOtpValid = await _authService.verifyOtp(event.otp);
-      if (isOtpValid) {
-        emit(VerifyOtpSuccess());
-      } else {
-        emit(VerifyOtpFailure("Invalid verification code. Please try again."));
-      }
-    } catch (e) {
-      emit(VerifyOtpFailure(e.toString()));
-    }
-  }
+
 
   Future<void> _onGoogleSignInRequested(
     GoogleSignInRequestedEvent event,
@@ -373,4 +320,5 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(PairingFailure(e.toString()));
     }
   }
+
 }

@@ -28,16 +28,6 @@ class ForgotPasswordFailure extends AuthState {
   ForgotPasswordFailure(this.errorMessage);
 }
 
-class VerifyOtpLoading extends AuthState {}
-
-class VerifyOtpSuccess extends AuthState {}
-
-class VerifyOtpFailure extends AuthState {
-  final String errorMessage;
-
-  VerifyOtpFailure(this.errorMessage);
-}
-
 class SignUpLoading extends AuthState {}
 
 class SignUpSuccess extends AuthState {}
@@ -86,4 +76,3 @@ class PairingFailure extends AuthState {
 }
 
 class PairingSkipped extends AuthState {}
-
