@@ -11,6 +11,7 @@ import '../bloc/trivia_bloc.dart';
 import '../bloc/trivia_event.dart';
 import '../bloc/trivia_state.dart';
 import '../models/trivia_model.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
 
 class TriviaScreen extends StatefulWidget {
   final String coupleId;
@@ -70,18 +71,18 @@ class _TriviaScreenState extends State<TriviaScreen> {
         body: BlocListener<TriviaBloc, TriviaState>(
           listener: (context, state) {
             if (state is TriviaSuccess) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: AppColors.primaryPink,
-                ),
+              AppToast.show(
+                context,
+                title: "Success",
+                message: state.message,
+                type: ToastType.success,
               );
             } else if (state is TriviaFailure) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.error),
-                  backgroundColor: Colors.redAccent,
-                ),
+              AppToast.show(
+                context,
+                title: "Failed",
+                message: state.error,
+                type: ToastType.error,
               );
             }
           },

@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
 
 class VaultScreen extends StatefulWidget {
   const VaultScreen({super.key});
@@ -24,19 +25,11 @@ class _VaultScreenState extends State<VaultScreen> {
   ];
 
   void _uploadNewMedia() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.cloud_upload_outlined, color: Colors.white, size: 20.sp),
-            SizedBox(width: 8.w),
-            const Text("Select photos/videos from gallery..."),
-          ],
-        ),
-        backgroundColor: AppColors.primaryPurple,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-      ),
+    AppToast.show(
+      context,
+      title: "Upload",
+      message: "Select photos/videos from gallery...",
+      type: ToastType.info,
     );
   }
 

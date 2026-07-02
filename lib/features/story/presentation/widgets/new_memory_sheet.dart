@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
 
 class NewMemorySheet extends StatefulWidget {
   final Function({
@@ -222,11 +223,11 @@ class _NewMemorySheetState extends State<NewMemorySheet> {
                 ),
                 onPressed: () {
                   if (_titleController.text.trim().isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Please enter a title"),
-                        backgroundColor: Colors.redAccent,
-                      ),
+                    AppToast.show(
+                      context,
+                      title: "Required",
+                      message: "Please enter a title",
+                      type: ToastType.error,
                     );
                     return;
                   }

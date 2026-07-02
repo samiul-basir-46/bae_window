@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
 import 'quick_action_dock.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
 
 class LivePeekCard extends StatefulWidget {
   final String imageUrl;
@@ -121,11 +122,11 @@ class _LivePeekCardState extends State<LivePeekCard> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Could not play voice message: $e'),
-          backgroundColor: Colors.redAccent,
-        ),
+      AppToast.show(
+        context,
+        title: "Playback Error",
+        message: "Could not play voice message: $e",
+        type: ToastType.error,
       );
     }
   }

@@ -9,6 +9,7 @@ import '../bloc/home_bloc.dart';
 import '../bloc/home_event.dart';
 import '../bloc/home_state.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
 
 class QuestionOfTheDayCard extends StatelessWidget {
   final TriviaQuestion question;
@@ -119,11 +120,11 @@ class QuestionOfTheDayCard extends StatelessWidget {
                             AnswerQuestionTogetherEvent(question.questionText),
                           );
                           final displayPartnerName = partnerName != null && partnerName!.isNotEmpty ? partnerName : 'partner';
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text("Trivia invitation sent to $displayPartnerName!"),
-                              backgroundColor: AppColors.primaryPink,
-                            ),
+                          AppToast.show(
+                            context,
+                            title: "Invitation Sent",
+                            message: "Trivia invitation sent to $displayPartnerName!",
+                            type: ToastType.success,
                           );
                         }
 

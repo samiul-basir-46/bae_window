@@ -13,6 +13,7 @@ import '../bloc/change_passcode_event.dart';
 import '../bloc/change_passcode_state.dart';
 import '../widgets/passcode_dot_row.dart';
 import '../widgets/passcode_keypad.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
 
 class ChangeVaultPasscodeScreen extends StatelessWidget {
   const ChangeVaultPasscodeScreen({super.key});
@@ -98,19 +99,11 @@ class _ChangeVaultPasscodeViewState extends State<_ChangeVaultPasscodeView> {
 
         if (didAuthenticate && mounted) {
           context.read<ChangePasscodeBloc>().add(const VerifyWithBiometricsSuccessEvent());
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  Icon(Icons.fingerprint_rounded, color: Colors.white, size: 20.sp),
-                  UIHelper.horizontalSpace(8.w),
-                  const Text('Biometric verification successful!'),
-                ],
-              ),
-              backgroundColor: AppColors.primaryPink,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-            ),
+          AppToast.show(
+            context,
+            title: "Success",
+            message: "Biometric verification successful!",
+            type: ToastType.success,
           );
         }
       }
@@ -129,19 +122,11 @@ class _ChangeVaultPasscodeViewState extends State<_ChangeVaultPasscodeView> {
       listener: (context, state) {
         if (state is ChangePasscodeSuccess) {
           Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  Icon(Icons.lock_reset_rounded, color: Colors.white, size: 20.sp),
-                  UIHelper.horizontalSpace(8.w),
-                  const Text('Vault PIN updated successfully!'),
-                ],
-              ),
-              backgroundColor: AppColors.primaryPurple,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-            ),
+          AppToast.show(
+            context,
+            title: "Success",
+            message: "Vault PIN updated successfully!",
+            type: ToastType.success,
           );
         }
       },

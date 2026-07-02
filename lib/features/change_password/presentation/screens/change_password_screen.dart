@@ -9,6 +9,7 @@ import '../bloc/change_password_bloc.dart';
 import '../bloc/change_password_event.dart';
 import '../bloc/change_password_state.dart';
 import '../widgets/password_input_field.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
 
 class ChangePasswordScreen extends StatelessWidget {
   const ChangePasswordScreen({super.key});
@@ -48,19 +49,11 @@ class ChangePasswordScreen extends StatelessWidget {
               child: BlocConsumer<ChangePasswordBloc, ChangePasswordState>(
                 listener: (context, state) {
                   if (state is ChangePasswordSuccess) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Row(
-                          children: [
-                            Icon(Icons.check_circle_outline_rounded,
-                                color: Colors.white, size: 20.sp),
-                            SizedBox(width: 8.w),
-                            const Text("Password changed successfully!"),
-                          ],
-                        ),
-                        backgroundColor: Colors.green,
-                        behavior: SnackBarBehavior.floating,
-                      ),
+                    AppToast.show(
+                      context,
+                      title: "Success",
+                      message: "Password changed successfully!",
+                      type: ToastType.success,
                     );
                     Navigator.pop(context);
                   }

@@ -16,6 +16,7 @@ import '../widgets/theme_selector.dart';
 import '../widgets/settings_group.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
 import 'package:bea_window_app/features/space_screen/services/presence_service.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
 
 class NestScreen extends StatelessWidget {
   const NestScreen({super.key});
@@ -281,14 +282,11 @@ class NestScreen extends StatelessWidget {
   }
 
   void _showSnackbar(BuildContext context, String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: AppColors.primaryPink,
-        behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-      ),
+    AppToast.show(
+      context,
+      title: "Logout Error",
+      message: msg,
+      type: ToastType.error,
     );
   }
 }

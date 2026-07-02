@@ -13,6 +13,7 @@ import '../widgets/vault_setup_sheet.dart';
 import '../widgets/pin_unlock_dialog.dart';
 import '../widgets/memory_card.dart';
 import '../widgets/month_group_feed.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
 
 class StoryScreen extends StatelessWidget {
   const StoryScreen({super.key});
@@ -335,15 +336,14 @@ class _StoryScreenViewState extends State<StoryScreenView> {
                             ),
                             Row(
                               children: [
-                                _buildIconButton(Icons.search_rounded, () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content:
-                                          Text("Search feature coming soon!"),
-                                      backgroundColor: AppColors.primaryPink,
-                                    ),
-                                  );
-                                }),
+                                  _buildIconButton(Icons.search_rounded, () {
+                                    AppToast.show(
+                                      context,
+                                      title: "Search",
+                                      message: "Search feature coming soon!",
+                                      type: ToastType.info,
+                                    );
+                                  }),
                                 SizedBox(width: 12.w),
                                 _buildIconButton(Icons.add_rounded,
                                     () => _openNewMemorySheet(context)),
