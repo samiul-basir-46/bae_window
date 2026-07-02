@@ -7,6 +7,7 @@ import 'package:bea_window_app/helpers/ui_helpers.dart';
 import 'package:bea_window_app/constants/validator.dart';
 import '../widgets/auth_background_blobs.dart';
 import '../widgets/auth_header.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({super.key});
@@ -62,16 +63,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
           _isLoading = false;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(
-                'Password reset successfully! Please sign in with your new password.'),
-            backgroundColor: const Color(0xFF4CD964),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
+        AppToast.show(
+          context,
+          title: "Reset Success",
+          message: "Password reset successfully! Please sign in with your new password.",
+          type: ToastType.success,
         );
 
         Navigator.pushNamedAndRemoveUntil(

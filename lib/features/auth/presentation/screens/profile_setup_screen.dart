@@ -34,7 +34,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
     'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
     'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150',
     'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
-    'https://images.unsplash.com/photo-1527983359383-4758693f760c?w=150',
+    'https://i.pravatar.cc/150?img=2',
     'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150',
   ];
 
@@ -118,6 +118,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
       builder: (context, state) {
         final isLoading = state is ProfileSetupLoading;
 
+
         return Scaffold(
           backgroundColor: const Color(0xFF0D0D10),
           body: Stack(
@@ -189,6 +190,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
       },
     );
   }
+
+
+
 
   Widget _buildAvatarSelector() {
     return Column(

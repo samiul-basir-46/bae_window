@@ -28,7 +28,7 @@ class SpecialDayBloc extends Bloc<SpecialDayEvent, SpecialDayState> {
         add(SpecialDaysUpdatedEvent(days));
       },
       onError: (e) {
-        add(SpecialDaysUpdatedEvent(const []));
+        add(const SpecialDaysUpdatedEvent([]));
       },
     );
   }

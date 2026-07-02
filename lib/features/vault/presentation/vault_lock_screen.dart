@@ -8,6 +8,8 @@ import '../bloc/vault_bloc.dart';
 import '../bloc/vault_event.dart';
 import '../bloc/vault_state.dart';
 
+import 'package:bea_window_app/common_widgets/app_toast.dart';
+
 class VaultLockScreen extends StatefulWidget {
   final VaultState state;
 
@@ -60,11 +62,11 @@ class _VaultLockScreenState extends State<VaultLockScreen> {
           context.read<VaultBloc>().add(SetupVaultPasscodeEvent(_enteredCode));
         } else {
           // Mismatch, reset
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Passcodes do not match. Start over."),
-              backgroundColor: Colors.redAccent,
-            ),
+          AppToast.show(
+            context,
+            title: "Mismatch",
+            message: "Passcodes do not match. Start over.",
+            type: ToastType.error,
           );
           setState(() {
             _enteredCode = '';

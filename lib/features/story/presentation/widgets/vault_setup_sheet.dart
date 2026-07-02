@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
 
 class VaultSetupSheet extends StatefulWidget {
   final Function(String pin, bool enableBiometrics) onSetup;
@@ -151,32 +152,32 @@ class _VaultSetupSheetState extends State<VaultSetupSheet> {
                   final confirmPin = _confirmPinController.text.trim();
 
                   if (pin.length != 4 || int.tryParse(pin) == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("PIN must be exactly 4 digits!"),
-                        backgroundColor: Colors.redAccent,
-                      ),
+                    AppToast.show(
+                      context,
+                      title: "Invalid PIN",
+                      message: "PIN must be exactly 4 digits!",
+                      type: ToastType.error,
                     );
                     return;
                   }
 
                   if (pin != confirmPin) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("PIN and Confirm PIN do not match!"),
-                        backgroundColor: Colors.redAccent,
-                      ),
+                    AppToast.show(
+                      context,
+                      title: "Mismatch",
+                      message: "PIN and Confirm PIN do not match!",
+                      type: ToastType.error,
                     );
                     return;
                   }
 
                   widget.onSetup(pin, _enableBiometrics);
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Private Vault Enabled successfully!"),
-                      backgroundColor: AppColors.primaryPink,
-                    ),
+                  AppToast.show(
+                    context,
+                    title: "Success",
+                    message: "Private Vault Enabled successfully!",
+                    type: ToastType.success,
                   );
                 },
                 child: Text(

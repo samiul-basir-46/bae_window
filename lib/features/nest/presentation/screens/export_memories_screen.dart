@@ -3,6 +3,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
+import 'package:bea_window_app/common_widgets/bae_loader.dart';
 
 class ExportMemoriesScreen extends StatefulWidget {
   const ExportMemoriesScreen({super.key});
@@ -32,19 +34,11 @@ class _ExportMemoriesScreenState extends State<ExportMemoriesScreen> {
         _lastExported = "${now.day}/${now.month}/${now.year} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle_rounded, color: Colors.white, size: 20.sp),
-              SizedBox(width: 8.w),
-              const Expanded(child: Text("Export request sent! We'll email you the download link.")),
-            ],
-          ),
-          backgroundColor: AppColors.primaryPink,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-        ),
+      AppToast.show(
+        context,
+        title: "Export Sent",
+        message: "Export request sent! We'll email you the download link.",
+        type: ToastType.success,
       );
     }
   }
@@ -184,13 +178,9 @@ class _ExportMemoriesScreenState extends State<ExportMemoriesScreen> {
                                     ],
                             ),
                             child: _isExporting
-                                ? SizedBox(
-                                    height: 20.h,
-                                    width: 20.h,
-                                    child: const CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
-                                    ),
+                                ? BaeLoader(
+                                    isFullScreen: false,
+                                    size: 20.h,
                                   )
                                 : Text(
                                     "Export & Email to Me",

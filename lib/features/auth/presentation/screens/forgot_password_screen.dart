@@ -4,12 +4,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/common_widgets/custom_auth_text_field.dart';
 import 'package:bea_window_app/common_widgets/custom_auth_button.dart';
-import 'package:bea_window_app/helpers/all_routes.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
 import 'package:bea_window_app/constants/validator.dart';
 import '../widgets/auth_background_blobs.dart';
 import '../widgets/auth_header.dart';
 import '../bloc/auth_bloc.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -66,11 +66,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
           });
         }
         if (state is ForgotPasswordSuccess) {
-          Navigator.pushNamed(
+          AppToast.show(
             context,
-            Routes.otpVerificationScreen,
-            arguments: _emailController.text.trim(),
+            title: "Email Sent",
+            message: "A password reset link has been sent to your email address.",
+            type: ToastType.success,
           );
+          Navigator.pop(context);
         } else if (state is ForgotPasswordFailure) {
           setState(() {
             _blocErrorMessage = state.errorMessage;

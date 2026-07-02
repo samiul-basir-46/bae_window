@@ -1,8 +1,8 @@
-// lib/widgets/buttons/custom_button.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '/constants/text_font_style.dart';
 import '/gen/colors.gen.dart';
+import 'bae_loader.dart';
 
 class CustomButton extends StatelessWidget {
   const CustomButton({
@@ -51,15 +51,9 @@ class CustomButton extends StatelessWidget {
           padding: padding ?? EdgeInsets.symmetric(horizontal: 16.w),
         ),
         child: isLoading
-            ? SizedBox(
-                width: 20.w,
-                height: 20.h,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.w,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    foregroundColor ?? AppColors.cFFFFFF,
-                  ),
-                ),
+            ? BaeLoader(
+                isFullScreen: false,
+                size: 20.w,
               )
             : Text(
                 title,
@@ -103,15 +97,9 @@ Widget customButton({
         padding: padding ?? EdgeInsets.symmetric(horizontal: 16.w),
       ),
       child: isLoading
-          ? SizedBox(
-              width: 20.w,
-              height: 20.h,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.w,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  foregroundColor ?? AppColors.cFFFFFF,
-                ),
-              ),
+          ? BaeLoader(
+              isFullScreen: false,
+              size: 20.w,
             )
           : Text(
               title,

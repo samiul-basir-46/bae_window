@@ -73,7 +73,7 @@ class PushNotificationService {
 
       tz.initializeTimeZones();
 
-      final androidPlatformChannelSpecifics = AndroidNotificationDetails(
+      const androidPlatformChannelSpecifics = AndroidNotificationDetails(
         activityChannelId,
         'Bae activity',
         channelDescription: 'Snaps, drawings, voice, pulse, mood and task updates',
@@ -81,13 +81,13 @@ class PushNotificationService {
         priority: Priority.high,
       );
 
-      final iosPlatformChannelSpecifics = const DarwinNotificationDetails(
+      const iosPlatformChannelSpecifics = DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
       );
 
-      final platformChannelSpecifics = NotificationDetails(
+      const platformChannelSpecifics = NotificationDetails(
         android: androidPlatformChannelSpecifics,
         iOS: iosPlatformChannelSpecifics,
       );

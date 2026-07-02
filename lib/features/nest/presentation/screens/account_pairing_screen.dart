@@ -8,6 +8,7 @@ import '../widgets/unpair_dialog.dart';
 import '../widgets/delete_account_dialogs.dart';
 import '../widgets/sensitive_warning_card.dart';
 import '../widgets/action_card.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
 
 class AccountPairingScreen extends StatefulWidget {
   const AccountPairingScreen({super.key});
@@ -53,12 +54,11 @@ class _AccountPairingScreenState extends State<AccountPairingScreen> {
   }
 
   void _showDoneSnackbar(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(text),
-        backgroundColor: const Color(0xFFFF5252),
-        behavior: SnackBarBehavior.floating,
-      ),
+    AppToast.show(
+      context,
+      title: "Account Action",
+      message: text,
+      type: ToastType.error,
     );
   }
 

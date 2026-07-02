@@ -48,6 +48,7 @@ dependencies:
   home_widget: ^0.9.3
   app_links: ^6.4.0
   googleapis_auth: ^1.6.0
+  mailer: ^7.1.0
 
 
 

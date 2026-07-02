@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
 
 class PINUnlockDialog extends StatefulWidget {
   final VoidCallback onSuccess;
@@ -55,11 +56,11 @@ class _PINUnlockDialogState extends State<PINUnlockDialog> {
           widget.onSuccess();
           if (mounted) {
             Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text("Vault Unlocked!"),
-                backgroundColor: AppColors.primaryPink,
-              ),
+            AppToast.show(
+              context,
+              title: "Unlocked",
+              message: "Vault Unlocked!",
+              type: ToastType.success,
             );
           }
         }
@@ -79,11 +80,11 @@ class _PINUnlockDialogState extends State<PINUnlockDialog> {
           widget.onSuccess();
           Navigator.pop(context);
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Incorrect PIN! Please try again"),
-              backgroundColor: Colors.redAccent,
-            ),
+          AppToast.show(
+            context,
+            title: "Incorrect PIN",
+            message: "Incorrect PIN! Please try again",
+            type: ToastType.error,
           );
           setState(() {
             _pin = "";

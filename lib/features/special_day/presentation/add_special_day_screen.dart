@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
 import '../models/special_day_model.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
 
 class AddSpecialDayScreen extends StatefulWidget {
   final SpecialDayModel? existingDay;
@@ -61,7 +61,9 @@ class _AddSpecialDayScreenState extends State<AddSpecialDayScreen> {
               surface: AppColors.navBgColor,
               onSurface: Colors.white,
             ),
-            dialogBackgroundColor: AppColors.navBgColor,
+            dialogTheme: const DialogThemeData(
+              backgroundColor: AppColors.navBgColor,
+            ),
           ),
           child: child!,
         );
@@ -78,11 +80,11 @@ class _AddSpecialDayScreenState extends State<AddSpecialDayScreen> {
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please select a date!"),
-          backgroundColor: Colors.redAccent,
-        ),
+      AppToast.show(
+        context,
+        title: "Required Field",
+        message: "Please select a date!",
+        type: ToastType.error,
       );
       return;
     }

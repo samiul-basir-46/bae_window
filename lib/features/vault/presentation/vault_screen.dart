@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -10,6 +9,8 @@ import '../bloc/vault_bloc.dart';
 import '../bloc/vault_event.dart';
 import '../bloc/vault_state.dart';
 import 'vault_lock_screen.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
+import 'package:bea_window_app/common_widgets/bae_loader.dart';
 
 class VaultScreen extends StatelessWidget {
   const VaultScreen({super.key});
@@ -71,7 +72,7 @@ class _VaultLifecycleWrapperState extends State<VaultLifecycleWrapper> with Widg
             return const Scaffold(
               backgroundColor: AppColors.softBlack,
               body: Center(
-                child: CircularProgressIndicator(color: AppColors.primaryPurple),
+                child: BaeLoader(),
               ),
             );
           } else if (state is VaultSetupRequired || state is VaultLocked) {
@@ -112,19 +113,11 @@ class _VaultContentViewState extends State<VaultContentView> {
   ];
 
   void _uploadNewMedia() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.cloud_upload_outlined, color: Colors.white, size: 20.sp),
-            SizedBox(width: 8.w),
-            const Text("Select photos/videos from gallery..."),
-          ],
-        ),
-        backgroundColor: AppColors.primaryPurple,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-      ),
+    AppToast.show(
+      context,
+      title: "Upload",
+      message: "Select photos/videos from gallery...",
+      type: ToastType.info,
     );
   }
 
@@ -135,7 +128,7 @@ class _VaultContentViewState extends State<VaultContentView> {
       return const Scaffold(
         backgroundColor: AppColors.softBlack,
         body: Center(
-          child: CircularProgressIndicator(color: AppColors.primaryPurple),
+          child: BaeLoader(),
         ),
       );
     }

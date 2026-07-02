@@ -15,6 +15,7 @@ import 'package:bea_window_app/helpers/ui_helpers.dart';
 import '../bloc/home_action_bloc.dart';
 import '../bloc/home_action_event.dart';
 import '../bloc/home_action_state.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
 
 class QuickActionDock extends StatelessWidget {
   const QuickActionDock({super.key});
@@ -35,12 +36,11 @@ class QuickActionDock extends StatelessWidget {
       }
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Camera error: $e"),
-          backgroundColor: Colors.redAccent,
-        ),
+      AppToast.show(
+        context,
+        title: "Camera Error",
+        message: "Camera error: $e",
+        type: ToastType.error,
       );
     }
   }
@@ -301,7 +301,6 @@ class _DrawingCanvasSheetState extends State<DrawingCanvasSheet> {
                           return;
                         }
 
-                        final messenger = ScaffoldMessenger.of(context);
                         final onSend = widget.onSend;
 
                         Navigator.pop(context);
@@ -363,12 +362,14 @@ class _DrawingCanvasSheetState extends State<DrawingCanvasSheet> {
                             onSend(file);
                           }
                         } catch (e) {
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text("Drawing error: $e"),
-                              backgroundColor: Colors.redAccent,
-                            ),
-                          );
+                          if (context.mounted) {
+                            AppToast.show(
+                              context,
+                              title: "Drawing Error",
+                              message: "Drawing error: $e",
+                              type: ToastType.error,
+                            );
+                          }
                         }
                       },
                       child: Text(
@@ -615,11 +616,11 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Could not start recording: $e"),
-          backgroundColor: Colors.redAccent,
-        ),
+      AppToast.show(
+        context,
+        title: "Recording Error",
+        message: "Could not start recording: $e",
+        type: ToastType.error,
       );
     }
   }

@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'dart:developer' as dev;
 import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:bea_window_app/features/auth/services/firebase_auth_service.dart';
 import 'package:bea_window_app/features/auth/services/cloudinary_service.dart';
+
 
 part 'auth_event.dart';
 part 'auth_state.dart';
@@ -40,36 +43,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         name: event.name,
       );
       if (credential.user != null) {
-        try {
-          dev.log(
-              'Firebase user created successfully (UID: ${credential.user!.uid}). Sending verification email...',
-              name: 'AuthBloc');
-          await _authService
-              .sendEmailVerification()
-              .timeout(const Duration(seconds: 3));
-          dev.log('Verification email sent to: ${event.email}',
-              name: 'AuthBloc');
-        } catch (emailErr) {
-          dev.log(
-              'Failed to send verification email: $emailErr. Continuing signup.',
-              name: 'AuthBloc');
-        }
-
-        dev.log('Triggering profile save to Firestore in background...',
-            name: 'AuthBloc');
-        _authService
-            .saveUserProfile(
+        dev.log('Sending verification email...', name: 'AuthBloc');
+        await _authService.sendEmailVerification();
+        dev.log('Triggering profile save to Firestore...', name: 'AuthBloc');
+        await _authService.saveUserProfile(
           uid: credential.user!.uid,
           name: event.name,
           email: event.email,
-        )
-            .then((_) {
-          dev.log('Profile saved to Firestore in background.',
-              name: 'AuthBloc');
-        }).catchError((err) {
-          dev.log('Firestore write failed in background: $err',
-              name: 'AuthBloc');
-        });
+        );
       }
       emit(SignUpSuccess());
     } on FirebaseAuthException catch (e, stack) {
@@ -95,17 +76,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         password: event.password,
       );
       if (credential.user != null) {
+        if (!credential.user!.emailVerified) {
+          dev.log('User logged in but email is not verified.',
+              name: 'AuthBloc');
+          await _authService.sendEmailVerification();
+          emit(EmailVerificationPending());
+          return;
+        }
+
+        // Check if profile setup or pairing is pending
         try {
-          final userDoc = await _authService.getUserProfile(credential.user!.uid);
-          final isEmailVerified = userDoc?['isEmailVerified'] as bool? ?? false;
-
-          if (!isEmailVerified) {
-            dev.log('User logged in but email is not verified.',
-                name: 'AuthBloc');
-            emit(EmailVerificationPending());
-            return;
-          }
-
+          final userDoc = await _authService.getUserProfile(
+            credential.user!.uid,
+            options: const GetOptions(source: Source.server),
+          );
           if (userDoc != null) {
             final isProfileComplete = userDoc['profileComplete'] as bool? ?? false;
             if (!isProfileComplete) {
@@ -214,12 +198,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(ForgotPasswordLoading());
     try {
-      await Future.delayed(const Duration(seconds: 2));
+      await _authService.sendPasswordResetEmail(event.email);
       emit(ForgotPasswordSuccess());
     } catch (e) {
       emit(ForgotPasswordFailure(e.toString()));
     }
   }
+
+
 
   Future<void> _onGoogleSignInRequested(
     GoogleSignInRequestedEvent event,
@@ -334,4 +320,5 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(PairingFailure(e.toString()));
     }
   }
+
 }

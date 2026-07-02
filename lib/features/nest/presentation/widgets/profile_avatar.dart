@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:bea_window_app/gen/colors.gen.dart';
+import 'package:bea_window_app/common_widgets/bae_loader.dart';
+
+import '../../../../gen/colors.gen.dart';
 
 class ProfileAvatar extends StatelessWidget {
   final VoidCallback onTap;
@@ -61,13 +63,9 @@ class ProfileAvatar extends StatelessWidget {
               border: Border.all(color: AppColors.softBlack, width: 2.w),
             ),
             child: isUploading
-                ? SizedBox(
-                    width: 14.sp,
-                    height: 14.sp,
-                    child: const CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
+                ? BaeLoader(
+                    isFullScreen: false,
+                    size: 14.sp,
                   )
                 : Icon(
                     Icons.edit_rounded,
@@ -102,10 +100,9 @@ class ProfileAvatar extends StatelessWidget {
           return Container(
             color: Colors.white.withValues(alpha: 0.05),
             child: const Center(
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
+              child: BaeLoader(
+                isFullScreen: false,
+                size: 24,
               ),
             ),
           );

@@ -1,43 +1,33 @@
-import 'package:flutter/material.dart';
-
 import '../helpers/navigation_service.dart';
+import 'app_toast.dart';
 
-void customToastMessage(String title, String description) {
-  // Get the root scaffold messenger
-  final context =  NavigationService.navigatorKey.currentContext!;
-  
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            description,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
-      backgroundColor: const Color(0xff444444),
-      behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.all(16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
-      duration: const Duration(seconds: 3),
-      // No action button - will auto close after 3 seconds
-    ),
+void customToastMessage(String title, String description, {ToastType type = ToastType.info}) {
+  final context = NavigationService.navigatorKey.currentContext;
+  if (context == null) return;
+
+  ToastType toastType = type;
+  if (type == ToastType.info) {
+    final lowerTitle = title.toLowerCase();
+    if (lowerTitle.contains('error') ||
+        lowerTitle.contains('fail') ||
+        lowerTitle.contains('wrong') ||
+        lowerTitle.contains('incorrect') ||
+        lowerTitle.contains('invalid')) {
+      toastType = ToastType.error;
+    } else if (lowerTitle.contains('success') ||
+        lowerTitle.contains('save') ||
+        lowerTitle.contains('complete') ||
+        lowerTitle.contains('verified') ||
+        lowerTitle.contains('update') ||
+        lowerTitle.contains('done')) {
+      toastType = ToastType.success;
+    }
+  }
+
+  AppToast.show(
+    context,
+    title: title,
+    message: description,
+    type: toastType,
   );
 }

@@ -14,6 +14,8 @@ import 'package:bea_window_app/features/auth/services/cloudinary_service.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/profile_form_field.dart';
 import 'package:bea_window_app/common_widgets/custom_date_picker.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
+import 'package:bea_window_app/common_widgets/bae_loader.dart';
 
 class MyProfileScreen extends StatefulWidget {
   const MyProfileScreen({super.key});
@@ -160,21 +162,11 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
             _isUploadingAvatar = false;
             // _localAvatarFile রেখে দিচ্ছি যাতে নেটওয়ার্ক ছবি load হওয়ার আগ পর্যন্ত local ছবিই দেখা যায়
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  Icon(Icons.check_circle_outline_rounded,
-                      color: Colors.white, size: 20.sp),
-                  SizedBox(width: 8.w),
-                  const Text("Profile picture updated!"),
-                ],
-              ),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.r)),
-            ),
+          AppToast.show(
+            context,
+            title: "Success",
+            message: "Profile picture updated!",
+            type: ToastType.success,
           );
         }
       } else {
@@ -182,17 +174,13 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
           setState(() {
             _isUploadingAvatar = false;
             _localAvatarFile =
-                null; // upload fail হলে local preview সরিয়ে ফেলুন
+                null; 
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content:
-                  const Text("Failed to upload profile picture. Try again."),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.r)),
-            ),
+          AppToast.show(
+            context,
+            title: "Failed",
+            message: "Failed to upload profile picture. Try again.",
+            type: ToastType.error,
           );
         }
       }
@@ -202,14 +190,11 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
           _isUploadingAvatar = false;
           _localAvatarFile = null;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Error picking image: $e"),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r)),
-          ),
+        AppToast.show(
+          context,
+          title: "Error",
+          message: "Error picking image: $e",
+          type: ToastType.error,
         );
       }
     }
@@ -233,21 +218,11 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
 
       if (mounted) {
         _isDateDirty = false;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle_outline_rounded,
-                    color: Colors.white, size: 20.sp),
-                SizedBox(width: 8.w),
-                const Text("Profile changes saved!"),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r)),
-          ),
+        AppToast.show(
+          context,
+          title: "Saved",
+          message: "Profile changes saved!",
+          type: ToastType.success,
         );
         Navigator.pop(context);
       }
@@ -256,14 +231,11 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
         setState(() {
           _isSaving = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Failed to save changes: $e"),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r)),
-          ),
+        AppToast.show(
+          context,
+          title: "Failed",
+          message: "Failed to save changes: $e",
+          type: ToastType.error,
         );
       }
     }
@@ -409,7 +381,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
           ),
           if (_isLoading || _isSaving)
             const Center(
-              child: CircularProgressIndicator(color: AppColors.primaryPink),
+              child: BaeLoader(),
             ),
         ],
       ),

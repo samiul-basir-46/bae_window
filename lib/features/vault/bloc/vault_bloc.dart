@@ -62,7 +62,7 @@ class VaultBloc extends Bloc<VaultEvent, VaultState> {
 
   void _onLockVault(LockVaultEvent event, Emitter<VaultState> emit) {
     _securityService.biometric.isBiometricAvailable().then((bioAvailable) {
-      add(ShowLockScreenEvent());
+      add(const ShowLockScreenEvent());
     });
   }
 

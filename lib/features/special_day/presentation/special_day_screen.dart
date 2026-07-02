@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -11,6 +10,8 @@ import '../bloc/special_day_event.dart';
 import '../bloc/special_day_state.dart';
 import '../models/special_day_model.dart';
 import 'add_special_day_screen.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
+import 'package:bea_window_app/common_widgets/bae_loader.dart';
 
 class SpecialDayScreen extends StatelessWidget {
   final String coupleId;
@@ -42,18 +43,18 @@ class SpecialDayScreen extends StatelessWidget {
         body: BlocListener<SpecialDayBloc, SpecialDayState>(
           listener: (context, state) {
             if (state is SpecialDaySuccess) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: AppColors.primaryPink,
-                ),
+              AppToast.show(
+                context,
+                title: "Success",
+                message: state.message,
+                type: ToastType.success,
               );
             } else if (state is SpecialDayFailure) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.error),
-                  backgroundColor: Colors.redAccent,
-                ),
+              AppToast.show(
+                context,
+                title: "Failed",
+                message: state.error,
+                type: ToastType.error,
               );
             }
           },
@@ -64,7 +65,7 @@ class SpecialDayScreen extends StatelessWidget {
                 current is SpecialDayInitial,
             builder: (context, state) {
               if (state is SpecialDayLoading || state is SpecialDayInitial) {
-                return const Center(child: CircularProgressIndicator(color: AppColors.primaryPink));
+                return const Center(child: BaeLoader());
               }
 
               if (state is SpecialDaysLoaded) {

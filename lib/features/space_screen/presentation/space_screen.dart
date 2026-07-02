@@ -13,6 +13,7 @@ import 'widgets/love_connection_card.dart';
 import 'widgets/quick_action_grid.dart';
 import 'widgets/activity_feed.dart';
 import 'package:bea_window_app/common_widgets/custom_date_picker.dart';
+import 'package:bea_window_app/common_widgets/bae_loader.dart';
 
 class SpaceScreen extends StatelessWidget {
   const SpaceScreen({super.key});
@@ -91,9 +92,7 @@ class SpaceScreenView extends StatelessWidget {
               builder: (context, state) {
                 if (state is SpaceScreenLoading || state is SpaceScreenInitial) {
                   return const Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryPink),
-                    ),
+                    child: BaeLoader(),
                   );
                 } else if (state is SpaceScreenLoaded) {
                   return SingleChildScrollView(

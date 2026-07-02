@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
 import '../bloc/task_notification_cubit.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
 
 class TasksScreen extends StatelessWidget {
   const TasksScreen({super.key});
@@ -450,23 +451,21 @@ class _TasksViewState extends State<_TasksView>
               context.read<TaskNotificationCubit>().notifyTaskCompleted(
                     task["title"] as String? ?? "Shared task",
                   );
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Task marked as completed!"),
-                  backgroundColor: Colors.green,
-                  behavior: SnackBarBehavior.floating,
-                ),
+              AppToast.show(
+                context,
+                title: "Task Done",
+                message: "Task marked as completed!",
+                type: ToastType.success,
               );
             } else {
               setState(() {
                 _tasks.removeWhere((t) => t["id"] == id);
               });
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Task deleted."),
-                  backgroundColor: Colors.redAccent,
-                  behavior: SnackBarBehavior.floating,
-                ),
+              AppToast.show(
+                context,
+                title: "Task Deleted",
+                message: "Task deleted.",
+                type: ToastType.error,
               );
             }
           },
