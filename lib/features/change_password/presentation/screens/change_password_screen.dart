@@ -10,17 +10,63 @@ import '../bloc/change_password_event.dart';
 import '../bloc/change_password_state.dart';
 import '../widgets/password_input_field.dart';
 import 'package:bea_window_app/common_widgets/app_toast.dart';
-import 'package:bea_window_app/common_widgets/bae_loader.dart';
+import 'package:bea_window_app/common_widgets/custom_auth_button.dart';
 
-class ChangePasswordScreen extends StatelessWidget {
+class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final oldPasswordController = TextEditingController();
-    final newPasswordController = TextEditingController();
-    final confirmPasswordController = TextEditingController();
+  State<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
+}
 
+class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
+  final _oldPasswordController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  int _passwordStrength = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _newPasswordController.addListener(_checkPasswordStrength);
+  }
+
+  @override
+  void dispose() {
+    _oldPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  void _checkPasswordStrength() {
+    final pw = _newPasswordController.text;
+    int strength = 0;
+    if (pw.length >= 6) strength++;
+    if (pw.length >= 10) strength++;
+    if (pw.contains(RegExp(r'[A-Z]')) && pw.contains(RegExp(r'[0-9]'))) {
+      strength++;
+    }
+    if (pw.contains(RegExp(r'[!@#\$&*~]'))) strength++;
+    setState(() => _passwordStrength = strength);
+  }
+
+  Color get _strengthColor {
+    if (_passwordStrength <= 1) return const Color(0xFFE060A0);
+    if (_passwordStrength == 2) return const Color(0xFFF5A623);
+    return const Color(0xFF4CD964);
+  }
+
+  String get _strengthLabel {
+    if (_passwordStrength == 0) return '';
+    if (_passwordStrength <= 1) return 'Weak';
+    if (_passwordStrength == 2) return 'Fair';
+    if (_passwordStrength == 3) return 'Good';
+    return 'Strong ✦';
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => ChangePasswordBloc(),
       child: Scaffold(
@@ -57,6 +103,14 @@ class ChangePasswordScreen extends StatelessWidget {
                       type: ToastType.success,
                     );
                     Navigator.pop(context);
+                  } else if (state is ChangePasswordFailure &&
+                      state.generalError != null) {
+                    AppToast.show(
+                      context,
+                      title: "Error",
+                      message: state.generalError!,
+                      type: ToastType.error,
+                    );
                   }
                 },
                 builder: (context, state) {
@@ -85,80 +139,45 @@ class ChangePasswordScreen extends StatelessWidget {
                             children: [
                               PasswordInputField(
                                 label: "OLD PASSWORD",
-                                controller: oldPasswordController,
+                                controller: _oldPasswordController,
                                 hint: "Enter your current password",
                                 errorText: oldPwError,
                               ),
                               UIHelper.verticalSpace(20.h),
                               PasswordInputField(
                                 label: "NEW PASSWORD",
-                                controller: newPasswordController,
+                                controller: _newPasswordController,
                                 hint: "Enter a strong new password",
                                 errorText: newPwError,
                               ),
+                              UIHelper.verticalSpace(10.h),
+                              _buildStrengthBar(),
                               UIHelper.verticalSpace(20.h),
                               PasswordInputField(
                                 label: "CONFIRM PASSWORD",
-                                controller: confirmPasswordController,
+                                controller: _confirmPasswordController,
                                 hint: "Re-enter your new password",
                                 errorText: confirmPwError,
                               ),
                               UIHelper.verticalSpace(40.h),
 
                               // Submit Button
-                              GestureDetector(
-                                onTap: isLoading
-                                    ? null
-                                    : () {
-                                        context.read<ChangePasswordBloc>().add(
-                                              SubmitChangePasswordEvent(
-                                                oldPassword:
-                                                    oldPasswordController.text,
-                                                newPassword:
-                                                    newPasswordController.text,
-                                                confirmPassword:
-                                                    confirmPasswordController
-                                                        .text,
-                                              ),
-                                            );
-                                      },
-                                child: Container(
-                                  width: double.infinity,
-                                  padding: EdgeInsets.symmetric(vertical: 16.h),
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [
-                                        Color(0xFFFF6E7F),
-                                        Color(0xFFBFE9FF)
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                    borderRadius: BorderRadius.circular(16.r),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFFFF6E7F)
-                                            .withValues(alpha: 0.15),
-                                        blurRadius: 10,
-                                        spreadRadius: 1,
-                                      ),
-                                    ],
-                                  ),
-                                  child: isLoading
-                                      ? BaeLoader(
-                                          isFullScreen: false,
-                                          size: 20.sp,
-                                        )
-                                      : Text(
-                                          "Update Password",
-                                          style: GoogleFonts.dmSans(
-                                            color: Colors.white,
-                                            fontSize: 14.sp,
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                              CustomAuthButton(
+                                label: 'Update Password',
+                                isLoading: isLoading,
+                                showArrow: true,
+                                onTap: () {
+                                  context.read<ChangePasswordBloc>().add(
+                                        SubmitChangePasswordEvent(
+                                          oldPassword:
+                                              _oldPasswordController.text,
+                                          newPassword:
+                                              _newPasswordController.text,
+                                          confirmPassword:
+                                              _confirmPasswordController.text,
                                         ),
-                                ),
+                                      );
+                                },
                               ),
                             ],
                           ),
@@ -172,6 +191,42 @@ class ChangePasswordScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildStrengthBar() {
+    if (_newPasswordController.text.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: List.generate(4, (i) {
+            return Expanded(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                height: 3.h,
+                margin: EdgeInsets.only(right: i < 3 ? 4.w : 0),
+                decoration: BoxDecoration(
+                  color: i < _passwordStrength
+                      ? _strengthColor
+                      : Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(2.r),
+                ),
+              ),
+            );
+          }),
+        ),
+        if (_strengthLabel.isNotEmpty) ...[
+          UIHelper.verticalSpace(6.h),
+          Text(
+            _strengthLabel,
+            style: GoogleFonts.dmSans(
+                fontSize: 11.sp,
+                color: _strengthColor,
+                fontWeight: FontWeight.w500),
+          ),
+        ]
+      ],
     );
   }
 
