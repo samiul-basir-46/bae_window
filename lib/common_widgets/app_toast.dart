@@ -212,13 +212,15 @@ class _ToastWidgetState extends State<_ToastWidget>
                                         ),
                                       ),
                                       SizedBox(height: 2.h),
-                                      Text(
-                                        widget.message,
-                                        maxLines: 3,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: GoogleFonts.dmSans(
-                                          fontSize: 12.sp,
-                                          color: const Color(0xFFD9C2CE),
+                                      Flexible(
+                                        child: Text(
+                                          widget.message,
+                                          maxLines: 3,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: GoogleFonts.dmSans(
+                                            fontSize: 12.sp,
+                                            color: const Color(0xFFD9C2CE),
+                                          ),
                                         ),
                                       ),
                                     ],
