@@ -10,6 +10,7 @@ import '../bloc/home_event.dart';
 import '../bloc/home_state.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
 import 'package:bea_window_app/common_widgets/app_toast.dart';
+import 'package:bea_window_app/common_widgets/bae_loader.dart';
 
 class QuestionOfTheDayCard extends StatelessWidget {
   final TriviaQuestion question;
@@ -229,10 +230,9 @@ class QuestionOfTheDayCard extends StatelessWidget {
                 UIHelper.verticalSpace(10.h),
                 Row(
                   children: [
-                    const SizedBox(
-                      width: 12,
-                      height: 12,
-                      child: CircularProgressIndicator(strokeWidth: 1.5, color: AppColors.primaryPurple),
+                    const BaeLoader(
+                      isFullScreen: false,
+                      size: 12.0,
                     ),
                     SizedBox(width: 8.w),
                     Text(

@@ -17,6 +17,7 @@ import '../widgets/settings_group.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
 import 'package:bea_window_app/features/space_screen/services/presence_service.dart';
 import 'package:bea_window_app/common_widgets/app_toast.dart';
+import 'package:bea_window_app/common_widgets/bae_loader.dart';
 
 class NestScreen extends StatelessWidget {
   const NestScreen({super.key});
@@ -70,10 +71,7 @@ class NestScreen extends StatelessWidget {
                 builder: (context, state) {
                   if (state is NestLoading || state is NestInitial) {
                     return const Center(
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                            AppColors.primaryPurple),
-                      ),
+                      child: BaeLoader(),
                     );
                   }
 

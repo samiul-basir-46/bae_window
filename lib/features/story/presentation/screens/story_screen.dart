@@ -14,6 +14,7 @@ import '../widgets/pin_unlock_dialog.dart';
 import '../widgets/memory_card.dart';
 import '../widgets/month_group_feed.dart';
 import 'package:bea_window_app/common_widgets/app_toast.dart';
+import 'package:bea_window_app/common_widgets/bae_loader.dart';
 
 class StoryScreen extends StatelessWidget {
   const StoryScreen({super.key});
@@ -282,10 +283,7 @@ class _StoryScreenViewState extends State<StoryScreenView> {
               builder: (context, state) {
                 if (state is StoryLoading) {
                   return const Center(
-                    child: CircularProgressIndicator(
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(AppColors.primaryPink),
-                    ),
+                    child: BaeLoader(),
                   );
                 } else if (state is StoryLoaded) {
                   // Filter memories

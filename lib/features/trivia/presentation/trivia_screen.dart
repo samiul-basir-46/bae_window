@@ -12,6 +12,7 @@ import '../bloc/trivia_event.dart';
 import '../bloc/trivia_state.dart';
 import '../models/trivia_model.dart';
 import 'package:bea_window_app/common_widgets/app_toast.dart';
+import 'package:bea_window_app/common_widgets/bae_loader.dart';
 
 class TriviaScreen extends StatefulWidget {
   final String coupleId;
@@ -128,7 +129,7 @@ class _TriviaScreenState extends State<TriviaScreen> {
                   builder: (context, state) {
                     if (state is TriviaLoading || state is TriviaInitial) {
                       return const Center(
-                        child: CircularProgressIndicator(color: AppColors.primaryPink),
+                        child: BaeLoader(),
                       );
                     }
 
@@ -427,10 +428,9 @@ class _TriviaScreenState extends State<TriviaScreen> {
     if (!hasPartnerAnswered) {
       return Row(
         children: [
-          const SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryPurple),
+          const BaeLoader(
+            isFullScreen: false,
+            size: 16,
           ),
           SizedBox(width: 12.w),
           Text(

@@ -10,6 +10,7 @@ import 'package:bea_window_app/helpers/ui_helpers.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
 import 'package:bea_window_app/navigation_screen.dart';
 import 'package:bea_window_app/common_widgets/app_toast.dart';
+import 'package:bea_window_app/common_widgets/bae_loader.dart';
 import '../bloc/home_bloc.dart';
 import '../bloc/home_event.dart';
 import '../bloc/home_state.dart';
@@ -122,12 +123,7 @@ class HomeScreenView extends StatelessWidget {
                     if (state is HomeLoading) {
                       return SizedBox(
                         height: 500.h,
-                        child: const Center(
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                                AppColors.primaryPink),
-                          ),
-                        ),
+                        child: const BaeLoader(),
                       );
                     } else if (state is HomeLoaded) {
                       return Column(

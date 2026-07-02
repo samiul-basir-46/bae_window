@@ -203,8 +203,8 @@ class FirebaseAuthService {
   }
 
   /// Retrieve user profile details from Firestore
-  Future<Map<String, dynamic>?> getUserProfile(String uid) async {
-    final doc = await _firestore.collection('users').doc(uid).get();
+  Future<Map<String, dynamic>?> getUserProfile(String uid, {GetOptions? options}) async {
+    final doc = await _firestore.collection('users').doc(uid).get(options);
     return doc.exists ? doc.data() : null;
   }
 

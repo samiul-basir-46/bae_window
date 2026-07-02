@@ -15,6 +15,7 @@ import '../widgets/auth_background_blobs.dart';
 import '../widgets/auth_header.dart';
 import '../bloc/auth_bloc.dart';
 import 'package:bea_window_app/common_widgets/app_toast.dart';
+import 'package:bea_window_app/common_widgets/bae_loader.dart';
 
 class PairingScreen extends StatefulWidget {
   const PairingScreen({super.key});
@@ -298,14 +299,10 @@ class _PairingScreenState extends State<PairingScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox(
-                width: 14.r,
-                height: 14.r,
-                child: const CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8060C8)),
-                ),
-              ),
+                    const BaeLoader(
+                      isFullScreen: false,
+                      size: 14.0,
+                    ),
               SizedBox(width: 8.w),
               Text(
                 "Waiting for partner to join...",

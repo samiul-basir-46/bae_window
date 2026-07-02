@@ -6,6 +6,7 @@ import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
 import 'package:bea_window_app/common_widgets/custom_date_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:bea_window_app/common_widgets/bae_loader.dart';
 
 import '../bloc/space_screen_bloc.dart';
 import '../bloc/space_screen_event.dart';
@@ -86,8 +87,7 @@ class BucketListScreen extends StatelessWidget {
                 if (state is SpaceScreenLoading ||
                     state is SpaceScreenInitial) {
                   return const Center(
-                    child:
-                        CircularProgressIndicator(color: AppColors.primaryPink),
+                    child: BaeLoader(),
                   );
                 } else if (state is SpaceScreenLoaded) {
                   final list = state.bucketList;

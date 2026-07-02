@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'bae_loader.dart';
 
 class CustomAuthButton extends StatelessWidget {
   final String label;
@@ -39,13 +40,9 @@ class CustomAuthButton extends StatelessWidget {
         ),
         child: Center(
           child: isLoading
-              ? SizedBox(
-                  width: 22.w,
-                  height: 22.w,
-                  child: const CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2.5,
-                  ),
+              ? const BaeLoader(
+                  isFullScreen: false,
+                  size: 22.0,
                 )
               : Text(
                   showArrow ? '$label →' : label,

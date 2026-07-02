@@ -10,6 +10,7 @@ import '../bloc/vault_event.dart';
 import '../bloc/vault_state.dart';
 import 'vault_lock_screen.dart';
 import 'package:bea_window_app/common_widgets/app_toast.dart';
+import 'package:bea_window_app/common_widgets/bae_loader.dart';
 
 class VaultScreen extends StatelessWidget {
   const VaultScreen({super.key});
@@ -71,7 +72,7 @@ class _VaultLifecycleWrapperState extends State<VaultLifecycleWrapper> with Widg
             return const Scaffold(
               backgroundColor: AppColors.softBlack,
               body: Center(
-                child: CircularProgressIndicator(color: AppColors.primaryPurple),
+                child: BaeLoader(),
               ),
             );
           } else if (state is VaultSetupRequired || state is VaultLocked) {
@@ -127,7 +128,7 @@ class _VaultContentViewState extends State<VaultContentView> {
       return const Scaffold(
         backgroundColor: AppColors.softBlack,
         body: Center(
-          child: CircularProgressIndicator(color: AppColors.primaryPurple),
+          child: BaeLoader(),
         ),
       );
     }

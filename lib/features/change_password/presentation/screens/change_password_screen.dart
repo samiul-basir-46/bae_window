@@ -10,6 +10,7 @@ import '../bloc/change_password_event.dart';
 import '../bloc/change_password_state.dart';
 import '../widgets/password_input_field.dart';
 import 'package:bea_window_app/common_widgets/app_toast.dart';
+import 'package:bea_window_app/common_widgets/bae_loader.dart';
 
 class ChangePasswordScreen extends StatelessWidget {
   const ChangePasswordScreen({super.key});
@@ -145,14 +146,9 @@ class ChangePasswordScreen extends StatelessWidget {
                                     ],
                                   ),
                                   child: isLoading
-                                      ? SizedBox(
-                                          width: 20.sp,
-                                          height: 20.sp,
-                                          child:
-                                              const CircularProgressIndicator(
-                                            color: Colors.white,
-                                            strokeWidth: 2,
-                                          ),
+                                      ? BaeLoader(
+                                          isFullScreen: false,
+                                          size: 20.sp,
                                         )
                                       : Text(
                                           "Update Password",

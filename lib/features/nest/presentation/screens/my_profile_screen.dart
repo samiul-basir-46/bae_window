@@ -15,6 +15,7 @@ import '../widgets/profile_avatar.dart';
 import '../widgets/profile_form_field.dart';
 import 'package:bea_window_app/common_widgets/custom_date_picker.dart';
 import 'package:bea_window_app/common_widgets/app_toast.dart';
+import 'package:bea_window_app/common_widgets/bae_loader.dart';
 
 class MyProfileScreen extends StatefulWidget {
   const MyProfileScreen({super.key});
@@ -380,7 +381,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
           ),
           if (_isLoading || _isSaving)
             const Center(
-              child: CircularProgressIndicator(color: AppColors.primaryPink),
+              child: BaeLoader(),
             ),
         ],
       ),

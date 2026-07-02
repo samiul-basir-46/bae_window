@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
 import 'package:bea_window_app/common_widgets/app_toast.dart';
+import 'package:bea_window_app/common_widgets/bae_loader.dart';
 
 class ExportMemoriesScreen extends StatefulWidget {
   const ExportMemoriesScreen({super.key});
@@ -177,13 +178,9 @@ class _ExportMemoriesScreenState extends State<ExportMemoriesScreen> {
                                     ],
                             ),
                             child: _isExporting
-                                ? SizedBox(
-                                    height: 20.h,
-                                    width: 20.h,
-                                    child: const CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
-                                    ),
+                                ? BaeLoader(
+                                    isFullScreen: false,
+                                    size: 20.h,
                                   )
                                 : Text(
                                     "Export & Email to Me",
