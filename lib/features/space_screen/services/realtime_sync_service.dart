@@ -90,4 +90,94 @@ class RealtimeSyncService {
       return snapshot.data()!['nickname'] as String?;
     });
   }
+
+  // --- Tasks Sync ---
+
+  Stream<List<Map<String, dynamic>>> watchTasks(String coupleId) {
+    return _firestore
+        .collection('couples')
+        .doc(coupleId)
+        .collection('tasks')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    });
+  }
+
+  Future<void> addTask({
+    required String coupleId,
+    required String title,
+    required String creatorUid,
+    required String creatorName,
+    required String assignedToUid,
+    required String assignedToName,
+    required String status,
+  }) async {
+    await _firestore
+        .collection('couples')
+        .doc(coupleId)
+        .collection('tasks')
+        .add({
+      'title': title,
+      'creatorUid': creatorUid,
+      'creatorName': creatorName,
+      'assignedToUid': assignedToUid,
+      'assignedToName': assignedToName,
+      'status': status,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> updateTask(String coupleId, String taskId, Map<String, dynamic> data) async {
+    await _firestore
+        .collection('couples')
+        .doc(coupleId)
+        .collection('tasks')
+        .doc(taskId)
+        .update(data);
+  }
+
+  Future<void> deleteTask(String coupleId, String taskId) async {
+    await _firestore
+        .collection('couples')
+        .doc(coupleId)
+        .collection('tasks')
+        .doc(taskId)
+        .delete();
+  }
+
+  // --- Moments Sync ---
+
+  Stream<List<Map<String, dynamic>>> watchMoments(String coupleId) {
+    return _firestore
+        .collection('couples')
+        .doc(coupleId)
+        .collection('moments')
+        .orderBy('createdAt', descending: true)
+        .limit(10)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        return doc.data();
+      }).toList();
+    });
+  }
+
+  Future<void> addMoment(String coupleId, {required String user, required String action, required String type}) async {
+    await _firestore
+        .collection('couples')
+        .doc(coupleId)
+        .collection('moments')
+        .add({
+      'user': user,
+      'action': action,
+      'type': type,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
 }

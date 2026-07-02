@@ -120,17 +120,6 @@ class NestScreen extends StatelessWidget {
                           SettingsGroup(
                             children: [
                               SettingsSwitchTile(
-                                icon: Icons.lock_open_rounded,
-                                iconColor: Colors.amber,
-                                title: "Vault Lock",
-                                subtitle: "Face ID / Fingerprint required",
-                                value: state.isVaultLocked,
-                                onChanged: (val) => context
-                                    .read<NestBloc>()
-                                    .add(ToggleVaultLockEvent(val)),
-                              ),
-                              const SettingsDivider(),
-                              SettingsSwitchTile(
                                 icon: Icons.self_improvement_rounded,
                                 iconColor: Colors.orangeAccent,
                                 title: "Focus Mode",
@@ -143,17 +132,6 @@ class NestScreen extends StatelessWidget {
                               const SettingsDivider(),
                               SettingsMenuTile(
                                 icon: Icons.key_rounded,
-                                iconColor: AppColors.primaryPurple,
-                                title: "Change Vault Passcode",
-                                subtitle: "Update your vault lock PIN",
-                                onTap: () {
-                                  Navigator.pushNamed(context,
-                                      Routes.changeVaultPasscodeScreen);
-                                },
-                              ),
-                              const SettingsDivider(),
-                              SettingsMenuTile(
-                                icon: Icons.shield_rounded,
                                 iconColor: Colors.blueAccent,
                                 title: "Change Password",
                                 subtitle: "Update account sign-in password",
