@@ -18,6 +18,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<GoogleSignInRequestedEvent>(_onGoogleSignInRequested);
     on<AppleSignInRequestedEvent>(_onAppleSignInRequested);
     on<ForgotPasswordRequestedEvent>(_onForgotPasswordRequested);
+    on<VerifyOtpRequestedEvent>(_onVerifyOtpRequested);
     on<SignUpRequestedEvent>(_onSignUpRequested);
     on<LoginRequestedEvent>(_onLoginRequested);
     on<CheckEmailVerificationRequested>(_onCheckEmailVerificationRequested);
@@ -231,10 +232,31 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(ForgotPasswordLoading());
     try {
-      await Future.delayed(const Duration(seconds: 2));
-      emit(ForgotPasswordSuccess());
+      final success = await _authService.sendOtp(event.email);
+      if (success) {
+        emit(ForgotPasswordSuccess());
+      } else {
+        emit(ForgotPasswordFailure("Failed to send verification code. Please check your email."));
+      }
     } catch (e) {
       emit(ForgotPasswordFailure(e.toString()));
+    }
+  }
+
+  Future<void> _onVerifyOtpRequested(
+    VerifyOtpRequestedEvent event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(VerifyOtpLoading());
+    try {
+      final isOtpValid = await _authService.verifyOtp(event.otp);
+      if (isOtpValid) {
+        emit(VerifyOtpSuccess());
+      } else {
+        emit(VerifyOtpFailure("Invalid verification code. Please try again."));
+      }
+    } catch (e) {
+      emit(VerifyOtpFailure(e.toString()));
     }
   }
 

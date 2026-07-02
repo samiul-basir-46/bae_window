@@ -129,7 +129,7 @@ class _ToastWidgetState extends State<_ToastWidget>
   @override
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.of(context).padding.top;
-    
+
     return Positioned(
       top: topPadding + 16.h,
       left: 16.w,
@@ -197,11 +197,14 @@ class _ToastWidgetState extends State<_ToastWidget>
                                 // Text Content
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Text(
                                         widget.title,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                         style: GoogleFonts.playfairDisplay(
                                           fontSize: 14.sp,
                                           fontWeight: FontWeight.w500,
@@ -211,6 +214,8 @@ class _ToastWidgetState extends State<_ToastWidget>
                                       SizedBox(height: 2.h),
                                       Text(
                                         widget.message,
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
                                         style: GoogleFonts.dmSans(
                                           fontSize: 12.sp,
                                           color: const Color(0xFFD9C2CE),
