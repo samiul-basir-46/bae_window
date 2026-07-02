@@ -11,6 +11,11 @@ import 'package:bea_window_app/helpers/ui_helpers.dart';
 import '../widgets/auth_background_blobs.dart';
 import '../widgets/auth_header.dart';
 import '../bloc/auth_bloc.dart';
+import 'package:bea_window_app/helpers/di.dart';
+import 'package:bea_window_app/features/email/presentation/cubit/email_cubit.dart';
+import 'package:bea_window_app/features/email/data/templates/welcome_email_template.dart';
+import 'package:bea_window_app/common_widgets/custom_toast.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -101,22 +106,51 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<AuthBloc, AuthState>(
-      listener: (context, state) {
-        if (state is ProfileSetupLoading) {
-          setState(() {
-            _errorMessage = null;
-          });
-        } else if (state is ProfileSetupSuccess) {
-          Navigator.pushReplacementNamed(context, Routes.pairingScreen);
-        } else if (state is ProfileSetupFailure) {
-          setState(() {
-            _errorMessage = state.errorMessage;
-          });
-        }
-      },
-      builder: (context, state) {
-        final isLoading = state is ProfileSetupLoading;
+    return BlocProvider<EmailCubit>(
+      create: (context) => locator<EmailCubit>(),
+      child: BlocConsumer<EmailCubit, EmailState>(
+        listener: (context, emailState) {
+          if (emailState.status == EmailStatus.success) {
+            customToastMessage('Success', 'Welcome email sent successfully!');
+            Navigator.pushReplacementNamed(context, Routes.pairingScreen);
+          } else if (emailState.status == EmailStatus.failure) {
+            customToastMessage('Notice', emailState.errorMessage ?? 'Failed to send welcome email.');
+            // Still navigate so the user isn't blocked
+            Navigator.pushReplacementNamed(context, Routes.pairingScreen);
+          }
+        },
+        builder: (context, emailState) {
+          return BlocConsumer<AuthBloc, AuthState>(
+            listener: (context, state) {
+              if (state is ProfileSetupLoading) {
+                setState(() {
+                  _errorMessage = null;
+                });
+              } else if (state is ProfileSetupSuccess) {
+                final user = FirebaseAuth.instance.currentUser;
+                final email = user?.email;
+                if (email != null) {
+                  context.read<EmailCubit>().sendEmail(
+                    to: email,
+                    subject: 'Welcome to Bae Window 💌',
+                    htmlContent: baeWindowWelcomeEmailHtml(
+                      userName: _nicknameController.text.trim(),
+                    ),
+                    name: _nicknameController.text.trim(),
+                  );
+                } else {
+                  Navigator.pushReplacementNamed(context, Routes.pairingScreen);
+                }
+              } else if (state is ProfileSetupFailure) {
+                setState(() {
+                  _errorMessage = state.errorMessage;
+                });
+              }
+            },
+            builder: (context, state) {
+              final isLoading = state is ProfileSetupLoading ||
+                  emailState.status == EmailStatus.loading;
+
 
         return Scaffold(
           backgroundColor: const Color(0xFF0D0D10),
@@ -186,9 +220,15 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
             ],
           ),
         );
-      },
+            },
+          );
+        },
+      ),
     );
   }
+
+
+
 
   Widget _buildAvatarSelector() {
     return Column(

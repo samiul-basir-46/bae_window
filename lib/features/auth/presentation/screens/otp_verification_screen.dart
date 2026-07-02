@@ -10,6 +10,7 @@ import 'package:bea_window_app/helpers/ui_helpers.dart';
 import '../widgets/auth_background_blobs.dart';
 import '../widgets/auth_header.dart';
 import '../bloc/auth_bloc.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String email;
@@ -140,13 +141,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
           });
         }
         if (state is VerifyOtpSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Code verified successfully!'),
-              backgroundColor: const Color(0xFF4CD964),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
+          AppToast.show(
+            context,
+            title: "Verified",
+            message: "Code verified successfully!",
+            type: ToastType.success,
           );
           Navigator.pushReplacementNamed(
             context,

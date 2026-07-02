@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:developer' as dev;
 import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:bea_window_app/features/auth/services/firebase_auth_service.dart';
 import 'package:bea_window_app/features/auth/services/cloudinary_service.dart';
+
 
 part 'auth_event.dart';
 part 'auth_state.dart';
@@ -44,15 +46,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           dev.log(
               'Firebase user created successfully (UID: ${credential.user!.uid}). Sending verification email...',
               name: 'AuthBloc');
+          
           await _authService
               .sendEmailVerification()
-              .timeout(const Duration(seconds: 3));
-          dev.log('Verification email sent to: ${event.email}',
+              .timeout(const Duration(seconds: 10));
+              
+          dev.log(
+              'Verification email sent successfully to: ${event.email}',
               name: 'AuthBloc');
         } catch (emailErr) {
-          dev.log(
-              'Failed to send verification email: $emailErr. Continuing signup.',
-              name: 'AuthBloc');
+          if (emailErr is TimeoutException || emailErr.toString().contains('TimeoutException')) {
+            dev.log(
+                'Timeout occurred (10 seconds) while sending verification email to: ${event.email}. Continuing signup.',
+                error: emailErr,
+                name: 'AuthBloc');
+          } else {
+            dev.log(
+                'Failed to send verification email to: ${event.email}. Error: $emailErr. Continuing signup.',
+                error: emailErr,
+                name: 'AuthBloc');
+          }
         }
 
         dev.log('Triggering profile save to Firestore in background...',

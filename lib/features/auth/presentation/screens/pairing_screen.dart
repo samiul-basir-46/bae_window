@@ -11,10 +11,10 @@ import 'package:bea_window_app/common_widgets/custom_auth_button.dart';
 import 'package:bea_window_app/common_widgets/custom_auth_text_field.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
-import 'package:bea_window_app/gen/colors.gen.dart';
 import '../widgets/auth_background_blobs.dart';
 import '../widgets/auth_header.dart';
 import '../bloc/auth_bloc.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
 
 class PairingScreen extends StatefulWidget {
   const PairingScreen({super.key});
@@ -75,19 +75,11 @@ class _PairingScreenState extends State<PairingScreen>
 
   void _showPairingSuccessSnackbar() {
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.favorite_rounded, color: Colors.white, size: 20.sp),
-              SizedBox(width: 8.w),
-              const Text("Successfully paired! Welcome to your private space ✦"),
-            ],
-          ),
-          backgroundColor: AppColors.primaryPink,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
+      AppToast.show(
+        context,
+        title: "Paired",
+        message: "Successfully paired! Welcome to your private space ✦",
+        type: ToastType.success,
       );
     }
   }
@@ -117,14 +109,11 @@ class _PairingScreenState extends State<PairingScreen>
 
   void _copyToClipboard(String code) {
     Clipboard.setData(ClipboardData(text: code));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text("Invite code copied to clipboard!"),
-        backgroundColor: const Color(0xFF32323E),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
+    AppToast.show(
+      context,
+      title: "Copied",
+      message: "Invite code copied to clipboard!",
+      type: ToastType.success,
     );
   }
 

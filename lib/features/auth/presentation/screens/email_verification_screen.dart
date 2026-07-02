@@ -11,6 +11,7 @@ import '../widgets/auth_header.dart';
 import '../bloc/auth_bloc.dart';
 import 'package:bea_window_app/helpers/di.dart';
 import 'package:bea_window_app/constants/app_constants.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
@@ -89,29 +90,31 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
           setState(() {
             _errorMessage = null;
           });
+          AppToast.show(
+            context,
+            title: "Check Inbox",
+            message: "Verification email sent! Please check your inbox.",
+            type: ToastType.info,
+          );
         } else if (state is EmailVerificationSuccess) {
           appData.write(kKeyIsLoggedIn, true);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  Icon(Icons.check_circle_outline_rounded,
-                      color: Colors.white, size: 20.sp),
-                  SizedBox(width: 8.w),
-                  const Text("Email verified successfully! Welcome."),
-                ],
-              ),
-              backgroundColor: const Color(0xFF4CD964),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
+          AppToast.show(
+            context,
+            title: "Verified",
+            message: "Email verified successfully! Welcome.",
+            type: ToastType.success,
           );
           Navigator.pushReplacementNamed(context, Routes.profileSetupScreen);
         } else if (state is EmailVerificationFailure) {
           setState(() {
             _errorMessage = state.errorMessage;
           });
+          AppToast.show(
+            context,
+            title: "Failed",
+            message: state.errorMessage,
+            type: ToastType.error,
+          );
         }
       },
       builder: (context, state) {

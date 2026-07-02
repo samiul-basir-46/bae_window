@@ -9,6 +9,7 @@ import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
 import 'package:bea_window_app/navigation_screen.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
 import '../bloc/home_bloc.dart';
 import '../bloc/home_event.dart';
 import '../bloc/home_state.dart';
@@ -49,42 +50,27 @@ class HomeScreenView extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocListener<HomeActionBloc, HomeActionState>(
       listener: (context, state) {
-        final messenger = ScaffoldMessenger.of(context);
-        messenger.clearSnackBars();
-
         if (state is HomeActionLoading) {
-          messenger.showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(child: Text(state.message)),
-                ],
-              ),
-              duration: const Duration(seconds: 30),
-            ),
+          AppToast.show(
+            context,
+            title: "Please wait",
+            message: state.message,
+            type: ToastType.info,
+            duration: const Duration(seconds: 5), // custom shorter duration for loading
           );
         } else if (state is HomeActionSuccess) {
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: AppColors.primaryPink,
-            ),
+          AppToast.show(
+            context,
+            title: "Success",
+            message: state.message,
+            type: ToastType.success,
           );
         } else if (state is HomeActionFailure) {
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Colors.redAccent,
-            ),
+          AppToast.show(
+            context,
+            title: "Failed",
+            message: state.message,
+            type: ToastType.error,
           );
         }
       },
@@ -507,14 +493,11 @@ class HomeScreenView extends StatelessWidget {
                           label: "Copy",
                           onTap: () {
                             Clipboard.setData(ClipboardData(text: inviteCode));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text("Code copied!"),
-                                backgroundColor: AppColors.primaryPink,
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12.r)),
-                              ),
+                            AppToast.show(
+                              context,
+                              title: "Copied",
+                              message: "Code copied to clipboard!",
+                              type: ToastType.success,
                             );
                           },
                         ),
