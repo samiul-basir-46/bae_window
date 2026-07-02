@@ -54,3 +54,13 @@ class SendSpaceLoveNoteEvent extends SpaceScreenEvent {
   final String note;
   const SendSpaceLoveNoteEvent(this.note);
 }
+
+class TasksUpdatedEvent extends SpaceScreenEvent {
+  final List<Map<String, dynamic>> tasks;
+  const TasksUpdatedEvent(this.tasks);
+}
+
+class MomentsUpdatedEvent extends SpaceScreenEvent {
+  final List<Map<String, dynamic>> moments;
+  const MomentsUpdatedEvent(this.moments);
+}

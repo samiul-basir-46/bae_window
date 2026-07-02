@@ -29,23 +29,6 @@ class QuickActionGrid extends StatelessWidget {
               Expanded(
                 child: SpringyCard(
                   onTap: () {
-                    Navigator.pushNamed(context, Routes.vaultScreen);
-                  },
-                  child: _buildGridItem(
-                    iconWidget: Hero(
-                      tag: "hero-vault-icon",
-                      child: Icon(Icons.lock_outline_rounded, color: AppColors.primaryPurple, size: 16.sp),
-                    ),
-                    iconColor: AppColors.primaryPurple,
-                    title: "Vault",
-                    subtitle: "Access private shared media",
-                  ),
-                ),
-              ),
-              SizedBox(width: 14.w),
-              Expanded(
-                child: SpringyCard(
-                  onTap: () {
                     Navigator.pushNamed(context, Routes.bucketListScreen);
                   },
                   child: _buildGridItem(

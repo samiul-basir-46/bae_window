@@ -14,6 +14,7 @@ import 'widgets/quick_action_grid.dart';
 import 'widgets/activity_feed.dart';
 import 'package:bea_window_app/common_widgets/custom_date_picker.dart';
 import 'package:bea_window_app/common_widgets/bae_loader.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
 
 class SpaceScreen extends StatelessWidget {
   const SpaceScreen({super.key});
@@ -123,12 +124,18 @@ class SpaceScreenView extends StatelessWidget {
                           ),
                         ),
                         UIHelper.verticalSpace(12.h),
-                        QuickActionGrid(
+                         QuickActionGrid(
                           taskProgress: state.taskProgress,
                           nextTaskTitle: state.nextTaskTitle,
                           partnerNickname: state.partnerNickname,
                           onSendLoveNote: (note) {
                             context.read<SpaceScreenBloc>().add(SendSpaceLoveNoteEvent(note));
+                            AppToast.show(
+                              context,
+                              title: "Love Note Sent 💌",
+                              message: "Sent successfully to ${state.partnerNickname}!",
+                              type: ToastType.success,
+                            );
                           },
                         ),
                         UIHelper.verticalSpace(28.h),

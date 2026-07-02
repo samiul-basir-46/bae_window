@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
+import 'package:bea_window_app/features/space_screen/services/realtime_sync_service.dart';
 import '../bloc/task_notification_cubit.dart';
 import 'package:bea_window_app/common_widgets/app_toast.dart';
+import 'package:bea_window_app/common_widgets/bae_loader.dart';
+import 'package:bea_window_app/helpers/notification_service.dart';
+
+import '../widgets/task_progress_bar.dart';
+import '../widgets/task_card.dart';
+import '../widgets/create_task_dialog.dart';
 
 class TasksScreen extends StatelessWidget {
   const TasksScreen({super.key});
@@ -29,38 +39,78 @@ class _TasksView extends StatefulWidget {
 class _TasksViewState extends State<_TasksView>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  final RealtimeSyncService _syncService = RealtimeSyncService();
 
-  final List<Map<String, dynamic>> _tasks = [
-    {
-      "id": "1",
-      "title": "Book dinner table",
-      "assignedTo": "Babu",
-      "completed": false
-    },
-    {
-      "id": "2",
-      "title": "Buy grocery items",
-      "assignedTo": "You",
-      "completed": false
-    },
-    {
-      "id": "3",
-      "title": "Water the plants",
-      "assignedTo": "You",
-      "completed": false
-    },
-    {
-      "id": "4",
-      "title": "Plan weekend movie night",
-      "assignedTo": "Babu",
-      "completed": true
-    },
-  ];
+  String? _coupleId;
+  String? _partnerUid;
+  String _myNickname = "You";
+  String _partnerNickname = "Babu";
+  bool _loadingProfile = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadProfileData();
+  }
+
+  Future<void> _loadProfileData() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (userDoc.exists && userDoc.data() != null) {
+          final data = userDoc.data()!;
+          _coupleId = data['pairId'] as String?;
+          _myNickname = data['nickname'] as String? ?? "You";
+
+          final pUid = await _getPartnerUid(_coupleId);
+          _partnerUid = pUid;
+          if (pUid != null) {
+            final partnerDoc = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(pUid)
+                .get();
+            if (partnerDoc.exists && partnerDoc.data() != null) {
+              _partnerNickname =
+                  partnerDoc.data()!['nickname'] as String? ?? "Babu";
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Error loading profile: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loadingProfile = false;
+        });
+      }
+    }
+  }
+
+  Future<String?> _getPartnerUid(String? coupleId) async {
+    if (coupleId == null) return null;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;
+
+    final doc = await FirebaseFirestore.instance
+        .collection('couples')
+        .doc(coupleId)
+        .get();
+    if (!doc.exists || doc.data() == null) return null;
+
+    final data = doc.data()!;
+    final user1 = data['user1Uid'] as String?;
+    final user2 = data['user2Uid'] as String?;
+
+    if (user1 == user.uid) return user2;
+    if (user2 == user.uid) return user1;
+    return null;
   }
 
   @override
@@ -70,139 +120,48 @@ class _TasksViewState extends State<_TasksView>
   }
 
   void _addNewTask() {
-    final taskController = TextEditingController();
-    String assigned = "You";
+    if (_coupleId == null) return;
 
     showDialog(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.8),
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setModalState) {
-          return AlertDialog(
-            backgroundColor: AppColors.navBgColor,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20.r)),
-            title: Text(
-              "Create Task",
-              style: GoogleFonts.dmSans(
-                  color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: taskController,
-                  style: GoogleFonts.dmSans(color: Colors.white),
-                  decoration: InputDecoration(
-                    labelText: "Task Description",
-                    labelStyle: GoogleFonts.dmSans(color: Colors.white38),
-                    enabledBorder: const UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white12)),
-                    focusedBorder: const UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.blueAccent)),
-                  ),
-                ),
-                UIHelper.verticalSpace(16.h),
-                Text("Assign To:",
-                    style: GoogleFonts.dmSans(
-                        color: Colors.white38, fontSize: 11.sp)),
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => setModalState(() => assigned = "You"),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
-                        padding: EdgeInsets.symmetric(
-                            horizontal: 16.w, vertical: 8.h),
-                        decoration: BoxDecoration(
-                          color: assigned == "You"
-                              ? Colors.blueAccent.withValues(alpha: 0.15)
-                              : Colors.white.withValues(alpha: 0.03),
-                          borderRadius: BorderRadius.circular(12.r),
-                          border: Border.all(
-                            color: assigned == "You"
-                                ? Colors.blueAccent
-                                : Colors.white.withValues(alpha: 0.1),
-                            width: 1.w,
-                          ),
-                        ),
-                        child: Text(
-                          "You",
-                          style: GoogleFonts.dmSans(
-                            color: assigned == "You"
-                                ? Colors.blueAccent
-                                : Colors.white70,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12.sp,
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 8.w),
-                    GestureDetector(
-                      onTap: () => setModalState(() => assigned = "Babu"),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
-                        padding: EdgeInsets.symmetric(
-                            horizontal: 16.w, vertical: 8.h),
-                        decoration: BoxDecoration(
-                          color: assigned == "Babu"
-                              ? Colors.blueAccent.withValues(alpha: 0.15)
-                              : Colors.white.withValues(alpha: 0.03),
-                          borderRadius: BorderRadius.circular(12.r),
-                          border: Border.all(
-                            color: assigned == "Babu"
-                                ? Colors.blueAccent
-                                : Colors.white.withValues(alpha: 0.1),
-                            width: 1.w,
-                          ),
-                        ),
-                        child: Text(
-                          "Babu",
-                          style: GoogleFonts.dmSans(
-                            color: assigned == "Babu"
-                                ? Colors.blueAccent
-                                : Colors.white70,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12.sp,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: Text("Cancel",
-                    style: GoogleFonts.dmSans(color: Colors.white54)),
-              ),
-              TextButton(
-                onPressed: () {
-                  final text = taskController.text.trim();
-                  if (text.isNotEmpty) {
-                    setState(() {
-                      _tasks.add({
-                        "id": DateTime.now().millisecondsSinceEpoch.toString(),
-                        "title": text,
-                        "assignedTo": assigned,
-                        "completed": false,
-                      });
-                    });
-                    Navigator.pop(dialogContext);
-                  }
-                },
-                child: Text(
-                  "Create",
-                  style: GoogleFonts.dmSans(
-                      color: Colors.blueAccent, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
+      barrierColor: Colors.black.withValues(alpha: 0.7),
+      builder: (dialogContext) => CreateTaskDialog(
+        partnerNickname: _partnerNickname,
+        onCreate: (text, assigned) async {
+          Navigator.pop(dialogContext);
+
+          final user = FirebaseAuth.instance.currentUser;
+          final creatorUid = user?.uid ?? "";
+          final creatorName = _myNickname;
+
+          final assignedToUid = (assigned == "You") ? creatorUid : (_partnerUid ?? "");
+          final assignedToName = (assigned == "You") ? _myNickname : _partnerNickname;
+          final status = (assigned == "You") ? "inProgress" : "pending";
+
+          await _syncService.addTask(
+            coupleId: _coupleId!,
+            title: text,
+            creatorUid: creatorUid,
+            creatorName: creatorName,
+            assignedToUid: assignedToUid,
+            assignedToName: assignedToName,
+            status: status,
           );
+
+          await _syncService.addMoment(
+            _coupleId!,
+            user: _myNickname,
+            action: "created a task: $text",
+            type: "task",
+          );
+
+          if (assigned != "You") {
+            unawaited(PushNotificationService.sendNotificationToPartner(
+              title: "New Task Assigned ✦",
+              body: "A new task has been assigned to you: $text",
+              type: "tasks",
+            ));
+          }
         },
       ),
     );
@@ -210,109 +169,151 @@ class _TasksViewState extends State<_TasksView>
 
   @override
   Widget build(BuildContext context) {
-    final total = _tasks.length;
-    final completedCount = _tasks.where((t) => t["completed"]).length;
-    final progress = total == 0 ? 0.0 : completedCount / total;
+    if (_loadingProfile) {
+      return const Scaffold(
+        backgroundColor: AppColors.softBlack,
+        body: Center(
+          child: BaeLoader(),
+        ),
+      );
+    }
 
-    final activeTasks = _tasks.where((t) => !t["completed"]).toList();
-    final completedTasks = _tasks.where((t) => t["completed"]).toList();
+    if (_coupleId == null) {
+      return Scaffold(
+        backgroundColor: AppColors.softBlack,
+        body: Center(
+          child: Text(
+            "You must be paired to access tasks",
+            style: GoogleFonts.dmSans(color: Colors.white70),
+          ),
+        ),
+      );
+    }
 
-    return Scaffold(
-      backgroundColor: AppColors.softBlack,
-      body: Stack(
-        children: [
-          Positioned(
-            top: -100.h,
-            right: -50.w,
-            child: Container(
-              width: 300.w,
-              height: 300.h,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    Colors.blueAccent.withValues(alpha: 0.12),
-                    Colors.transparent,
-                  ],
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: _syncService.watchTasks(_coupleId!),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Scaffold(
+            backgroundColor: AppColors.softBlack,
+            body: Center(
+              child: BaeLoader(),
+            ),
+          );
+        }
+
+        final tasks = snapshot.data!;
+        final total = tasks.length;
+        final completedCount =
+            tasks.where((t) => t["status"] == "completed").length;
+        final progress = total == 0 ? 0.0 : completedCount / total;
+
+        final activeTasks = tasks.where((t) => t["status"] != "completed").toList();
+        final completedTasks =
+            tasks.where((t) => t["status"] == "completed").toList();
+
+        return Scaffold(
+          backgroundColor: AppColors.softBlack,
+          body: Stack(
+            children: [
+              Positioned(
+                top: -100.h,
+                right: -50.w,
+                child: Container(
+                  width: 300.w,
+                  height: 300.h,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        Colors.blueAccent.withValues(alpha: 0.12),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-          SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(),
-                UIHelper.verticalSpace(12.h),
-                _buildTopProgressBar(progress, completedCount, total),
-                UIHelper.verticalSpace(16.h),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24.w),
-                  child: TabBar(
-                    controller: _tabController,
-                    indicatorColor: Colors.blueAccent,
-                    labelColor: Colors.white,
-                    unselectedLabelColor: Colors.white38,
-                    dividerColor: Colors.white.withValues(alpha: 0.05),
-                    labelStyle: GoogleFonts.dmSans(
-                        fontWeight: FontWeight.bold, fontSize: 13.sp),
-                    tabs: const [
-                      Tab(text: "Active"),
-                      Tab(text: "Completed"),
-                    ],
-                  ),
-                ),
-                UIHelper.verticalSpace(12.h),
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildTaskList(activeTasks),
-                      _buildTaskList(completedTasks),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Positioned(
-            bottom: 40.h,
-            left: 24.w,
-            right: 24.w,
-            child: GestureDetector(
-              onTap: _addNewTask,
-              child: Container(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(vertical: 16.h),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Colors.blueAccent, AppColors.primaryPurple],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.blueAccent.withValues(alpha: 0.25),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
+              SafeArea(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeader(),
+                    UIHelper.verticalSpace(12.h),
+                    TaskProgressBar(
+                      progress: progress,
+                      completed: completedCount,
+                      total: total,
+                    ),
+                    UIHelper.verticalSpace(16.h),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 24.w),
+                      child: TabBar(
+                        controller: _tabController,
+                        indicatorColor: Colors.blueAccent,
+                        labelColor: Colors.white,
+                        unselectedLabelColor: Colors.white38,
+                        dividerColor: Colors.white.withValues(alpha: 0.05),
+                        labelStyle: GoogleFonts.dmSans(
+                            fontWeight: FontWeight.bold, fontSize: 13.sp),
+                        tabs: const [
+                          Tab(text: "Active"),
+                          Tab(text: "Completed"),
+                        ],
+                      ),
+                    ),
+                    UIHelper.verticalSpace(12.h),
+                    Expanded(
+                      child: TabBarView(
+                        controller: _tabController,
+                        children: [
+                          _buildTaskList(activeTasks),
+                          _buildTaskList(completedTasks),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-                child: Text(
-                  "+ Create New Task",
-                  style: GoogleFonts.dmSans(
-                    color: Colors.white,
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.bold,
+              ),
+              Positioned(
+                bottom: 40.h,
+                left: 24.w,
+                right: 24.w,
+                child: GestureDetector(
+                  onTap: _addNewTask,
+                  child: Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(vertical: 16.h),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Colors.blueAccent, AppColors.primaryPurple],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16.r),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.blueAccent.withValues(alpha: 0.25),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      "+ Create New Task",
+                      style: GoogleFonts.dmSans(
+                        color: Colors.white,
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -366,54 +367,6 @@ class _TasksViewState extends State<_TasksView>
     );
   }
 
-  Widget _buildTopProgressBar(double progress, int completed, int total) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 24.w),
-      child: Container(
-        padding: EdgeInsets.all(16.r),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.02),
-          borderRadius: BorderRadius.circular(18.r),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
-        ),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "Shared Progress",
-                  style: GoogleFonts.dmSans(
-                      color: Colors.white70,
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  "$completed/$total Completed (${(progress * 100).toInt()}%)",
-                  style: GoogleFonts.dmSans(
-                      color: Colors.blueAccent,
-                      fontSize: 10.sp,
-                      fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            UIHelper.verticalSpace(10.h),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8.r),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 6.h,
-                backgroundColor: Colors.white.withValues(alpha: 0.05),
-                valueColor:
-                    const AlwaysStoppedAnimation<Color>(Colors.blueAccent),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildTaskList(List<Map<String, dynamic>> tasks) {
     if (tasks.isEmpty) {
       return Center(
@@ -424,6 +377,8 @@ class _TasksViewState extends State<_TasksView>
       );
     }
 
+    final currentUserUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
     return ListView.builder(
       physics: const BouncingScrollPhysics(),
       padding:
@@ -432,44 +387,50 @@ class _TasksViewState extends State<_TasksView>
       itemBuilder: (context, index) {
         final task = tasks[index];
         final id = task["id"]!;
+        final String status = task["status"] ?? "pending";
+        final String title = task["title"] ?? "";
 
         return Dismissible(
           key: Key(id),
-          direction: DismissDirection.horizontal,
-          background: _buildSwipeBg(Alignment.centerLeft, Colors.green,
-              Icons.check_circle_outline_rounded),
-          secondaryBackground: _buildSwipeBg(Alignment.centerRight,
+          direction: DismissDirection.endToStart, // Swipe left to delete
+          background: _buildSwipeBg(Alignment.centerRight,
               Colors.redAccent, Icons.delete_outline_rounded),
-          onDismissed: (direction) {
-            if (direction == DismissDirection.startToEnd) {
-              setState(() {
-                final foundIndex = _tasks.indexWhere((t) => t["id"] == id);
-                if (foundIndex != -1) {
-                  _tasks[foundIndex]["completed"] = true;
-                }
-              });
-              context.read<TaskNotificationCubit>().notifyTaskCompleted(
-                    task["title"] as String? ?? "Shared task",
-                  );
-              AppToast.show(
-                context,
-                title: "Task Done",
-                message: "Task marked as completed!",
-                type: ToastType.success,
-              );
-            } else {
-              setState(() {
-                _tasks.removeWhere((t) => t["id"] == id);
-              });
+          confirmDismiss: (direction) async {
+            if (status == "waitingConfirmation") {
+              if (context.mounted) {
+                AppToast.show(
+                  context,
+                  title: "Cannot Delete",
+                  message: "Tasks awaiting verification cannot be deleted.",
+                  type: ToastType.error,
+                );
+              }
+              return false;
+            }
+
+            await _syncService.deleteTask(_coupleId!, id);
+            unawaited(PushNotificationService.sendNotificationToPartner(
+              title: "Task Deleted ✗",
+              body: "$_myNickname deleted the task: \"$title\"",
+              type: "tasks",
+            ));
+            if (context.mounted) {
               AppToast.show(
                 context,
                 title: "Task Deleted",
-                message: "Task deleted.",
+                message: "Task deleted successfully.",
                 type: ToastType.error,
               );
             }
+            return true;
           },
-          child: _buildTaskCard(task),
+          child: TaskCard(
+            task: task,
+            currentUserUid: currentUserUid,
+            coupleId: _coupleId!,
+            myNickname: _myNickname,
+            syncService: _syncService,
+          ),
         );
       },
     );
@@ -485,61 +446,6 @@ class _TasksViewState extends State<_TasksView>
         borderRadius: BorderRadius.circular(20.r),
       ),
       child: Icon(icon, color: color, size: 22.sp),
-    );
-  }
-
-  Widget _buildTaskCard(Map<String, dynamic> task) {
-    final String assigned = task["assignedTo"]!;
-    final bool completed = task["completed"];
-
-    final Color avatarColor =
-        assigned == "You" ? AppColors.primaryPink : AppColors.primaryPurple;
-
-    return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.05),
-          width: 1.w,
-        ),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 16.r,
-            backgroundColor: avatarColor.withValues(alpha: 0.15),
-            child: Text(
-              assigned[0],
-              style: GoogleFonts.dmSans(
-                color: avatarColor,
-                fontSize: 12.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          SizedBox(width: 16.w),
-          Expanded(
-            child: Text(
-              task["title"]!,
-              style: GoogleFonts.dmSans(
-                color: completed ? Colors.white30 : Colors.white,
-                fontSize: 13.sp,
-                decoration: completed ? TextDecoration.lineThrough : null,
-              ),
-            ),
-          ),
-          Icon(
-            completed
-                ? Icons.check_circle_rounded
-                : Icons.radio_button_off_rounded,
-            color: completed ? Colors.greenAccent : Colors.white24,
-            size: 18.sp,
-          ),
-        ],
-      ),
     );
   }
 }

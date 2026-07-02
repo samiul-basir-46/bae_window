@@ -9,9 +9,6 @@ import '../bloc/story_bloc.dart';
 import '../bloc/story_event.dart';
 import '../bloc/story_state.dart';
 import '../widgets/new_memory_sheet.dart';
-import '../widgets/vault_setup_sheet.dart';
-import '../widgets/pin_unlock_dialog.dart';
-import '../widgets/memory_card.dart';
 import '../widgets/month_group_feed.dart';
 import 'package:bea_window_app/common_widgets/app_toast.dart';
 import 'package:bea_window_app/common_widgets/bae_loader.dart';
@@ -60,36 +57,6 @@ class _StoryScreenViewState extends State<StoryScreenView> {
     );
   }
 
-  void _showPINDialog(BuildContext context, String correctPin, bool isBiometricsEnabled) {
-    showDialog(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.8),
-      builder: (dialogContext) => PINUnlockDialog(
-        correctPin: correctPin,
-        isBiometricsEnabled: isBiometricsEnabled,
-        onSuccess: () {
-          context.read<StoryBloc>().add(const UnlockVaultEvent());
-        },
-      ),
-    );
-  }
-
-  void _showSetupSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => VaultSetupSheet(
-        onSetup: (pin, enableBiometrics) {
-          context.read<StoryBloc>().add(SetupVaultPinEvent(
-                pin: pin,
-                enableBiometrics: enableBiometrics,
-              ));
-        },
-      ),
-    );
-  }
-
   void _showContextMenu(BuildContext context, MemoryItem memory) {
     final storyBloc = context.read<StoryBloc>();
     showModalBottomSheet(
@@ -126,19 +93,6 @@ class _StoryScreenViewState extends State<StoryScreenView> {
                   ),
                 ),
                 UIHelper.verticalSpace(16.h),
-                _buildContextOption(
-                  icon: memory.isPrivate
-                      ? Icons.lock_open_rounded
-                      : Icons.lock_rounded,
-                  label: memory.isPrivate
-                      ? "Move to Feed (Make Public)"
-                      : "Move to Private Vault",
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    storyBloc.add(MoveToVaultEvent(
-                        id: memory.id, isPrivate: !memory.isPrivate));
-                  },
-                ),
                 _buildContextOption(
                   icon: Icons.edit_note_rounded,
                   label: "Edit Note",
@@ -286,20 +240,13 @@ class _StoryScreenViewState extends State<StoryScreenView> {
                     child: BaeLoader(),
                   );
                 } else if (state is StoryLoaded) {
-                  // Filter memories
+                  // Filter memories — no vault filter anymore
                   List<MemoryItem> filteredMemories = [];
                   if (state.selectedFilter == StoryFilter.all) {
-                    filteredMemories =
-                        state.memories.where((m) => !m.isPrivate).toList();
+                    filteredMemories = state.memories.toList();
                   } else if (state.selectedFilter == StoryFilter.milestones) {
-                    filteredMemories = state.memories
-                        .where((m) => m.isMilestone && !m.isPrivate)
-                        .toList();
-                  } else if (state.selectedFilter == StoryFilter.vault) {
-                    if (state.isVaultUnlocked) {
-                      filteredMemories =
-                          state.memories.where((m) => m.isPrivate).toList();
-                    }
+                    filteredMemories =
+                        state.memories.where((m) => m.isMilestone).toList();
                   }
 
                   // Group memories by Month/Year
@@ -334,14 +281,14 @@ class _StoryScreenViewState extends State<StoryScreenView> {
                             ),
                             Row(
                               children: [
-                                  _buildIconButton(Icons.search_rounded, () {
-                                    AppToast.show(
-                                      context,
-                                      title: "Search",
-                                      message: "Search feature coming soon!",
-                                      type: ToastType.info,
-                                    );
-                                  }),
+                                _buildIconButton(Icons.search_rounded, () {
+                                  AppToast.show(
+                                    context,
+                                    title: "Search",
+                                    message: "Search feature coming soon!",
+                                    type: ToastType.info,
+                                  );
+                                }),
                                 SizedBox(width: 12.w),
                                 _buildIconButton(Icons.add_rounded,
                                     () => _openNewMemorySheet(context)),
@@ -366,90 +313,32 @@ class _StoryScreenViewState extends State<StoryScreenView> {
                                   StoryFilter.milestones,
                                   state.selectedFilter,
                                   context),
-                              SizedBox(width: 10.w),
-                              _buildFilterTab(
-                                  "Private Vault",
-                                  StoryFilter.vault,
-                                  state.selectedFilter,
-                                  context),
                             ],
                           ),
                         ),
                       ),
-                      // Biometrics Toggle Setting when Vault is Unlocked
-                      if (state.selectedFilter == StoryFilter.vault && state.isVaultUnlocked) ...[
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(Icons.fingerprint_rounded, color: AppColors.primaryPink, size: 16.sp),
-                                  SizedBox(width: 8.w),
-                                  Text(
-                                    "Biometric Unlock",
-                                    style: GoogleFonts.dmSans(color: Colors.white70, fontSize: 13.sp, fontWeight: FontWeight.bold),
-                                  ),
-                                ],
-                              ),
-                              Switch(
-                                value: state.isBiometricsEnabled,
-                                onChanged: (val) {
-                                  context.read<StoryBloc>().add(ToggleBiometricsEvent(val));
-                                },
-                                activeThumbColor: AppColors.primaryPink,
-                                activeTrackColor: AppColors.primaryPink.withValues(alpha: 0.3),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
                       Expanded(
-                        child: state.selectedFilter == StoryFilter.vault &&
-                                !state.isVaultUnlocked
-                            ? _buildLockedVaultPrompt(context, state)
-                            : filteredMemories.isEmpty
-                                ? _buildEmptyState()
-                                : ListView.builder(
-                                    physics: const BouncingScrollPhysics(),
-                                    padding: EdgeInsets.only(
-                                        left: 24.w,
-                                        right: 24.w,
-                                        top: 16.h,
-                                        bottom: 120.h),
-                                    itemCount: grouped.keys.length +
-                                        (state.selectedFilter == StoryFilter.all
-                                            ? 1
-                                            : 0),
-                                    itemBuilder: (context, index) {
-                                      if (index == grouped.keys.length) {
-                                        return PrivateVaultEntryCard(
-                                          isUnlocked: state.isVaultUnlocked,
-                                          onTap: () {
-                                            if (state.vaultPin == null) {
-                                              _showSetupSheet(context);
-                                            } else if (!state.isVaultUnlocked) {
-                                              _showPINDialog(context, state.vaultPin!, state.isBiometricsEnabled);
-                                            } else {
-                                              context.read<StoryBloc>().add(
-                                                  const ChangeFilterEvent(
-                                                      StoryFilter.vault));
-                                            }
-                                          },
-                                        );
-                                      }
-
-                                      final key = grouped.keys.elementAt(index);
-                                      final items = grouped[key]!;
-                                      return MonthGroupFeed(
-                                        month: key,
-                                        items: items,
-                                        onCardLongPress: (memory) =>
-                                            _showContextMenu(context, memory),
-                                      );
-                                    },
-                                  ),
+                        child: filteredMemories.isEmpty
+                            ? _buildEmptyState()
+                            : ListView.builder(
+                                physics: const BouncingScrollPhysics(),
+                                padding: EdgeInsets.only(
+                                    left: 24.w,
+                                    right: 24.w,
+                                    top: 16.h,
+                                    bottom: 120.h),
+                                itemCount: grouped.keys.length,
+                                itemBuilder: (context, index) {
+                                  final key = grouped.keys.elementAt(index);
+                                  final items = grouped[key]!;
+                                  return MonthGroupFeed(
+                                    month: key,
+                                    items: items,
+                                    onCardLongPress: (memory) =>
+                                        _showContextMenu(context, memory),
+                                  );
+                                },
+                              ),
                       ),
                     ],
                   );
@@ -550,86 +439,6 @@ class _StoryScreenViewState extends State<StoryScreenView> {
             fontSize: 12.sp,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLockedVaultPrompt(BuildContext context, StoryLoaded state) {
-    final isSetup = state.vaultPin != null;
-    return Center(
-      child: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: EdgeInsets.symmetric(horizontal: 40.w, vertical: 20.h),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: EdgeInsets.all(24.w),
-              decoration: BoxDecoration(
-                color: AppColors.primaryPurple.withValues(alpha: 0.05),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppColors.primaryPurple.withValues(alpha: 0.1),
-                  width: 2.w,
-                ),
-              ),
-              child: Icon(
-                isSetup ? Icons.lock_rounded : Icons.lock_open_outlined,
-                color: AppColors.primaryPurple,
-                size: 48.sp,
-              ),
-            ),
-            UIHelper.verticalSpace(24.h),
-            Text(
-              isSetup ? "Private Vault Locked" : "Setup Private Vault",
-              style: GoogleFonts.dmSans(
-                color: Colors.white,
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            UIHelper.verticalSpace(8.h),
-            Text(
-              isSetup
-                  ? "Access requires biometric or PIN authentication to protect your private memories."
-                  : "Secure your private memories with a custom 4-digit PIN.",
-              textAlign: TextAlign.center,
-              style: GoogleFonts.dmSans(
-                color: Colors.white38,
-                fontSize: 12.sp,
-                height: 1.5,
-              ),
-            ),
-            UIHelper.verticalSpace(28.h),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryPurple,
-                  padding: EdgeInsets.symmetric(vertical: 14.h),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16.r),
-                  ),
-                ),
-                onPressed: () {
-                  if (isSetup) {
-                    _showPINDialog(context, state.vaultPin!, state.isBiometricsEnabled);
-                  } else {
-                    _showSetupSheet(context);
-                  }
-                },
-                child: Text(
-                  isSetup ? "Unlock Vault" : "Setup Secure PIN",
-                  style: GoogleFonts.dmSans(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-          ],
         ),
       ),
     );

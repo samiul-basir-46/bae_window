@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:developer' as dev;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import 'package:bea_window_app/features/auth/services/firebase_auth_service.dart';
 import 'package:bea_window_app/helpers/notification_service.dart';
 import 'space_screen_event.dart';
@@ -19,6 +21,8 @@ class SpaceScreenBloc extends Bloc<SpaceScreenEvent, SpaceScreenState> {
   StreamSubscription? _anniversarySub;
   StreamSubscription? _nicknameSub;
   StreamSubscription? _presenceSub;
+  StreamSubscription? _tasksSub;
+  StreamSubscription? _momentsSub;
 
   String? _coupleId;
   String? _partnerUid;
@@ -28,6 +32,9 @@ class SpaceScreenBloc extends Bloc<SpaceScreenEvent, SpaceScreenState> {
   DateTime? _cachedAnniversaryDate;
   String _cachedPartnerNickname = "Partner";
   bool _cachedIsPartnerOnline = false;
+  List<SpaceMomentItem> _cachedMoments = [];
+  double _cachedTaskProgress = 0.0;
+  String _cachedNextTaskTitle = "No active tasks";
 
   SpaceScreenBloc() : super(const SpaceScreenInitial()) {
     on<LoadSpaceScreenDataEvent>(_onLoadSpaceScreenData);
@@ -35,6 +42,8 @@ class SpaceScreenBloc extends Bloc<SpaceScreenEvent, SpaceScreenState> {
     on<AnniversaryUpdatedEvent>(_onAnniversaryUpdated);
     on<PartnerNicknameUpdatedEvent>(_onPartnerNicknameUpdated);
     on<PartnerPresenceUpdatedEvent>(_onPartnerPresenceUpdated);
+    on<TasksUpdatedEvent>(_onTasksUpdated);
+    on<MomentsUpdatedEvent>(_onMomentsUpdated);
     on<AddBucketItemEvent>(_onAddBucketItem);
     on<UpdateBucketItemEvent>(_onUpdateBucketItem);
     on<DeleteBucketItemEvent>(_onDeleteBucketItem);
@@ -78,6 +87,8 @@ class SpaceScreenBloc extends Bloc<SpaceScreenEvent, SpaceScreenState> {
       await _anniversarySub?.cancel();
       await _nicknameSub?.cancel();
       await _presenceSub?.cancel();
+      await _tasksSub?.cancel();
+      await _momentsSub?.cancel();
 
       // Listen to Firestore Bucket List stream
       _bucketSub = _syncService.watchBucketList(coupleId).listen((items) {
@@ -87,6 +98,16 @@ class SpaceScreenBloc extends Bloc<SpaceScreenEvent, SpaceScreenState> {
       // Listen to Firestore Anniversary stream
       _anniversarySub = _syncService.watchAnniversary(user.uid).listen((date) {
         add(AnniversaryUpdatedEvent(date));
+      });
+
+      // Listen to Firestore Tasks stream
+      _tasksSub = _syncService.watchTasks(coupleId).listen((tasks) {
+        add(TasksUpdatedEvent(tasks));
+      });
+
+      // Listen to Firestore Moments stream
+      _momentsSub = _syncService.watchMoments(coupleId).listen((moments) {
+        add(MomentsUpdatedEvent(moments));
       });
 
       if (_partnerUid != null) {
@@ -101,7 +122,6 @@ class SpaceScreenBloc extends Bloc<SpaceScreenEvent, SpaceScreenState> {
         });
       }
 
-      // Emit initial Loaded state with dummy placeholders (stream events will populate shortly)
       emit(SpaceScreenLoaded(
         bucketList: _cachedBucketList,
         anniversaryDate: _cachedAnniversaryDate,
@@ -109,9 +129,9 @@ class SpaceScreenBloc extends Bloc<SpaceScreenEvent, SpaceScreenState> {
         isPartnerOnline: _cachedIsPartnerOnline,
         coupleId: coupleId,
         partnerUid: _partnerUid ?? '',
-        recentMoments: _buildDummyMoments(),
-        taskProgress: 0.65,
-        nextTaskTitle: "Book dinner table",
+        recentMoments: _cachedMoments,
+        taskProgress: _cachedTaskProgress,
+        nextTaskTitle: _cachedNextTaskTitle,
       ));
     } catch (e) {
       emit(SpaceScreenError("Error loading space: $e"));
@@ -139,6 +159,53 @@ class SpaceScreenBloc extends Bloc<SpaceScreenEvent, SpaceScreenState> {
 
   void _onPartnerPresenceUpdated(PartnerPresenceUpdatedEvent event, Emitter<SpaceScreenState> emit) {
     _cachedIsPartnerOnline = event.isOnline;
+    _emitLoaded(emit);
+  }
+
+  void _onTasksUpdated(TasksUpdatedEvent event, Emitter<SpaceScreenState> emit) {
+    final tasks = event.tasks;
+    if (tasks.isEmpty) {
+      _cachedTaskProgress = 0.0;
+      _cachedNextTaskTitle = "No active tasks";
+    } else {
+      final total = tasks.length;
+      final completed = tasks.where((t) => t['status'] == 'completed').length;
+      _cachedTaskProgress = completed / total;
+
+      final activeTasks = tasks.where((t) => t['status'] != 'completed').toList();
+      if (activeTasks.isEmpty) {
+        _cachedNextTaskTitle = "All done! 🎉";
+      } else {
+        _cachedNextTaskTitle = activeTasks.last['title'] as String? ?? "No active tasks";
+      }
+    }
+    _emitLoaded(emit);
+  }
+
+  void _onMomentsUpdated(MomentsUpdatedEvent event, Emitter<SpaceScreenState> emit) {
+    _cachedMoments = event.moments.map((m) {
+      String timeStr = "Just now";
+      final createdAt = m['createdAt'];
+      if (createdAt is Timestamp) {
+        final date = createdAt.toDate();
+        final diff = DateTime.now().difference(date);
+        if (diff.inMinutes < 1) {
+          timeStr = "Just now";
+        } else if (diff.inHours < 1) {
+          timeStr = "${diff.inMinutes}m ago";
+        } else if (diff.inDays < 1) {
+          timeStr = "${diff.inHours}h ago";
+        } else {
+          timeStr = DateFormat('MMM d').format(date);
+        }
+      }
+      return SpaceMomentItem(
+        user: m['user'] as String? ?? 'System',
+        action: m['action'] as String? ?? '',
+        time: timeStr,
+        type: m['type'] as String? ?? 'note',
+      );
+    }).toList();
     _emitLoaded(emit);
   }
 
@@ -184,21 +251,26 @@ class SpaceScreenBloc extends Bloc<SpaceScreenEvent, SpaceScreenState> {
   }
 
   Future<void> _onSendSpaceLoveNoteEvent(SendSpaceLoveNoteEvent event, Emitter<SpaceScreenState> emit) async {
-    final currentState = state;
-    if (currentState is SpaceScreenLoaded) {
-      final updatedMoments = List<SpaceMomentItem>.from(currentState.recentMoments);
-      updatedMoments.insert(
-        0,
-        SpaceMomentItem(
-          user: "You",
-          action: "sent a Love Note: '${event.note}'",
-          time: "Just now",
-          type: "note",
-        ),
-      );
-      emit(currentState.copyWith(recentMoments: updatedMoments));
+    if (_coupleId != null) {
       try {
-        await PushNotificationService.createLoveNoteEvent(event.note);
+        final currentUser = FirebaseAuth.instance.currentUser;
+        if (currentUser != null) {
+          final userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(currentUser.uid)
+              .get();
+          final name = userDoc.exists ? (userDoc.data()?['nickname'] as String? ?? currentUser.displayName ?? "Someone") : "Someone";
+
+          // Add to Moments feed
+          await _syncService.addMoment(
+            _coupleId!,
+            user: name,
+            action: "sent a Love Note: '${event.note}'",
+            type: "note",
+          );
+
+          await PushNotificationService.createLoveNoteEvent(event.note);
+        }
       } catch (e, stack) {
         dev.log(
           'Could not create love-note notification event',
@@ -217,31 +289,11 @@ class SpaceScreenBloc extends Bloc<SpaceScreenEvent, SpaceScreenState> {
         anniversaryDate: _cachedAnniversaryDate,
         partnerNickname: _cachedPartnerNickname,
         isPartnerOnline: _cachedIsPartnerOnline,
+        recentMoments: _cachedMoments,
+        taskProgress: _cachedTaskProgress,
+        nextTaskTitle: _cachedNextTaskTitle,
       ));
     }
-  }
-
-  List<SpaceMomentItem> _buildDummyMoments() {
-    return [
-      const SpaceMomentItem(
-        user: "You",
-        action: "added a photo to Vault",
-        time: "5m ago",
-        type: "vault",
-      ),
-      SpaceMomentItem(
-        user: _cachedPartnerNickname,
-        action: "completed a task: Book flight tickets",
-        time: "1h ago",
-        type: "task",
-      ),
-      const SpaceMomentItem(
-        user: "System",
-        action: "synced the shared bucket list",
-        time: "Just now",
-        type: "note",
-      ),
-    ];
   }
 
   @override
@@ -250,6 +302,8 @@ class SpaceScreenBloc extends Bloc<SpaceScreenEvent, SpaceScreenState> {
     _anniversarySub?.cancel();
     _nicknameSub?.cancel();
     _presenceSub?.cancel();
+    _tasksSub?.cancel();
+    _momentsSub?.cancel();
     return super.close();
   }
 }
