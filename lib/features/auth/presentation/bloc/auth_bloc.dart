@@ -95,17 +95,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         password: event.password,
       );
       if (credential.user != null) {
+        if (!credential.user!.emailVerified) {
+          dev.log('User logged in but email is not verified.',
+              name: 'AuthBloc');
+          await _authService.sendEmailVerification();
+          emit(EmailVerificationPending());
+          return;
+        }
+
+        // Check if profile setup or pairing is pending
         try {
           final userDoc = await _authService.getUserProfile(credential.user!.uid);
-          final isEmailVerified = userDoc?['isEmailVerified'] as bool? ?? false;
-
-          if (!isEmailVerified) {
-            dev.log('User logged in but email is not verified.',
-                name: 'AuthBloc');
-            emit(EmailVerificationPending());
-            return;
-          }
-
           if (userDoc != null) {
             final isProfileComplete = userDoc['profileComplete'] as bool? ?? false;
             if (!isProfileComplete) {

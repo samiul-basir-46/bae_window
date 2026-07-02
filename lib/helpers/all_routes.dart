@@ -9,7 +9,6 @@ import 'package:bea_window_app/features/auth/presentation/screens/reset_password
 import 'package:bea_window_app/features/auth/presentation/screens/email_verification_screen.dart';
 import 'package:bea_window_app/features/auth/presentation/screens/profile_setup_screen.dart';
 import 'package:bea_window_app/features/auth/presentation/screens/pairing_screen.dart';
-import 'package:bea_window_app/features/auth/presentation/screens/verifying_screen.dart';
 import 'package:bea_window_app/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:bea_window_app/navigation_screen.dart';
 
@@ -45,7 +44,6 @@ final class Routes {
   static const String emailVerificationScreen = '/emailVerification';
   static const String profileSetupScreen = '/profileSetup';
   static const String pairingScreen = '/pairing';
-  static const String verifyingScreen = '/verifying';
 
   // Space Routes
   static const String vaultScreen = '/vault';
@@ -147,18 +145,6 @@ final class RouteGenerator {
             ? CupertinoPageRoute(builder: (context) => const PairingScreen())
             : _FadedTransitionRoute(
                 widget: const PairingScreen(), settings: settings);
-
-      case Routes.verifyingScreen:
-        final args = settings.arguments as Map<String, dynamic>;
-        final token = args['token'] as String;
-        final uid = args['uid'] as String;
-        return defaultTargetPlatform == TargetPlatform.iOS
-            ? CupertinoPageRoute(
-                builder: (context) => VerifyingScreen(token: token, uid: uid))
-            : _FadedTransitionRoute(
-                widget: VerifyingScreen(token: token, uid: uid),
-                settings: settings,
-              );
 
       case Routes.resetPasswordScreen:
         return defaultTargetPlatform == TargetPlatform.iOS
