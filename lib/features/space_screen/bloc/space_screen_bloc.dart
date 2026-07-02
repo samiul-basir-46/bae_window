@@ -254,17 +254,23 @@ class SpaceScreenBloc extends Bloc<SpaceScreenEvent, SpaceScreenState> {
     if (_coupleId != null) {
       try {
         final currentUser = FirebaseAuth.instance.currentUser;
-        final name = currentUser?.displayName ?? "You";
+        if (currentUser != null) {
+          final userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(currentUser.uid)
+              .get();
+          final name = userDoc.exists ? (userDoc.data()?['nickname'] as String? ?? currentUser.displayName ?? "Someone") : "Someone";
 
-        // Add to Moments feed
-        await _syncService.addMoment(
-          _coupleId!,
-          user: name,
-          action: "sent a Love Note: '${event.note}'",
-          type: "note",
-        );
+          // Add to Moments feed
+          await _syncService.addMoment(
+            _coupleId!,
+            user: name,
+            action: "sent a Love Note: '${event.note}'",
+            type: "note",
+          );
 
-        await PushNotificationService.createLoveNoteEvent(event.note);
+          await PushNotificationService.createLoveNoteEvent(event.note);
+        }
       } catch (e, stack) {
         dev.log(
           'Could not create love-note notification event',
