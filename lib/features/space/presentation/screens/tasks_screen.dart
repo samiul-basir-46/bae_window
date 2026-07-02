@@ -396,12 +396,12 @@ class _TasksViewState extends State<_TasksView>
           background: _buildSwipeBg(Alignment.centerRight,
               Colors.redAccent, Icons.delete_outline_rounded),
           confirmDismiss: (direction) async {
-            if (status == "pending") {
+            if (status == "waitingConfirmation") {
               if (context.mounted) {
                 AppToast.show(
                   context,
                   title: "Cannot Delete",
-                  message: "Pending tasks cannot be deleted.",
+                  message: "Tasks awaiting verification cannot be deleted.",
                   type: ToastType.error,
                 );
               }

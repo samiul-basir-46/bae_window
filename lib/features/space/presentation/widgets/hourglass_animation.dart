@@ -135,7 +135,6 @@ class _HourglassPainter extends CustomPainter {
 
     // Draw bottom sand (growing)
     if (progress > 0.0) {
-      final bottomY = h * 0.9 - (h * 0.4 * progress);
       final pathBottomSand = Path()
         ..moveTo(w * 0.5, h * 0.5 + (h * 0.4 * (1.0 - progress)))
         ..lineTo(w * 0.85 - (w * 0.35 * (1.0 - progress)), h * 0.9)
@@ -144,9 +143,6 @@ class _HourglassPainter extends CustomPainter {
       canvas.drawPath(pathBottomSand, paintSand);
     }
   }
-
-  @override
-  bool overrideMaxSimultaneousCaptures() => false;
 
   @override
   bool shouldRepaint(covariant _HourglassPainter oldDelegate) {

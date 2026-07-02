@@ -6,6 +6,7 @@ import 'package:bea_window_app/common_widgets/app_toast.dart';
 import 'package:bea_window_app/helpers/notification_service.dart';
 import 'package:bea_window_app/features/space_screen/services/realtime_sync_service.dart';
 import 'dart:async';
+import 'hourglass_animation.dart';
 
 class TaskCard extends StatelessWidget {
   final Map<String, dynamic> task;
@@ -88,7 +89,7 @@ class TaskCard extends StatelessWidget {
       case "completed":
         return Icon(Icons.check_circle_rounded, color: Colors.greenAccent, size: 18.sp);
       case "waitingConfirmation":
-        return Icon(Icons.hourglass_empty_rounded, color: Colors.amberAccent, size: 18.sp);
+        return const HourglassAnimation(size: 18.0, color: Colors.amberAccent);
       default:
         return Icon(Icons.radio_button_off_rounded, color: Colors.white24, size: 18.sp);
     }
