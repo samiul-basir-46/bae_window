@@ -33,6 +33,7 @@ class _PairingScreenState extends State<PairingScreen>
   String? _generatedCode;
   String? _errorMessage;
   StreamSubscription? _pairingSub;
+  bool _hasNavigated = false;
 
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
@@ -66,6 +67,8 @@ class _PairingScreenState extends State<PairingScreen>
         if (snapshot.exists) {
           final data = snapshot.data();
           if (data != null && data['pairStatus'] == 'paired' && mounted) {
+            if (_hasNavigated) return;
+            _hasNavigated = true;
             _showPairingSuccessSnackbar();
             Navigator.of(context).pushReplacementNamed(Routes.navigationScreen);
           }
@@ -136,8 +139,15 @@ class _PairingScreenState extends State<PairingScreen>
           setState(() {
             _generatedCode = state.code;
           });
-        } else if (state is PairingSuccess || state is PairingSkipped) {
-          if (mounted) {
+        } else if (state is PairingSuccess) {
+          if (mounted && !_hasNavigated) {
+            _hasNavigated = true;
+            _showPairingSuccessSnackbar();
+            Navigator.pushReplacementNamed(context, Routes.navigationScreen);
+          }
+        } else if (state is PairingSkipped) {
+          if (mounted && !_hasNavigated) {
+            _hasNavigated = true;
             Navigator.pushReplacementNamed(context, Routes.navigationScreen);
           }
         } else if (state is PairingFailure) {

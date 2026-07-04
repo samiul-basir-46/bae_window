@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -67,7 +68,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       add(UpdateMessagesEvent(messages));
     }, onError: (err) {
       // Cannot call emit from stream listener — log instead
-      print('[ChatBloc] Messages stream error: $err');
+      log('[ChatBloc] Messages stream error: $err');
     });
 
     // Subscribe to typing indicator status changes from the conversation doc
@@ -112,7 +113,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         add(UpdateMessagesEvent(messages));
       }, onError: (err) {
         // Cannot call emit from stream listener — log instead
-        print('[ChatBloc] Load more messages stream error: $err');
+        log('[ChatBloc] Load more messages stream error: $err');
       });
     }
   }

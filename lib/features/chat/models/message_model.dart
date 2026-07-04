@@ -52,6 +52,7 @@ class MessageModel {
   final int? fileSize;
   final bool isEdited;
   final String? videoThumbnail;
+  final bool isPinned;
 
   MessageModel({
     required this.id,
@@ -66,6 +67,7 @@ class MessageModel {
     this.fileSize,
     this.isEdited = false,
     this.videoThumbnail,
+    this.isPinned = false,
   });
 
   factory MessageModel.fromMap(String id, Map<String, dynamic> map) {
@@ -109,6 +111,7 @@ class MessageModel {
       fileSize: map['fileSize'] as int?,
       isEdited: map['isEdited'] as bool? ?? false,
       videoThumbnail: map['videoThumbnail'] as String?,
+      isPinned: map['isPinned'] as bool? ?? false,
     );
   }
 
@@ -126,6 +129,7 @@ class MessageModel {
       'fileSize': fileSize,
       'isEdited': isEdited,
       'videoThumbnail': videoThumbnail,
+      'isPinned': isPinned,
     };
   }
 
@@ -142,6 +146,7 @@ class MessageModel {
     int? fileSize,
     bool? isEdited,
     String? videoThumbnail,
+    bool? isPinned,
   }) {
     return MessageModel(
       id: id ?? this.id,
@@ -156,6 +161,7 @@ class MessageModel {
       fileSize: fileSize ?? this.fileSize,
       isEdited: isEdited ?? this.isEdited,
       videoThumbnail: videoThumbnail ?? this.videoThumbnail,
+      isPinned: isPinned ?? this.isPinned,
     );
   }
 }

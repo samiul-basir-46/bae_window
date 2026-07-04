@@ -12,15 +12,38 @@ import 'package:flutter/widgets.dart';
 class $AssetsIconsGen {
   const $AssetsIconsGen();
 
+  /// File path: assets/icons/brush.png
+  AssetGenImage get brush => const AssetGenImage('assets/icons/brush.png');
+
+  /// File path: assets/icons/camera.png
+  AssetGenImage get camera => const AssetGenImage('assets/icons/camera.png');
+
   /// File path: assets/icons/google.png
   AssetGenImage get google => const AssetGenImage('assets/icons/google.png');
+
+  /// File path: assets/icons/message.png
+  AssetGenImage get message => const AssetGenImage('assets/icons/message.png');
 
   /// File path: assets/icons/notification_icon.png
   AssetGenImage get notificationIcon =>
       const AssetGenImage('assets/icons/notification_icon.png');
 
+  /// File path: assets/icons/pulse.png
+  AssetGenImage get pulse => const AssetGenImage('assets/icons/pulse.png');
+
+  /// File path: assets/icons/voice.png
+  AssetGenImage get voice => const AssetGenImage('assets/icons/voice.png');
+
   /// List of all assets
-  List<AssetGenImage> get values => [google, notificationIcon];
+  List<AssetGenImage> get values => [
+    brush,
+    camera,
+    google,
+    message,
+    notificationIcon,
+    pulse,
+    voice,
+  ];
 }
 
 class $AssetsImagesGen {
@@ -145,6 +168,10 @@ class Assets {
   static const $AssetsIconsGen icons = $AssetsIconsGen();
   static const $AssetsImagesGen images = $AssetsImagesGen();
   static const $AssetsLottieGen lottie = $AssetsLottieGen();
+  static const String serviceAccount = 'assets/service-account.json';
+
+  /// List of all assets
+  static List<String> get values => [serviceAccount];
 }
 
 class AssetGenImage {

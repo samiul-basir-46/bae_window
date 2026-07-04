@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:bea_window_app/features/chat/models/message_model.dart';
 import 'package:bea_window_app/constants/text_font_style.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
+import 'package:bea_window_app/common_widgets/custom_chat_text_field.dart';
 
 class MessageInput extends StatefulWidget {
   final Function(String text) onSendText;
@@ -15,6 +16,7 @@ class MessageInput extends StatefulWidget {
   final MessageModel? editingMessage;
   final VoidCallback? onCancelEdit;
   final Function(String newContent)? onFinishEdit;
+  final String quickReaction;
 
   const MessageInput({
     super.key,
@@ -24,6 +26,7 @@ class MessageInput extends StatefulWidget {
     this.editingMessage,
     this.onCancelEdit,
     this.onFinishEdit,
+    this.quickReaction = '👍',
   });
 
   @override
@@ -310,47 +313,39 @@ class _MessageInputState extends State<MessageInput> {
                 ),
               SizedBox(width: 4.w),
               Expanded(
-                child: Container(
-                  constraints: BoxConstraints(minHeight: 42.h),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(24.r),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.05),
-                      width: 1.w,
-                    ),
-                  ),
-                  child: TextField(
-                    controller: _controller,
-                    focusNode: _focusNode,
-                    minLines: 1,
-                    maxLines: 4,
-                    textCapitalization: TextCapitalization.sentences,
-                    style: TextFontStyle.textStyle14c8E8E9FDMSans400.copyWith(
-                      color: Colors.white,
-                    ),
-                    decoration: InputDecoration(
-                      hintText:
-                          isEditing ? 'Edit message...' : 'Type a message...',
-                      hintStyle:
-                          TextFontStyle.textStyle14c949494DMSans400.copyWith(
-                        color: AppColors.c8E8E9F.withValues(alpha: 0.5),
-                      ),
-                      contentPadding: EdgeInsets.symmetric(
-                          horizontal: 16.w, vertical: 10.h),
-                      border: InputBorder.none,
-                    ),
-                  ),
+                child: CustomChatTextField(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  hintText: isEditing ? 'Edit message...' : 'Type a message...',
+                  minLines: 1,
+                  maxLines: 4,
+                  keyboardType: TextInputType.multiline,
+                  textInputAction: TextInputAction.newline,
+                  textCapitalization: TextCapitalization.sentences,
+                  onChanged: (text) {
+                    final hasText = text.trim().isNotEmpty;
+                    if (hasText != _hasText) {
+                      setState(() {
+                        _hasText = hasText;
+                      });
+                    }
+                    _onTextChanged();
+                  },
                 ),
               ),
               SizedBox(width: 8.w),
-              // Send button — টেক্সট থাকলে active gradient, না থাকলে dim/disabled
               GestureDetector(
-                onTap: canSend ? _handleSend : null,
+                onTap: () {
+                  if (canSend) {
+                    _handleSend();
+                  } else {
+                    widget.onSendText(widget.quickReaction);
+                  }
+                },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   curve: Curves.easeOut,
-                  padding: EdgeInsets.all(10.r),
+                  padding: canSend ? EdgeInsets.all(10.r) : EdgeInsets.all(4.r),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: canSend
@@ -363,8 +358,7 @@ class _MessageInputState extends State<MessageInput> {
                             end: Alignment.bottomRight,
                           )
                         : null,
-                    color:
-                        canSend ? null : Colors.white.withValues(alpha: 0.08),
+                    color: canSend ? null : Colors.transparent,
                     boxShadow: canSend
                         ? [
                             BoxShadow(
@@ -376,11 +370,16 @@ class _MessageInputState extends State<MessageInput> {
                           ]
                         : [],
                   ),
-                  child: Icon(
-                    isEditing ? Icons.check_rounded : Icons.send_rounded,
-                    size: 18.sp,
-                    color: canSend ? Colors.white : Colors.white38,
-                  ),
+                  child: canSend
+                      ? Icon(
+                          isEditing ? Icons.check_rounded : Icons.send_rounded,
+                          size: 18.sp,
+                          color: Colors.white,
+                        )
+                      : Text(
+                          widget.quickReaction,
+                          style: TextStyle(fontSize: 26.sp),
+                        ),
                 ),
               ),
             ],

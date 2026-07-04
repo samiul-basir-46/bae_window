@@ -10,6 +10,8 @@ import 'package:get_storage/get_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../../../helpers/all_routes.dart';
+
 class ChatAppBar extends StatefulWidget implements PreferredSizeWidget {
   final UserModel partnerUser;
   final bool isTyping;
@@ -90,78 +92,82 @@ class _ChatAppBarState extends State<ChatAppBar> {
         onPressed: () => Navigator.pop(context),
       ),
       titleSpacing: 0,
-      title: Row(
-        children: [
-          Stack(
-            children: [
-              CircleAvatar(
-                radius: 20.r,
-                backgroundColor: Colors.white10,
-                backgroundImage: widget.partnerUser.profilePicture != null &&
-                        widget.partnerUser.profilePicture!.isNotEmpty
-                    ? CachedNetworkImageProvider(widget.partnerUser.profilePicture!)
-                    : null,
-                child: widget.partnerUser.profilePicture == null ||
-                        widget.partnerUser.profilePicture!.isEmpty
-                    ? Icon(Icons.person, color: Colors.white30, size: 20.sp)
-                    : null,
-              ),
-              if (widget.partnerUser.isOnline)
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: 12.r,
-                    height: 12.r,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.green,
-                      border: Border.all(
-                        color: AppColors.softBlack,
-                        width: 1.5.w,
+      title: GestureDetector(
+        onTap: () => _showPartnerProfile(context),
+        behavior: HitTestBehavior.opaque,
+        child: Row(
+          children: [
+            Stack(
+              children: [
+                CircleAvatar(
+                  radius: 20.r,
+                  backgroundColor: Colors.white10,
+                  backgroundImage: widget.partnerUser.profilePicture != null &&
+                          widget.partnerUser.profilePicture!.isNotEmpty
+                      ? CachedNetworkImageProvider(widget.partnerUser.profilePicture!)
+                      : null,
+                  child: widget.partnerUser.profilePicture == null ||
+                          widget.partnerUser.profilePicture!.isEmpty
+                      ? Icon(Icons.person, color: Colors.white30, size: 20.sp)
+                      : null,
+                ),
+                if (widget.partnerUser.isOnline)
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      width: 12.r,
+                      height: 12.r,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.green,
+                        border: Border.all(
+                          color: AppColors.softBlack,
+                          width: 1.5.w,
+                        ),
                       ),
                     ),
                   ),
-                ),
-            ],
-          ),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  widget.partnerUser.displayName,
-                  style: TextFontStyle.textStyle14cFFFFFFDMSans600.copyWith(
-                    fontSize: 15.sp,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: 2.h),
-                Text(
-                  widget.isTyping
-                      ? 'Typing...'
-                      : widget.partnerUser.isOnline
-                          ? 'Active Now'
-                          : _formatLastActive(widget.partnerUser.lastActive),
-                  style: TextFontStyle.textStyle12c8E8E9FDMSans600.copyWith(
-                    fontSize: 11.sp,
-                    color: widget.isTyping
-                        ? AppColors.primaryPink
-                        : widget.partnerUser.isOnline
-                            ? Colors.green
-                            : AppColors.c8E8E9F,
-                    fontWeight: widget.isTyping || widget.partnerUser.isOnline
-                        ? FontWeight.w600
-                        : FontWeight.w400,
-                  ),
-                ),
               ],
             ),
-          ),
-        ],
+            SizedBox(width: 12.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    widget.partnerUser.displayName,
+                    style: TextFontStyle.textStyle14cFFFFFFDMSans600.copyWith(
+                      fontSize: 15.sp,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: 2.h),
+                  Text(
+                    widget.isTyping
+                        ? 'Typing...'
+                        : widget.partnerUser.isOnline
+                            ? 'Active Now'
+                            : _formatLastActive(widget.partnerUser.lastActive),
+                    style: TextFontStyle.textStyle12c8E8E9FDMSans600.copyWith(
+                      fontSize: 11.sp,
+                      color: widget.isTyping
+                          ? AppColors.primaryPink
+                          : widget.partnerUser.isOnline
+                              ? Colors.green
+                              : AppColors.c8E8E9F,
+                      fontWeight: widget.isTyping || widget.partnerUser.isOnline
+                          ? FontWeight.w600
+                          : FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
       actions: [
         if (isMuted)
@@ -354,81 +360,17 @@ class _ChatAppBarState extends State<ChatAppBar> {
   }
 
   void _showPartnerProfile(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.navBgColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-      ),
-      builder: (context) {
-        return Container(
-          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 24.h),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 36.w,
-                height: 4.h,
-                margin: EdgeInsets.only(bottom: 24.h),
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2.r),
-                ),
-              ),
-              CircleAvatar(
-                radius: 46.r,
-                backgroundColor: Colors.white10,
-                backgroundImage: widget.partnerUser.profilePicture != null &&
-                        widget.partnerUser.profilePicture!.isNotEmpty
-                    ? CachedNetworkImageProvider(widget.partnerUser.profilePicture!)
-                    : null,
-                child: widget.partnerUser.profilePicture == null ||
-                        widget.partnerUser.profilePicture!.isEmpty
-                    ? Icon(Icons.person, color: Colors.white30, size: 48.sp)
-                    : null,
-              ),
-              SizedBox(height: 16.h),
-              Text(
-                widget.partnerUser.name,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              if (widget.partnerUser.nickname != null && widget.partnerUser.nickname!.isNotEmpty) ...[
-                SizedBox(height: 4.h),
-                Text(
-                  '@${widget.partnerUser.nickname}',
-                  style: TextStyle(
-                    color: AppColors.primaryPink,
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-              SizedBox(height: 16.h),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
-                decoration: BoxDecoration(
-                  color: widget.partnerUser.isOnline 
-                      ? Colors.green.withValues(alpha: 0.1) 
-                      : Colors.white.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Text(
-                  widget.partnerUser.isOnline ? 'Online' : 'Offline',
-                  style: TextStyle(
-                    color: widget.partnerUser.isOnline ? Colors.green : AppColors.c8E8E9F,
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              SizedBox(height: 12.h),
-            ],
-          ),
-        );
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+    final uids = [currentUser.uid, widget.partnerUser.uid]..sort();
+    final conversationId = uids.join('_');
+
+    Navigator.pushNamed(
+      context,
+      Routes.chatDetails,
+      arguments: {
+        'conversationId': conversationId,
+        'partnerUser': widget.partnerUser,
       },
     );
   }

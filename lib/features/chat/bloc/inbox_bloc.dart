@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:bea_window_app/features/chat/bloc/inbox_event.dart';
@@ -44,7 +45,7 @@ class InboxBloc extends Bloc<InboxEvent, InboxState> {
     }, onError: (err) {
       // Note: onError in a stream listener also can't call emit directly.
       // For now, we log the error. A dedicated error event could be added if needed.
-      print('[InboxBloc] Conversations stream error: $err');
+      log('[InboxBloc] Conversations stream error: $err');
     });
   }
 

@@ -5,16 +5,17 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:bea_window_app/features/chat/bloc/inbox_bloc.dart';
 import 'package:bea_window_app/features/chat/bloc/inbox_event.dart';
 import 'package:bea_window_app/features/chat/bloc/inbox_state.dart';
-import 'package:bea_window_app/features/chat/models/user_model.dart';
 import 'package:bea_window_app/features/chat/presentation/widgets/conversation_tile.dart';
 import 'package:bea_window_app/features/chat/presentation/widgets/empty_chat_widget.dart';
 import 'package:bea_window_app/features/chat/presentation/widgets/loading_widget.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/constants/text_font_style.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:bea_window_app/features/chat/models/conversation_model.dart';
+import 'package:bea_window_app/helpers/notification_service.dart';
+import 'package:bea_window_app/helpers/ui_helpers.dart';
 
 class InboxScreen extends StatelessWidget {
   const InboxScreen({super.key});
@@ -40,168 +41,180 @@ class InboxView extends StatefulWidget {
 class _InboxViewState extends State<InboxView> {
   final TextEditingController _searchController = TextEditingController();
 
-  void _startChatWithUser(BuildContext context, UserModel otherUser) async {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) return;
+  void _showConversationOptionsSheet(BuildContext context, ConversationModel conv, String currentUserId) {
+    final muteExpiry = conv.muteSettings[currentUserId] ?? 0;
+    final isMuted = muteExpiry == -1 || (muteExpiry > 0 && DateTime.now().millisecondsSinceEpoch < muteExpiry);
 
-    // Generate unique conversation ID sorting UIDs lexicographically
-    final uids = [currentUser.uid, otherUser.uid]..sort();
-    final conversationId = uids.join('_');
-
-    // Open chat screen immediately, passing conversation data
-    Navigator.pushNamed(
-      context,
-      Routes.chatScreen,
-      arguments: {
-        'conversationId': conversationId,
-        'partnerUid': otherUser.uid,
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.navBgColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36.w,
+                height: 4.h,
+                margin: EdgeInsets.only(bottom: 20.h),
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2.r),
+                ),
+              ),
+              ListTile(
+                leading: Icon(Icons.mark_chat_read_rounded, color: Colors.white, size: 20.sp),
+                title: Text('Mark as Read', style: TextStyle(color: Colors.white, fontSize: 14.sp)),
+                onTap: () async {
+                  Navigator.pop(context);
+                  // Mark as read in Firestore
+                  try {
+                    final convRef = FirebaseFirestore.instance.collection('conversations').doc(conv.id);
+                    await convRef.update({
+                      'unreadCounts.$currentUserId': 0,
+                      'lastSeen.$currentUserId': FieldValue.serverTimestamp(),
+                    });
+                    
+                    // Cancel push notifications
+                    await PushNotificationService.clearConversationNotifications(conv.id);
+                    
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Conversation marked as read'), duration: Duration(seconds: 2)),
+                      );
+                    }
+                  } catch (_) {}
+                },
+              ),
+              ListTile(
+                leading: Icon(isMuted ? Icons.notifications_active_rounded : Icons.notifications_off_rounded, color: Colors.white, size: 20.sp),
+                title: Text(isMuted ? 'Unmute Notifications' : 'Mute Notifications', style: TextStyle(color: Colors.white, fontSize: 14.sp)),
+                onTap: () async {
+                  Navigator.pop(context);
+                  if (isMuted) {
+                    // Unmute
+                    GetStorage().remove('mute_until_${conv.id}');
+                    await FirebaseFirestore.instance.collection('conversations').doc(conv.id).set({
+                      'muteSettings': {
+                        currentUserId: FieldValue.delete(),
+                      }
+                    }, SetOptions(merge: true));
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Notifications unmuted'), duration: Duration(seconds: 2)),
+                      );
+                    }
+                  } else {
+                    // Show mute duration dialog helper
+                    _showMuteDurationPicker(context, conv.id, currentUserId);
+                  }
+                },
+              ),
+            ],
+          ),
+        );
       },
     );
   }
 
-  void _showNewChatDialog(BuildContext context, InboxLoaded state) {
-    final inboxBloc = context.read<InboxBloc>();
+  void _showMuteDurationPicker(BuildContext context, String conversationId, String currentUserId) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.softBlack,
+      backgroundColor: AppColors.navBgColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
       ),
-      isScrollControlled: true,
-      builder: (modalContext) {
-        return BlocProvider.value(
-          value: inboxBloc,
-          child: StatefulBuilder(
-            builder: (context, setModalState) {
-              return Container(
-                height: MediaQuery.of(context).size.height * 0.75,
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
-                child: Column(
-                  children: [
-                    Container(
-                      width: 40.w,
-                      height: 4.h,
-                      decoration: BoxDecoration(
-                        color: Colors.white24,
-                        borderRadius: BorderRadius.circular(2.r),
-                      ),
-                    ),
-                    SizedBox(height: 20.h),
-                    Text(
-                      'New Message',
-                      style: TextFontStyle.textStyle16cFFFFFFDMSans600,
-                    ),
-                    SizedBox(height: 16.h),
-                    // Search bar in bottom sheet
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(20.r),
-                      ),
-                      child: TextField(
-                        style: const TextStyle(color: Colors.white),
-                        onChanged: (val) {
-                          inboxBloc.add(SearchUsersEvent(val));
-                        },
-                        decoration: InputDecoration(
-                          hintText: 'Search people...',
-                          hintStyle: TextStyle(color: Colors.white30, fontSize: 13.sp),
-                          prefixIcon: const Icon(Icons.search, color: Colors.white38),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(vertical: 12.h),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 16.h),
-                    Expanded(
-                      child: BlocBuilder<InboxBloc, InboxState>(
-                        builder: (context, innerState) {
-                          if (innerState is InboxLoaded) {
-                            final users = innerState.filteredUsers;
-                            if (users.isEmpty) {
-                              return const Center(
-                                child: Text(
-                                  'No users found',
-                                  style: TextStyle(color: Colors.white54),
-                                ),
-                              );
-                            }
-                            return ListView.builder(
-                              itemCount: users.length,
-                              itemBuilder: (context, index) {
-                                final user = users[index];
-                                return Material(
-                                  color: Colors.transparent,
-                                  child: ListTile(
-                                    onTap: () {
-                                      Navigator.pop(modalContext);
-                                      _startChatWithUser(context, user);
-                                    },
-                                    contentPadding: EdgeInsets.symmetric(vertical: 4.h),
-                                    leading: Stack(
-                                      children: [
-                                        CircleAvatar(
-                                          radius: 22.r,
-                                          backgroundColor: Colors.white10,
-                                          backgroundImage: user.profilePicture != null &&
-                                                  user.profilePicture!.isNotEmpty
-                                              ? CachedNetworkImageProvider(user.profilePicture!)
-                                              : null,
-                                          child: user.profilePicture == null ||
-                                                  user.profilePicture!.isEmpty
-                                              ? Icon(Icons.person, color: Colors.white30, size: 20.sp)
-                                              : null,
-                                        ),
-                                        if (user.isOnline)
-                                          Positioned(
-                                            right: 0,
-                                            bottom: 0,
-                                            child: Container(
-                                              width: 12.r,
-                                              height: 12.r,
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                color: Colors.green,
-                                                border: Border.all(
-                                                  color: AppColors.softBlack,
-                                                  width: 1.5.w,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                    title: Text(
-                                      user.displayName,
-                                      style: TextFontStyle.textStyle14cFFFFFFDMSans600,
-                                    ),
-                                    subtitle: Text(
-                                      user.isOnline ? 'Online' : 'Offline',
-                                      style: TextStyle(
-                                        color: user.isOnline ? Colors.green : AppColors.c8E8E9F,
-                                        fontSize: 12.sp,
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            );
-                          }
-                          return const Center(child: CircularProgressIndicator());
-                        },
-                      ),
-                    ),
-                  ],
+      builder: (context) {
+        final options = [
+          {'label': '5 Minutes', 'duration': const Duration(minutes: 5)},
+          {'label': '10 Minutes', 'duration': const Duration(minutes: 10)},
+          {'label': '1 Hour', 'duration': const Duration(hours: 1)},
+          {'label': '8 Hours', 'duration': const Duration(hours: 8)},
+          {'label': '1 Day', 'duration': const Duration(days: 1)},
+          {'label': 'Forever (Until I change it)', 'duration': null},
+        ];
+
+        return Container(
+          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36.w,
+                  height: 4.h,
+                  margin: EdgeInsets.only(bottom: 20.h),
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
                 ),
-              );
-            },
+              ),
+              Padding(
+                padding: EdgeInsets.only(left: 8.w, bottom: 12.h),
+                child: Text(
+                  'Mute Notifications',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.03),
+                  borderRadius: BorderRadius.circular(16.r),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: options.map((opt) {
+                    return Material(
+                      color: Colors.transparent,
+                      child: ListTile(
+                        title: Text(
+                          opt['label'] as String,
+                          style: TextStyle(color: Colors.white, fontSize: 14.sp),
+                        ),
+                        onTap: () async {
+                          final duration = opt['duration'] as Duration?;
+                          final expiry = duration != null
+                              ? DateTime.now().add(duration).millisecondsSinceEpoch
+                              : -1;
+                          
+                          GetStorage().write('mute_until_$conversationId', expiry);
+                          
+                          await FirebaseFirestore.instance.collection('conversations').doc(conversationId).set({
+                            'muteSettings': {
+                              currentUserId: expiry,
+                            }
+                          }, SetOptions(merge: true));
+
+                          if (!context.mounted) return;
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Notifications muted for ${opt['label']}'),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              UIHelper.verticalSpace(12.h),
+            ],
           ),
         );
       },
-    ).then((_) {
-      // Clear query filter on dialog dismiss
-      inboxBloc.add(const SearchUsersEvent(''));
-    });
+    );
   }
 
   @override
@@ -266,32 +279,6 @@ class _InboxViewState extends State<InboxView> {
                           fontSize: 24.sp,
                           fontWeight: FontWeight.w700,
                         ),
-                      ),
-                      BlocBuilder<InboxBloc, InboxState>(
-                        builder: (context, state) {
-                          if (state is InboxLoaded) {
-                            return GestureDetector(
-                              onTap: () => _showNewChatDialog(context, state),
-                              child: Container(
-                                padding: EdgeInsets.all(8.r),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white.withValues(alpha: 0.06),
-                                  border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.04),
-                                    width: 1.w,
-                                  ),
-                                ),
-                                child: Icon(
-                                  Icons.edit_note_rounded,
-                                  size: 24.sp,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            );
-                          }
-                          return const SizedBox.shrink();
-                        },
                       ),
                     ],
                   ),
@@ -376,6 +363,7 @@ class _InboxViewState extends State<InboxView> {
                                     },
                                   );
                                 },
+                                onLongPress: () => _showConversationOptionsSheet(context, conv, currentUserId),
                               );
                             },
                           ),

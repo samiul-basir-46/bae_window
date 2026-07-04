@@ -12,6 +12,10 @@ class ConversationModel {
   final Map<String, int> muteSettings;
   final DateTime updatedAt;
   final bool isGroup;
+  final String? themeWallpaper;
+  final double? themeOpacity;
+  final String? quickReaction;
+  final Map<String, String> nicknames;
   final DateTime createdAt;
   final UserModel? otherUser; // populated dynamically at presentation layer
 
@@ -27,6 +31,10 @@ class ConversationModel {
     this.isGroup = false,
     required this.createdAt,
     this.otherUser,
+    this.themeWallpaper,
+    this.themeOpacity,
+    this.quickReaction,
+    this.nicknames = const {},
   });
 
   factory ConversationModel.fromMap(String id, Map<String, dynamic> map, {UserModel? otherUser}) {
@@ -114,6 +122,10 @@ class ConversationModel {
       isGroup: map['isGroup'] as bool? ?? false,
       createdAt: createdDt,
       otherUser: otherUser,
+      themeWallpaper: map['themeWallpaper'] as String?,
+      themeOpacity: (map['themeOpacity'] as num?)?.toDouble(),
+      quickReaction: map['quickReaction'] as String?,
+      nicknames: map['nicknames'] != null ? Map<String, String>.from(map['nicknames'] as Map) : const {},
     );
   }
 
@@ -134,6 +146,10 @@ class ConversationModel {
       'updatedAt': Timestamp.fromDate(updatedAt),
       'isGroup': isGroup,
       'createdAt': Timestamp.fromDate(createdAt),
+      'themeWallpaper': themeWallpaper,
+      'themeOpacity': themeOpacity,
+      'quickReaction': quickReaction,
+      'nicknames': nicknames,
     };
   }
 
@@ -149,6 +165,10 @@ class ConversationModel {
     bool? isGroup,
     DateTime? createdAt,
     UserModel? otherUser,
+    String? themeWallpaper,
+    double? themeOpacity,
+    String? quickReaction,
+    Map<String, String>? nicknames,
   }) {
     return ConversationModel(
       id: id ?? this.id,
@@ -162,6 +182,10 @@ class ConversationModel {
       isGroup: isGroup ?? this.isGroup,
       createdAt: createdAt ?? this.createdAt,
       otherUser: otherUser ?? this.otherUser,
+      themeWallpaper: themeWallpaper ?? this.themeWallpaper,
+      themeOpacity: themeOpacity ?? this.themeOpacity,
+      quickReaction: quickReaction ?? this.quickReaction,
+      nicknames: nicknames ?? this.nicknames,
     );
   }
 }

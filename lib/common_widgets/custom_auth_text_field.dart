@@ -5,23 +5,33 @@ import 'package:google_fonts/google_fonts.dart';
 class CustomAuthTextField extends StatefulWidget {
   final TextEditingController controller;
   final String hintText;
-  final IconData prefixIcon;
+  final IconData? prefixIcon;
   final bool isPassword;
   final String? Function(String?)? validator;
   final TextInputType keyboardType;
   final TextInputAction? textInputAction;
   final void Function(String)? onFieldSubmitted;
+  final FocusNode? focusNode;
+  final int? minLines;
+  final int? maxLines;
+  final TextCapitalization textCapitalization;
+  final void Function(String)? onChanged;
 
   const CustomAuthTextField({
     super.key,
     required this.controller,
     required this.hintText,
-    required this.prefixIcon,
+    this.prefixIcon,
     this.isPassword = false,
     this.validator,
     this.keyboardType = TextInputType.text,
     this.textInputAction,
     this.onFieldSubmitted,
+    this.focusNode,
+    this.minLines,
+    this.maxLines,
+    this.textCapitalization = TextCapitalization.none,
+    this.onChanged,
   });
 
   @override
@@ -46,6 +56,11 @@ class _CustomAuthTextFieldState extends State<CustomAuthTextField> {
       textInputAction: widget.textInputAction,
       onFieldSubmitted: widget.onFieldSubmitted,
       validator: widget.validator,
+      focusNode: widget.focusNode,
+      minLines: widget.isPassword ? 1 : widget.minLines,
+      maxLines: widget.isPassword ? 1 : (widget.maxLines ?? 1),
+      textCapitalization: widget.textCapitalization,
+      onChanged: widget.onChanged,
       cursorColor: Colors.white,
       style: GoogleFonts.dmSans(color: Colors.white, fontSize: 14.sp),
       decoration: InputDecoration(
@@ -54,11 +69,13 @@ class _CustomAuthTextFieldState extends State<CustomAuthTextField> {
           color: const Color(0xFF555568),
           fontSize: 14.sp,
         ),
-        prefixIcon: Icon(
-          widget.prefixIcon,
-          color: Colors.white.withValues(alpha: 0.3),
-          size: 18.sp,
-        ),
+        prefixIcon: widget.prefixIcon != null
+            ? Icon(
+                widget.prefixIcon,
+                color: Colors.white.withValues(alpha: 0.3),
+                size: 18.sp,
+              )
+            : null,
         suffixIcon: widget.isPassword
             ? GestureDetector(
                 onTap: () => setState(() => _obscureText = !_obscureText),

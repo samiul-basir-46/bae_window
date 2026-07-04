@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:bea_window_app/features/chat/bloc/chat_bloc.dart';
 import 'package:bea_window_app/features/chat/bloc/chat_event.dart';
@@ -194,6 +196,19 @@ class _ChatViewState extends State<ChatView> {
                           });
                         },
                       ),
+                    _buildMenuActionTile(
+                      icon: Icons.push_pin_rounded,
+                      title: message.isPinned ? 'Unpin Message' : 'Pin Message',
+                      onTap: () {
+                        Navigator.pop(modalContext);
+                        FirebaseFirestore.instance
+                            .collection('conversations')
+                            .doc(widget.conversationId)
+                            .collection('messages')
+                            .doc(message.id)
+                            .update({'isPinned': !message.isPinned});
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -232,196 +247,225 @@ class _ChatViewState extends State<ChatView> {
   Widget build(BuildContext context) {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
-    return Scaffold(
-      backgroundColor: AppColors.softBlack,
-      appBar: _partnerUser != null
-          ? ChatAppBar(
-              partnerUser: _partnerUser!,
-              isTyping: context.watch<ChatBloc>().state.isRecipientTyping,
-            )
-          : AppBar(
-              backgroundColor: AppColors.navBgColor,
-              elevation: 0,
-              title: const Text('Chat'),
-            ),
-      body: BlocListener<UploadBloc, UploadState>(
-        listener: (context, state) {
-          if (state is UploadSuccess) {
-            final type = context.read<UploadBloc>().state is UploadingState 
-                ? ChatMessageType.text // fallback
-                : (state.thumbnailUrl != null ? ChatMessageType.video : ChatMessageType.image);
-            
-            // Auto-trigger message send upon media upload completion
-            context.read<ChatBloc>().add(SendMediaMessageEvent(
-              content: state.mediaUrl,
-              type: type,
-              videoThumbnail: state.thumbnailUrl,
-            ));
-          } else if (state is UploadFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Upload failed: ${state.error}')),
-            );
-          }
-        },
-        child: Column(
-          children: [
-            // Message Feed list
-            Expanded(
-              child: BlocBuilder<ChatBloc, ChatState>(
-                builder: (context, state) {
-                  if (state is ChatLoading) {
-                    return const Center(child: LoadingWidget());
-                  }
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance.collection('conversations').doc(widget.conversationId).snapshots(),
+      builder: (context, snapshot) {
+        final data = snapshot.data?.data() ?? {};
+        final themeWallpaper = data['themeWallpaper'] as String?;
+        final themeOpacity = (data['themeOpacity'] as num?)?.toDouble() ?? 0.5;
+        final quickReaction = data['quickReaction'] as String? ?? '👍';
 
-                  final messages = state.messages;
-                  if (messages.isEmpty) {
-                    return const EmptyChatWidget(
-                      title: 'Say hello!',
-                      subtitle: 'No messages in this chat. Type a message below to start chatting.',
-                    );
-                  }
+        return Scaffold(
+          backgroundColor: AppColors.softBlack,
+          appBar: _partnerUser != null
+              ? ChatAppBar(
+                  partnerUser: _partnerUser!,
+                  isTyping: context.watch<ChatBloc>().state.isRecipientTyping,
+                )
+              : AppBar(
+                  backgroundColor: AppColors.navBgColor,
+                  elevation: 0,
+                  title: const Text('Chat'),
+                ),
+          body: Stack(
+            children: [
+              if (themeWallpaper != null && themeWallpaper.isNotEmpty)
+                Positioned.fill(
+                  child: Opacity(
+                    opacity: themeOpacity,
+                    child: CachedNetworkImage(
+                      imageUrl: themeWallpaper,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(color: Colors.black),
+                      errorWidget: (context, url, err) => Container(color: Colors.black),
+                    ),
+                  ),
+                ),
+              Positioned.fill(
+                child: BlocListener<UploadBloc, UploadState>(
+                  listener: (context, state) {
+                    if (state is UploadSuccess) {
+                      final type = context.read<UploadBloc>().state is UploadingState 
+                          ? ChatMessageType.text // fallback
+                          : (state.thumbnailUrl != null ? ChatMessageType.video : ChatMessageType.image);
+                      
+                      // Auto-trigger message send upon media upload completion
+                      context.read<ChatBloc>().add(SendMediaMessageEvent(
+                        content: state.mediaUrl,
+                        type: type,
+                        videoThumbnail: state.thumbnailUrl,
+                      ));
+                    } else if (state is UploadFailure) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Upload failed: ${state.error}')),
+                      );
+                    }
+                  },
+                  child: Column(
+                    children: [
+                      // Message Feed list
+                      Expanded(
+                        child: BlocBuilder<ChatBloc, ChatState>(
+                          builder: (context, state) {
+                            if (state is ChatLoading) {
+                              return const Center(child: LoadingWidget());
+                            }
 
-                  // Construct visual list containing date separators
-                  final List<Widget> listItems = [];
-                  for (int i = 0; i < messages.length; i++) {
-                    final msg = messages[i];
-                    final showAvatar = i == 0 || messages[i - 1].senderId != msg.senderId;
+                            final messages = state.messages;
+                            if (messages.isEmpty) {
+                              return const EmptyChatWidget(
+                                title: 'Say hello!',
+                                subtitle: 'No messages in this chat. Type a message below to start chatting.',
+                              );
+                            }
 
-                    listItems.add(
-                      MessageBubble(
-                        message: msg,
-                        isMe: msg.senderId == currentUserId,
-                        showAvatar: showAvatar,
-                        senderName: _partnerUser?.displayName ?? 'Partner',
-                        senderAvatarUrl: _partnerUser?.profilePicture,
-                        partnerAvatarUrl: _partnerUser?.profilePicture,
-                        isLastMessage: i == 0,
-                        onSwipeToReply: (messageToReply) {
-                          context.read<ChatBloc>().add(ReplyToMessageEvent(messageToReply));
-                        },
-                        onLongPressMessage: (messageToReact, position) {
-                          _showLongPressMenu(context, messageToReact, position);
+                            // Construct visual list containing date separators
+                            final List<Widget> listItems = [];
+                            for (int i = 0; i < messages.length; i++) {
+                              final msg = messages[i];
+                              final showAvatar = i == 0 || messages[i - 1].senderId != msg.senderId;
+
+                              listItems.add(
+                                MessageBubble(
+                                  message: msg,
+                                  isMe: msg.senderId == currentUserId,
+                                  showAvatar: showAvatar,
+                                  senderName: _partnerUser?.displayName ?? 'Partner',
+                                  senderAvatarUrl: _partnerUser?.profilePicture,
+                                  partnerAvatarUrl: _partnerUser?.profilePicture,
+                                  isLastMessage: i == 0,
+                                  onSwipeToReply: (messageToReply) {
+                                    context.read<ChatBloc>().add(ReplyToMessageEvent(messageToReply));
+                                  },
+                                  onLongPressMessage: (messageToReact, position) {
+                                    _showLongPressMenu(context, messageToReact, position);
+                                  },
+                                ),
+                              );
+
+                              // Add date separators dynamically
+                              if (i < messages.length - 1) {
+                                final nextMsg = messages[i + 1];
+                                if (msg.timestamp.day != nextMsg.timestamp.day ||
+                                    msg.timestamp.month != nextMsg.timestamp.month ||
+                                    msg.timestamp.year != nextMsg.timestamp.year) {
+                                  listItems.add(DateSeparator(date: msg.timestamp));
+                                }
+                              } else {
+                                // Last message
+                                listItems.add(DateSeparator(date: msg.timestamp));
+                              }
+                            }
+
+                            // Scroll to bottom when a new message is received or sent
+                            return BlocListener<ChatBloc, ChatState>(
+                              listenWhen: (previous, current) {
+                                return previous.messages.length != current.messages.length;
+                              },
+                              listener: (context, state) {
+                                if (_scrollController.hasClients) {
+                                  _scrollController.animateTo(
+                                    0.0,
+                                    duration: const Duration(milliseconds: 300),
+                                    curve: Curves.easeOut,
+                                  );
+                                }
+                              },
+                              child: ListView.builder(
+                                controller: _scrollController,
+                                reverse: true,
+                                physics: const BouncingScrollPhysics(),
+                                itemCount: listItems.length,
+                                itemBuilder: (context, index) => listItems[index],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+
+                      // Upload progress display
+                      BlocBuilder<UploadBloc, UploadState>(
+                        builder: (context, state) {
+                          if (state is UploadingState) {
+                            return Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                              child: UploadProgressWidget(
+                                progress: state.progress,
+                                onCancel: () {
+                                  context.read<UploadBloc>().add(CancelUploadEvent());
+                                },
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
                         },
                       ),
-                    );
 
-                    // Add date separators dynamically
-                    if (i < messages.length - 1) {
-                      final nextMsg = messages[i + 1];
-                      if (msg.timestamp.day != nextMsg.timestamp.day ||
-                          msg.timestamp.month != nextMsg.timestamp.month ||
-                          msg.timestamp.year != nextMsg.timestamp.year) {
-                        listItems.add(DateSeparator(date: msg.timestamp));
-                      }
-                    } else {
-                      // Last message
-                      listItems.add(DateSeparator(date: msg.timestamp));
-                    }
-                  }
+                      // Reply Preview panel
+                      BlocBuilder<ChatBloc, ChatState>(
+                        builder: (context, state) {
+                          if (state.replyingTo != null) {
+                            final replyUser = state.replyingTo!.senderId == currentUserId
+                                ? 'You'
+                                : (_partnerUser?.displayName ?? 'Partner');
+                            return ReplyPreview(
+                              message: state.replyingTo!,
+                              senderName: replyUser,
+                              onCancel: () {
+                                context.read<ChatBloc>().add(const ReplyToMessageEvent(null));
+                              },
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
 
-                  // Scroll to bottom when a new message is received or sent
-                  return BlocListener<ChatBloc, ChatState>(
-                    listenWhen: (previous, current) {
-                      return previous.messages.length != current.messages.length;
-                    },
-                    listener: (context, state) {
-                      if (_scrollController.hasClients) {
-                        _scrollController.animateTo(
-                          0.0,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeOut,
-                        );
-                      }
-                    },
-                    child: ListView.builder(
-                      controller: _scrollController,
-                      reverse: true,
-                      physics: const BouncingScrollPhysics(),
-                      itemCount: listItems.length,
-                      itemBuilder: (context, index) => listItems[index],
-                    ),
-                  );
-                },
+                      // Text Input bar
+                      BlocBuilder<ChatBloc, ChatState>(
+                        builder: (context, state) {
+                          return MessageInput(
+                            editingMessage: _editingMessage,
+                            quickReaction: quickReaction,
+                            onSendText: (text) {
+                              context.read<ChatBloc>().add(SendTextMessageEvent(text));
+                            },
+                            onSendMedia: (file, type) {
+                              context.read<UploadBloc>().add(StartMediaUploadEvent(
+                                file: file,
+                                conversationId: widget.conversationId,
+                                type: type,
+                              ));
+                            },
+                            onTypingChanged: (isTyping) {
+                              context.read<ChatBloc>().add(UpdateTypingEvent(isTyping));
+                            },
+                            onCancelEdit: () {
+                              setState(() {
+                                _editingMessage = null;
+                              });
+                            },
+                            onFinishEdit: (newText) {
+                              if (_editingMessage != null) {
+                                context.read<ChatBloc>().add(EditMessageEvent(
+                                  messageId: _editingMessage!.id,
+                                  newContent: newText,
+                                ));
+                                setState(() {
+                                  _editingMessage = null;
+                                });
+                              }
+                            },
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-
-            // Upload progress display
-            BlocBuilder<UploadBloc, UploadState>(
-              builder: (context, state) {
-                if (state is UploadingState) {
-                  return Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                    child: UploadProgressWidget(
-                      progress: state.progress,
-                      onCancel: () {
-                        context.read<UploadBloc>().add(CancelUploadEvent());
-                      },
-                    ),
-                  );
-                }
-                return const SizedBox.shrink();
-              },
-            ),
-
-            // Reply Preview panel
-            BlocBuilder<ChatBloc, ChatState>(
-              builder: (context, state) {
-                if (state.replyingTo != null) {
-                  final replyUser = state.replyingTo!.senderId == currentUserId
-                      ? 'You'
-                      : (_partnerUser?.displayName ?? 'Partner');
-                  return ReplyPreview(
-                    message: state.replyingTo!,
-                    senderName: replyUser,
-                    onCancel: () {
-                      context.read<ChatBloc>().add(const ReplyToMessageEvent(null));
-                    },
-                  );
-                }
-                return const SizedBox.shrink();
-              },
-            ),
-
-            // Text Input bar
-            BlocBuilder<ChatBloc, ChatState>(
-              builder: (context, state) {
-                return MessageInput(
-                  editingMessage: _editingMessage,
-                  onSendText: (text) {
-                    context.read<ChatBloc>().add(SendTextMessageEvent(text));
-                  },
-                  onSendMedia: (file, type) {
-                    context.read<UploadBloc>().add(StartMediaUploadEvent(
-                      file: file,
-                      conversationId: widget.conversationId,
-                      type: type,
-                    ));
-                  },
-                  onTypingChanged: (isTyping) {
-                    context.read<ChatBloc>().add(UpdateTypingEvent(isTyping));
-                  },
-                  onCancelEdit: () {
-                    setState(() {
-                      _editingMessage = null;
-                    });
-                  },
-                  onFinishEdit: (newText) {
-                    if (_editingMessage != null) {
-                      context.read<ChatBloc>().add(EditMessageEvent(
-                        messageId: _editingMessage!.id,
-                        newContent: newText,
-                      ));
-                      setState(() {
-                        _editingMessage = null;
-                      });
-                    }
-                  },
-                );
-              },
-            ),
-          ],
-        ),
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

@@ -6,6 +6,7 @@ import 'package:bea_window_app/features/chat/models/conversation_model.dart';
 import 'package:bea_window_app/features/chat/models/message_model.dart';
 import 'package:bea_window_app/constants/text_font_style.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
+import 'package:bea_window_app/helpers/ui_helpers.dart';
 
 class ConversationTile extends StatelessWidget {
   final ConversationModel conversation;
@@ -163,7 +164,7 @@ class ConversationTile extends StatelessWidget {
                   color: hasUnread ? Colors.white70 : AppColors.c8E8E9F,
                 ),
               ),
-              SizedBox(height: 6.h),
+              UIHelper.verticalSpace(6.h),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -173,7 +174,7 @@ class ConversationTile extends StatelessWidget {
                       size: 14.sp,
                       color: AppColors.primaryPink.withValues(alpha: 0.8),
                     ),
-                  if (isMuted && hasUnread) SizedBox(width: 6.w),
+                  if (isMuted && hasUnread) UIHelper.horizontalSpace(6.w),
                   if (hasUnread)
                     Container(
                       padding: EdgeInsets.all(6.r),

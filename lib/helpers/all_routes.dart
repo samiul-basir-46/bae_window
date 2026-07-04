@@ -29,6 +29,8 @@ import 'package:bea_window_app/features/change_vault_passcode/presentation/scree
 import 'package:bea_window_app/features/notification_settings/presentation/screens/notification_settings_screen.dart';
 import 'package:bea_window_app/features/chat/presentation/screens/inbox_screen.dart';
 import 'package:bea_window_app/features/chat/presentation/screens/chat_screen.dart';
+import 'package:bea_window_app/features/chat/presentation/screens/chat_details_screen.dart';
+import 'package:bea_window_app/features/chat/models/user_model.dart';
 
 final class Routes {
   static final Routes _routes = Routes._internal();
@@ -66,6 +68,7 @@ final class Routes {
   // Chat Routes
   static const String inboxScreen = '/inbox';
   static const String chatScreen = '/chat';
+  static const String chatDetails = '/chatDetails';
 }
 
 final class RouteGenerator {
@@ -248,6 +251,23 @@ final class RouteGenerator {
                 widget: ChatScreen(
                   conversationId: conversationId,
                   partnerUid: partnerUid,
+                 ),
+                settings: settings);
+
+      case Routes.chatDetails:
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        final conversationId = args['conversationId'] as String? ?? '';
+        final partnerUser = args['partnerUser'] as UserModel;
+        return defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(
+                builder: (context) => ChatDetailsScreen(
+                      conversationId: conversationId,
+                      partnerUser: partnerUser,
+                    ))
+            : _FadedTransitionRoute(
+                widget: ChatDetailsScreen(
+                  conversationId: conversationId,
+                  partnerUser: partnerUser,
                 ),
                 settings: settings);
 
