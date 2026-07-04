@@ -8,6 +8,7 @@ import 'package:bea_window_app/features/home/presentation/screens/home_screens.d
 import 'package:bea_window_app/features/story/presentation/screens/story_screen.dart';
 import 'package:bea_window_app/features/space_screen/presentation/space_screen.dart';
 import 'package:bea_window_app/features/nest/presentation/screens/nest_screen.dart';
+import 'package:bea_window_app/features/chat/presentation/screens/inbox_screen.dart';
 import 'helpers/helper_methods.dart';
 import 'helpers/deep_link_helper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -39,6 +40,7 @@ class _NavigationScreenState extends State<NavigationScreen> with WidgetsBinding
     _screens = [
       const HomeScreen(),
       const StoryScreen(),
+      const InboxScreen(),
       const SpaceScreen(),
       const NestScreen(),
     ];
@@ -190,7 +192,7 @@ class _NavigationScreenState extends State<NavigationScreen> with WidgetsBinding
           ),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final double itemWidth = constraints.maxWidth / 4;
+              final double itemWidth = constraints.maxWidth / 5;
               return Stack(
                 children: [
                   // Smooth sliding background pill behind active tab
@@ -226,9 +228,11 @@ class _NavigationScreenState extends State<NavigationScreen> with WidgetsBinding
                           Icons.favorite_border_rounded, "Home"),
                       _buildNavItem(1, Icons.auto_stories_rounded,
                           Icons.menu_book_rounded, "Story"),
-                      _buildNavItem(2, Icons.explore_rounded,
+                      _buildNavItem(2, Icons.chat_bubble_rounded,
+                          Icons.chat_bubble_outline_rounded, "Chat"),
+                      _buildNavItem(3, Icons.explore_rounded,
                           Icons.explore_outlined, "Spaces"),
-                      _buildNavItem(3, Icons.shield_rounded,
+                      _buildNavItem(4, Icons.shield_rounded,
                           Icons.shield_outlined, "Nest"),
                     ],
                   ),

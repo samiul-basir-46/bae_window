@@ -27,6 +27,8 @@ import 'package:bea_window_app/features/nest/presentation/screens/account_pairin
 import 'package:bea_window_app/features/change_password/presentation/screens/change_password_screen.dart';
 import 'package:bea_window_app/features/change_vault_passcode/presentation/screens/change_vault_passcode_screen.dart';
 import 'package:bea_window_app/features/notification_settings/presentation/screens/notification_settings_screen.dart';
+import 'package:bea_window_app/features/chat/presentation/screens/inbox_screen.dart';
+import 'package:bea_window_app/features/chat/presentation/screens/chat_screen.dart';
 
 final class Routes {
   static final Routes _routes = Routes._internal();
@@ -60,6 +62,10 @@ final class Routes {
   static const String changePasswordScreen = '/changePassword';
   static const String changeVaultPasscodeScreen = '/changeVaultPasscode';
   static const String notificationSettingsScreen = '/notificationSettings';
+
+  // Chat Routes
+  static const String inboxScreen = '/inbox';
+  static const String chatScreen = '/chat';
 }
 
 final class RouteGenerator {
@@ -221,6 +227,29 @@ final class RouteGenerator {
                 builder: (context) => const NotificationSettingsScreen())
             : _FadedTransitionRoute(
                 widget: const NotificationSettingsScreen(), settings: settings);
+
+      case Routes.inboxScreen:
+        return defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(builder: (context) => const InboxScreen())
+            : _FadedTransitionRoute(
+                widget: const InboxScreen(), settings: settings);
+
+      case Routes.chatScreen:
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        final conversationId = args['conversationId'] as String?;
+        final partnerUid = args['partnerUid'] as String?;
+        return defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(
+                builder: (context) => ChatScreen(
+                      conversationId: conversationId,
+                      partnerUid: partnerUid,
+                    ))
+            : _FadedTransitionRoute(
+                widget: ChatScreen(
+                  conversationId: conversationId,
+                  partnerUid: partnerUid,
+                ),
+                settings: settings);
 
       default:
         return null;
