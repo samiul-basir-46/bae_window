@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -11,6 +12,7 @@ import 'package:bea_window_app/helpers/all_routes.dart';
 import 'package:bea_window_app/navigation_screen.dart';
 import 'package:bea_window_app/common_widgets/app_toast.dart';
 import 'package:bea_window_app/common_widgets/bae_loader.dart';
+import '../../../../gen/assets.gen.dart';
 import '../bloc/home_bloc.dart';
 import '../bloc/home_event.dart';
 import '../bloc/home_state.dart';
@@ -57,7 +59,8 @@ class HomeScreenView extends StatelessWidget {
             title: "Please wait",
             message: state.message,
             type: ToastType.info,
-            duration: const Duration(seconds: 5), // custom shorter duration for loading
+            duration: const Duration(
+                seconds: 5), // custom shorter duration for loading
           );
         } else if (state is HomeActionSuccess) {
           AppToast.show(
@@ -220,23 +223,29 @@ class HomeScreenView extends StatelessWidget {
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(24.r),
                                   child: BackdropFilter(
-                                    filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                                    filter: ImageFilter.blur(
+                                        sigmaX: 15, sigmaY: 15),
                                     child: Container(
                                       width: double.infinity,
                                       padding: EdgeInsets.all(20.w),
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withValues(alpha: 0.03),
-                                        borderRadius: BorderRadius.circular(24.r),
+                                        color: Colors.white
+                                            .withValues(alpha: 0.03),
+                                        borderRadius:
+                                            BorderRadius.circular(24.r),
                                         border: Border.all(
-                                          color: Colors.white.withValues(alpha: 0.05),
+                                          color: Colors.white
+                                              .withValues(alpha: 0.05),
                                           width: 1.w,
                                         ),
                                       ),
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Padding(
-                                            padding: EdgeInsets.only(left: 4.w, bottom: 8.h),
+                                            padding: EdgeInsets.only(
+                                                left: 4.w, bottom: 8.h),
                                             child: Text(
                                               "SPECIAL DAYS",
                                               style: GoogleFonts.dmSans(
@@ -252,25 +261,29 @@ class HomeScreenView extends StatelessWidget {
                                               Container(
                                                 padding: EdgeInsets.all(10.w),
                                                 decoration: BoxDecoration(
-                                                  color: AppColors.primaryPink.withValues(alpha: 0.1),
+                                                  color: AppColors.primaryPink
+                                                      .withValues(alpha: 0.1),
                                                   shape: BoxShape.circle,
                                                 ),
                                                 child: Text(
                                                   "📅",
-                                                  style: TextStyle(fontSize: 18.sp),
+                                                  style: TextStyle(
+                                                      fontSize: 18.sp),
                                                 ),
                                               ),
                                               SizedBox(width: 14.w),
                                               Expanded(
                                                 child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
                                                   children: [
                                                     Text(
                                                       "No upcoming special days",
                                                       style: GoogleFonts.dmSans(
                                                         color: Colors.white,
                                                         fontSize: 14.sp,
-                                                        fontWeight: FontWeight.bold,
+                                                        fontWeight:
+                                                            FontWeight.bold,
                                                       ),
                                                     ),
                                                     UIHelper.verticalSpace(2.h),
@@ -316,6 +329,60 @@ class HomeScreenView extends StatelessWidget {
                     return const SizedBox.shrink();
                   },
                 ),
+              ),
+            ),
+            Positioned(
+              right: 24.w,
+              bottom: 100.h,
+              child: BlocBuilder<HomeBloc, HomeState>(
+                builder: (context, state) {
+                  if (state is HomeLoaded && state.isPaired && state.coupleId != null) {
+                    final parts = state.coupleId!.split('_');
+                    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+                    final partnerUid = parts.firstWhere((id) => id != currentUserId, orElse: () => '');
+                    if (partnerUid.isNotEmpty) {
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.pushNamed(
+                            context,
+                            Routes.chatScreen,
+                            arguments: {
+                              'conversationId': state.coupleId,
+                              'partnerUid': partnerUid,
+                            },
+                          );
+                        },
+                        child: Container(
+                          width: 56.w,
+                          height: 56.h,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(
+                              colors: [AppColors.primaryPink, AppColors.primaryPurple],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primaryPink.withValues(alpha: 0.35),
+                                blurRadius: 16,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Assets.icons.message.image(
+                              width: 24.w,
+                              height: 24.w,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                  }
+                  return const SizedBox.shrink();
+                },
               ),
             ),
           ],

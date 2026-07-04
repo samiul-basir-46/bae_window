@@ -27,6 +27,11 @@ import 'package:bea_window_app/features/nest/presentation/screens/account_pairin
 import 'package:bea_window_app/features/change_password/presentation/screens/change_password_screen.dart';
 import 'package:bea_window_app/features/change_vault_passcode/presentation/screens/change_vault_passcode_screen.dart';
 import 'package:bea_window_app/features/notification_settings/presentation/screens/notification_settings_screen.dart';
+import 'package:bea_window_app/features/chat/presentation/screens/inbox_screen.dart';
+import 'package:bea_window_app/features/chat/presentation/screens/chat_screen.dart';
+import 'package:bea_window_app/features/chat/presentation/screens/chat_details_screen.dart';
+import 'package:bea_window_app/features/chat/presentation/screens/shared_media_screen.dart';
+import 'package:bea_window_app/features/chat/models/user_model.dart';
 
 final class Routes {
   static final Routes _routes = Routes._internal();
@@ -60,6 +65,12 @@ final class Routes {
   static const String changePasswordScreen = '/changePassword';
   static const String changeVaultPasscodeScreen = '/changeVaultPasscode';
   static const String notificationSettingsScreen = '/notificationSettings';
+
+  // Chat Routes
+  static const String inboxScreen = '/inbox';
+  static const String chatScreen = '/chat';
+  static const String chatDetails = '/chatDetails';
+  static const String mediaViewer = '/mediaViewer';
 }
 
 final class RouteGenerator {
@@ -221,6 +232,79 @@ final class RouteGenerator {
                 builder: (context) => const NotificationSettingsScreen())
             : _FadedTransitionRoute(
                 widget: const NotificationSettingsScreen(), settings: settings);
+
+      case Routes.inboxScreen:
+        return defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(builder: (context) => const InboxScreen())
+            : _FadedTransitionRoute(
+                widget: const InboxScreen(), settings: settings);
+
+      case Routes.chatScreen:
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        final conversationId = args['conversationId'] as String?;
+        final partnerUid = args['partnerUid'] as String?;
+        return defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(
+                builder: (context) => ChatScreen(
+                      conversationId: conversationId,
+                      partnerUid: partnerUid,
+                    ))
+            : _FadedTransitionRoute(
+                widget: ChatScreen(
+                  conversationId: conversationId,
+                  partnerUid: partnerUid,
+                 ),
+                settings: settings);
+
+      case Routes.chatDetails:
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        final conversationId = args['conversationId'] as String? ?? '';
+        final partnerUser = args['partnerUser'] as UserModel;
+        return defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(
+                builder: (context) => ChatDetailsScreen(
+                      conversationId: conversationId,
+                      partnerUser: partnerUser,
+                    ))
+            : _FadedTransitionRoute(
+                widget: ChatDetailsScreen(
+                  conversationId: conversationId,
+                  partnerUser: partnerUser,
+                ),
+                settings: settings);
+
+      case Routes.mediaViewer:
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        final url = args['url'] as String? ?? '';
+        final type = args['type'] as String? ?? 'image';
+        final fileName = args['fileName'] as String? ?? '';
+        final fileSize = args['fileSize'] as int?;
+        final isAudio = args['isAudio'] as bool? ?? false;
+        final mediaItems = args['mediaItems'] as List<Map<String, dynamic>>? ?? [];
+        final initialIndex = args['initialIndex'] as int? ?? 0;
+
+        return defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(
+                builder: (context) => FullScreenMediaViewer(
+                      url: url,
+                      type: type,
+                      fileName: fileName,
+                      fileSize: fileSize,
+                      isAudio: isAudio,
+                      mediaItems: mediaItems,
+                      initialIndex: initialIndex,
+                    ))
+            : _FadedTransitionRoute(
+                widget: FullScreenMediaViewer(
+                  url: url,
+                  type: type,
+                  fileName: fileName,
+                  fileSize: fileSize,
+                  isAudio: isAudio,
+                  mediaItems: mediaItems,
+                  initialIndex: initialIndex,
+                ),
+                settings: settings);
 
       default:
         return null;

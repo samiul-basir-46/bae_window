@@ -12,19 +12,45 @@ import 'package:flutter/widgets.dart';
 class $AssetsIconsGen {
   const $AssetsIconsGen();
 
+  /// File path: assets/icons/brush.png
+  AssetGenImage get brush => const AssetGenImage('assets/icons/brush.png');
+
+  /// File path: assets/icons/camera.png
+  AssetGenImage get camera => const AssetGenImage('assets/icons/camera.png');
+
   /// File path: assets/icons/google.png
   AssetGenImage get google => const AssetGenImage('assets/icons/google.png');
+
+  /// File path: assets/icons/message.png
+  AssetGenImage get message => const AssetGenImage('assets/icons/message.png');
 
   /// File path: assets/icons/notification_icon.png
   AssetGenImage get notificationIcon =>
       const AssetGenImage('assets/icons/notification_icon.png');
 
+  /// File path: assets/icons/pulse.png
+  AssetGenImage get pulse => const AssetGenImage('assets/icons/pulse.png');
+
+  /// File path: assets/icons/voice.png
+  AssetGenImage get voice => const AssetGenImage('assets/icons/voice.png');
+
   /// List of all assets
-  List<AssetGenImage> get values => [google, notificationIcon];
+  List<AssetGenImage> get values => [
+    brush,
+    camera,
+    google,
+    message,
+    notificationIcon,
+    pulse,
+    voice,
+  ];
 }
 
 class $AssetsImagesGen {
   const $AssetsImagesGen();
+
+  /// File path: assets/images/_.jpeg
+  AssetGenImage get a => const AssetGenImage('assets/images/_.jpeg');
 
   /// File path: assets/images/error_image.png
   AssetGenImage get errorImage =>
@@ -34,8 +60,32 @@ class $AssetsImagesGen {
   AssetGenImage get placeholderImage =>
       const AssetGenImage('assets/images/placeholder_image.jpeg');
 
+  /// File path: assets/images/theme_1.jpeg
+  AssetGenImage get theme1 => const AssetGenImage('assets/images/theme_1.jpeg');
+
+  /// File path: assets/images/theme_2.jpeg
+  AssetGenImage get theme2 => const AssetGenImage('assets/images/theme_2.jpeg');
+
+  /// File path: assets/images/theme_3.jpeg
+  AssetGenImage get theme3 => const AssetGenImage('assets/images/theme_3.jpeg');
+
+  /// File path: assets/images/theme_4.jpeg
+  AssetGenImage get theme4 => const AssetGenImage('assets/images/theme_4.jpeg');
+
+  /// File path: assets/images/theme_5.jpeg
+  AssetGenImage get theme5 => const AssetGenImage('assets/images/theme_5.jpeg');
+
   /// List of all assets
-  List<AssetGenImage> get values => [errorImage, placeholderImage];
+  List<AssetGenImage> get values => [
+    a,
+    errorImage,
+    placeholderImage,
+    theme1,
+    theme2,
+    theme3,
+    theme4,
+    theme5,
+  ];
 }
 
 class $AssetsLottieGen {
@@ -145,6 +195,10 @@ class Assets {
   static const $AssetsIconsGen icons = $AssetsIconsGen();
   static const $AssetsImagesGen images = $AssetsImagesGen();
   static const $AssetsLottieGen lottie = $AssetsLottieGen();
+  static const String serviceAccount = 'assets/service-account.json';
+
+  /// List of all assets
+  static List<String> get values => [serviceAccount];
 }
 
 class AssetGenImage {
