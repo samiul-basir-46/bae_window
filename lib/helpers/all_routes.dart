@@ -30,6 +30,7 @@ import 'package:bea_window_app/features/notification_settings/presentation/scree
 import 'package:bea_window_app/features/chat/presentation/screens/inbox_screen.dart';
 import 'package:bea_window_app/features/chat/presentation/screens/chat_screen.dart';
 import 'package:bea_window_app/features/chat/presentation/screens/chat_details_screen.dart';
+import 'package:bea_window_app/features/chat/presentation/screens/shared_media_screen.dart';
 import 'package:bea_window_app/features/chat/models/user_model.dart';
 
 final class Routes {
@@ -69,6 +70,7 @@ final class Routes {
   static const String inboxScreen = '/inbox';
   static const String chatScreen = '/chat';
   static const String chatDetails = '/chatDetails';
+  static const String mediaViewer = '/mediaViewer';
 }
 
 final class RouteGenerator {
@@ -268,6 +270,39 @@ final class RouteGenerator {
                 widget: ChatDetailsScreen(
                   conversationId: conversationId,
                   partnerUser: partnerUser,
+                ),
+                settings: settings);
+
+      case Routes.mediaViewer:
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        final url = args['url'] as String? ?? '';
+        final type = args['type'] as String? ?? 'image';
+        final fileName = args['fileName'] as String? ?? '';
+        final fileSize = args['fileSize'] as int?;
+        final isAudio = args['isAudio'] as bool? ?? false;
+        final mediaItems = args['mediaItems'] as List<Map<String, dynamic>>? ?? [];
+        final initialIndex = args['initialIndex'] as int? ?? 0;
+
+        return defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(
+                builder: (context) => FullScreenMediaViewer(
+                      url: url,
+                      type: type,
+                      fileName: fileName,
+                      fileSize: fileSize,
+                      isAudio: isAudio,
+                      mediaItems: mediaItems,
+                      initialIndex: initialIndex,
+                    ))
+            : _FadedTransitionRoute(
+                widget: FullScreenMediaViewer(
+                  url: url,
+                  type: type,
+                  fileName: fileName,
+                  fileSize: fileSize,
+                  isAudio: isAudio,
+                  mediaItems: mediaItems,
+                  initialIndex: initialIndex,
                 ),
                 settings: settings);
 

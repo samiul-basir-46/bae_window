@@ -15,14 +15,17 @@ import '../../../../helpers/all_routes.dart';
 class ChatAppBar extends StatefulWidget implements PreferredSizeWidget {
   final UserModel partnerUser;
   final bool isTyping;
+  final String conversationId;
+  final String? partnerName;
 
   const ChatAppBar({
     super.key,
     required this.partnerUser,
     required this.isTyping,
+    required this.conversationId,
+    this.partnerName,
   });
 
-  // ✅ শুধু toolbar height, statusbar Flutter নিজেই handle করবে AppBar এর মাধ্যমে
   @override
   Size get preferredSize => Size.fromHeight(66.h);
 
@@ -31,7 +34,6 @@ class ChatAppBar extends StatefulWidget implements PreferredSizeWidget {
 }
 
 class _ChatAppBarState extends State<ChatAppBar> {
-
   String _formatLastActive(DateTime? dateTime) {
     if (dateTime == null) return 'Offline';
     final difference = DateTime.now().difference(dateTime);
@@ -49,30 +51,27 @@ class _ChatAppBarState extends State<ChatAppBar> {
   @override
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
-    final String conversationId;
+    final String conversationId = widget.conversationId;
     bool isMuted = false;
     if (currentUser != null) {
-      final uids = [currentUser.uid, widget.partnerUser.uid]..sort();
-      conversationId = uids.join('_');
-      final muteExpiry = GetStorage().read<int>('mute_until_$conversationId') ?? 0;
-      isMuted = muteExpiry == -1 || (muteExpiry > 0 && DateTime.now().millisecondsSinceEpoch < muteExpiry);
-    } else {
-      conversationId = '';
+      final muteExpiry =
+          GetStorage().read<int>('mute_until_$conversationId') ?? 0;
+      isMuted = muteExpiry == -1 ||
+          (muteExpiry > 0 &&
+              DateTime.now().millisecondsSinceEpoch < muteExpiry);
     }
 
     return AppBar(
-      // ✅ toolbarHeight = preferredSize, Flutter নিজেই status bar safe area যোগ করবে
       toolbarHeight: widget.preferredSize.height,
       backgroundColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
-      // ✅ Blur এখন flexibleSpace-এ, এটা পুরো AppBar area (statusbar সহ) কভার করবে
       flexibleSpace: ClipRect(
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
           child: Container(
             decoration: BoxDecoration(
-              color: AppColors.navBgColor.withValues(alpha: 0.8),
+              color: AppColors.navBgColor.withValues(alpha: 0.6),
               border: Border(
                 bottom: BorderSide(
                   color: Colors.white.withValues(alpha: 0.08),
@@ -99,17 +98,31 @@ class _ChatAppBarState extends State<ChatAppBar> {
           children: [
             Stack(
               children: [
-                CircleAvatar(
-                  radius: 20.r,
-                  backgroundColor: Colors.white10,
-                  backgroundImage: widget.partnerUser.profilePicture != null &&
-                          widget.partnerUser.profilePicture!.isNotEmpty
-                      ? CachedNetworkImageProvider(widget.partnerUser.profilePicture!)
-                      : null,
-                  child: widget.partnerUser.profilePicture == null ||
-                          widget.partnerUser.profilePicture!.isEmpty
-                      ? Icon(Icons.person, color: Colors.white30, size: 20.sp)
-                      : null,
+                Container(
+                  width: 40.r,
+                  height: 40.r,
+                  decoration: const BoxDecoration(
+                    color: Colors.white10,
+                    shape: BoxShape.circle,
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: widget.partnerUser.profilePicture != null &&
+                          widget.partnerUser.profilePicture!.isNotEmpty &&
+                          widget.partnerUser.profilePicture != 'null'
+                      ? CachedNetworkImage(
+                          imageUrl: widget.partnerUser.profilePicture!,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Icon(
+                              Icons.person,
+                              color: Colors.white30,
+                              size: 20.sp),
+                          errorWidget: (context, url, error) => Icon(
+                              Icons.person,
+                              color: Colors.white30,
+                              size: 20.sp),
+                        )
+                      : Icon(Icons.person,
+                          color: Colors.white30, size: 20.sp),
                 ),
                 if (widget.partnerUser.isOnline)
                   Positioned(
@@ -137,7 +150,7 @@ class _ChatAppBarState extends State<ChatAppBar> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    widget.partnerUser.displayName,
+                    widget.partnerName ?? widget.partnerUser.displayName,
                     style: TextFontStyle.textStyle14cFFFFFFDMSans600.copyWith(
                       fontSize: 15.sp,
                     ),
@@ -173,7 +186,8 @@ class _ChatAppBarState extends State<ChatAppBar> {
         if (isMuted)
           Padding(
             padding: EdgeInsets.only(right: 4.w),
-            child: Icon(Icons.notifications_off_rounded, size: 16.sp, color: AppColors.primaryPink),
+            child: Icon(Icons.notifications_off_rounded,
+                size: 16.sp, color: AppColors.primaryPink),
           ),
         PopupMenuButton<String>(
           icon:
@@ -196,7 +210,10 @@ class _ChatAppBarState extends State<ChatAppBar> {
                   GetStorage().remove('mute_until_$conversationId');
                 });
                 if (currentUser != null && conversationId.isNotEmpty) {
-                  FirebaseFirestore.instance.collection('conversations').doc(conversationId).set({
+                  FirebaseFirestore.instance
+                      .collection('conversations')
+                      .doc(conversationId)
+                      .set({
                     'muteSettings': {
                       currentUser.uid: FieldValue.delete(),
                     }
@@ -230,8 +247,12 @@ class _ChatAppBarState extends State<ChatAppBar> {
               value: 'mute',
               child: Row(
                 children: [
-                  Icon(isMuted ? Icons.notifications_active_outlined : Icons.notifications_off_outlined,
-                      color: Colors.white70, size: 18.sp),
+                  Icon(
+                      isMuted
+                          ? Icons.notifications_active_outlined
+                          : Icons.notifications_off_outlined,
+                      color: Colors.white70,
+                      size: 18.sp),
                   SizedBox(width: 8.w),
                   Text(isMuted ? 'Unmute Notifications' : 'Mute Notifications',
                       style: TextStyle(color: Colors.white, fontSize: 13.sp)),
@@ -316,22 +337,30 @@ class _ChatAppBarState extends State<ChatAppBar> {
                       child: ListTile(
                         title: Text(
                           opt['label'] as String,
-                          style: TextStyle(color: Colors.white, fontSize: 14.sp),
+                          style:
+                              TextStyle(color: Colors.white, fontSize: 14.sp),
                         ),
                         onTap: () {
                           final duration = opt['duration'] as Duration?;
                           final expiry = duration != null
-                              ? DateTime.now().add(duration).millisecondsSinceEpoch
+                              ? DateTime.now()
+                                  .add(duration)
+                                  .millisecondsSinceEpoch
                               : -1;
-                          
+
                           setState(() {
-                            GetStorage().write('mute_until_$conversationId', expiry);
+                            GetStorage()
+                                .write('mute_until_$conversationId', expiry);
                           });
-                          
+
                           // Write to Firestore for cloud persistence
                           final currentUser = FirebaseAuth.instance.currentUser;
-                          if (currentUser != null && conversationId.isNotEmpty) {
-                            FirebaseFirestore.instance.collection('conversations').doc(conversationId).set({
+                          if (currentUser != null &&
+                              conversationId.isNotEmpty) {
+                            FirebaseFirestore.instance
+                                .collection('conversations')
+                                .doc(conversationId)
+                                .set({
                               'muteSettings': {
                                 currentUser.uid: expiry,
                               }
@@ -341,7 +370,8 @@ class _ChatAppBarState extends State<ChatAppBar> {
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Notifications muted for ${opt['label']}'),
+                              content: Text(
+                                  'Notifications muted for ${opt['label']}'),
                               duration: const Duration(seconds: 2),
                             ),
                           );
@@ -360,16 +390,11 @@ class _ChatAppBarState extends State<ChatAppBar> {
   }
 
   void _showPartnerProfile(BuildContext context) {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) return;
-    final uids = [currentUser.uid, widget.partnerUser.uid]..sort();
-    final conversationId = uids.join('_');
-
     Navigator.pushNamed(
       context,
       Routes.chatDetails,
       arguments: {
-        'conversationId': conversationId,
+        'conversationId': widget.conversationId,
         'partnerUser': widget.partnerUser,
       },
     );

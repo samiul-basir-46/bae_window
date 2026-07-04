@@ -20,9 +20,10 @@ class ReactionPicker extends StatelessWidget {
   ];
 
   void _showAllEmojisSheet(BuildContext context) {
+    final navigator = Navigator.of(context);
     onDismiss(); // Dismiss floating picker first
     showModalBottomSheet(
-      context: context,
+      context: navigator.context,
       backgroundColor: AppColors.softBlack,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),

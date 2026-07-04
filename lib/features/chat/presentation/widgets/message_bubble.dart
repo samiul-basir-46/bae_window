@@ -1,5 +1,7 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:bea_window_app/features/chat/models/message_model.dart';
@@ -8,6 +10,8 @@ import 'package:bea_window_app/features/chat/presentation/widgets/video_message.
 import 'package:bea_window_app/features/chat/presentation/widgets/file_message.dart';
 import 'package:bea_window_app/constants/text_font_style.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
+
+import '../../../../helpers/ui_helpers.dart';
 
 class MessageBubble extends StatefulWidget {
   final MessageModel message;
@@ -75,16 +79,83 @@ class _MessageBubbleState extends State<MessageBubble> {
                 : null,
             color: widget.isMe ? null : Colors.white.withValues(alpha: 0.05),
           ),
-          child: Text(
-            widget.message.content,
-            style: TextFontStyle.textStyle14cFFFFFFDMSans600.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w400,
-              fontSize: 14.5.sp,
-            ),
+          child: Text.rich(
+            _buildLinkifiedText(widget.message.content),
           ),
         );
     }
+  }
+
+  static final _urlRegex = RegExp(
+    r'(https?://[^\s]+)',
+    caseSensitive: false,
+  );
+
+  TextSpan _buildLinkifiedText(String text) {
+    final matches = _urlRegex.allMatches(text);
+    if (matches.isEmpty) {
+      return TextSpan(
+        text: text,
+        style: TextFontStyle.textStyle14cFFFFFFDMSans600.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.w400,
+          fontSize: 14.5.sp,
+        ),
+      );
+    }
+
+    final spans = <TextSpan>[];
+    int lastEnd = 0;
+
+    for (final match in matches) {
+      // Add normal text before this URL
+      if (match.start > lastEnd) {
+        spans.add(TextSpan(
+          text: text.substring(lastEnd, match.start),
+          style: TextFontStyle.textStyle14cFFFFFFDMSans600.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w400,
+            fontSize: 14.5.sp,
+          ),
+        ));
+      }
+
+      // Add the URL as a tappable link
+      final url = match.group(0)!;
+      spans.add(TextSpan(
+        text: url,
+        style: TextFontStyle.textStyle14cFFFFFFDMSans600.copyWith(
+          color: const Color(0xFF8BB4FF),
+          fontWeight: FontWeight.w500,
+          fontSize: 14.5.sp,
+          decoration: TextDecoration.underline,
+          decorationColor: const Color(0xFF8BB4FF),
+        ),
+        recognizer: TapGestureRecognizer()
+          ..onTap = () async {
+            final uri = Uri.tryParse(url);
+            if (uri != null) {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
+          },
+      ));
+
+      lastEnd = match.end;
+    }
+
+    // Add remaining text after the last URL
+    if (lastEnd < text.length) {
+      spans.add(TextSpan(
+        text: text.substring(lastEnd),
+        style: TextFontStyle.textStyle14cFFFFFFDMSans600.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.w400,
+          fontSize: 14.5.sp,
+        ),
+      ));
+    }
+
+    return TextSpan(children: spans);
   }
 
   Widget _buildRepliedPreview() {
@@ -116,7 +187,7 @@ class _MessageBubbleState extends State<MessageBubble> {
               letterSpacing: 0,
             ),
           ),
-          SizedBox(height: 2.h),
+          UIHelper.verticalSpace(2.h),
           Text(
             reply.type == ChatMessageType.text
                 ? reply.content
@@ -172,7 +243,7 @@ class _MessageBubbleState extends State<MessageBubble> {
               style: TextStyle(fontSize: 10.sp),
             ),
             if (widget.message.reactions.length > 1) ...[
-              SizedBox(width: 2.w),
+              UIHelper.horizontalSpace(2.w),
               Text(
                 widget.message.reactions.length.toString(),
                 style: TextStyle(
@@ -216,11 +287,27 @@ class _MessageBubbleState extends State<MessageBubble> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          if (isSeen && widget.partnerAvatarUrl != null && widget.partnerAvatarUrl!.isNotEmpty) ...[
-            CircleAvatar(
-              radius: 9.r,
-              backgroundColor: Colors.white10,
-              backgroundImage: CachedNetworkImageProvider(widget.partnerAvatarUrl!),
+          if (isSeen) ...[
+            Container(
+              width: 18.r,
+              height: 18.r,
+              decoration: const BoxDecoration(
+                color: Colors.white10,
+                shape: BoxShape.circle,
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: widget.partnerAvatarUrl != null &&
+                      widget.partnerAvatarUrl!.isNotEmpty &&
+                      widget.partnerAvatarUrl != 'null'
+                  ? CachedNetworkImage(
+                      imageUrl: widget.partnerAvatarUrl!,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) =>
+                          Icon(Icons.person, color: Colors.white30, size: 8.sp),
+                      errorWidget: (context, url, error) =>
+                          Icon(Icons.person, color: Colors.white30, size: 8.sp),
+                    )
+                  : Icon(Icons.person, color: Colors.white30, size: 8.sp),
             ),
           ] else if (widget.message.status == MessageStatus.sending) ...[
             SizedBox(
@@ -231,7 +318,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                 valueColor: const AlwaysStoppedAnimation(AppColors.primaryPink),
               ),
             ),
-            SizedBox(width: 5.w),
+            UIHelper.horizontalSpace(5.w),
             Text(
               statusText,
               style: TextStyle(
@@ -265,65 +352,95 @@ class _MessageBubbleState extends State<MessageBubble> {
       onLongPressStart: (details) {
         widget.onLongPressMessage(widget.message, details.globalPosition);
       },
-      child: Dismissible(
-        key: Key('reply_${widget.message.id}'),
-        direction: isMe ? DismissDirection.endToStart : DismissDirection.startToEnd,
-        dismissThresholds: const {
-          DismissDirection.endToStart: 0.35,
-          DismissDirection.startToEnd: 0.35,
-        },
-        background: Container(
-          alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-          padding: EdgeInsets.symmetric(horizontal: 20.w),
-          child: Icon(
-            Icons.reply_rounded,
-            color: AppColors.primaryPink,
-            size: 20.sp,
-          ),
-        ),
-        confirmDismiss: (direction) async {
-          widget.onSwipeToReply(widget.message);
-          return false; // Do not dismiss bubble from list
-        },
+      child: SwipeToReplyWrapper(
+        isMe: isMe,
+        onSwipe: () => widget.onSwipeToReply(widget.message),
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: 4.h, horizontal: 16.w),
           child: Column(
-            crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            crossAxisAlignment:
+                isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
             children: [
               Row(
-                mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                mainAxisAlignment:
+                    isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   if (!isMe && widget.showAvatar) ...[
-                    CircleAvatar(
-                      radius: 14.r,
-                      backgroundColor: Colors.white10,
-                      backgroundImage: widget.senderAvatarUrl != null &&
-                              widget.senderAvatarUrl!.isNotEmpty
-                          ? CachedNetworkImageProvider(widget.senderAvatarUrl!)
-                          : null,
-                      child: widget.senderAvatarUrl == null ||
-                              widget.senderAvatarUrl!.isEmpty
-                          ? Icon(Icons.person, color: Colors.white30, size: 14.sp)
-                          : null,
+                    Container(
+                      width: 28.r,
+                      height: 28.r,
+                      decoration: const BoxDecoration(
+                        color: Colors.white10,
+                        shape: BoxShape.circle,
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: widget.senderAvatarUrl != null &&
+                              widget.senderAvatarUrl!.isNotEmpty &&
+                              widget.senderAvatarUrl != 'null'
+                          ? CachedNetworkImage(
+                              imageUrl: widget.senderAvatarUrl!,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Icon(Icons.person,
+                                  color: Colors.white30, size: 14.sp),
+                              errorWidget: (context, url, error) => Icon(
+                                  Icons.person,
+                                  color: Colors.white30,
+                                  size: 14.sp),
+                            )
+                          : Icon(Icons.person,
+                              color: Colors.white30, size: 14.sp),
                     ),
-                    SizedBox(width: 8.w),
+                    UIHelper.horizontalSpace(8.w),
                   ] else if (!isMe && !widget.showAvatar) ...[
-                    SizedBox(width: 36.w), // alignment buffer when avatar is grouped/hidden
+                    UIHelper.horizontalSpace(
+                        36.w), // alignment buffer when avatar is grouped/hidden
                   ],
                   Flexible(
-                    child: Stack(
-                      clipBehavior: Clip.none,
+                    child: Column(
+                      crossAxisAlignment: isMe
+                          ? CrossAxisAlignment.end
+                          : CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Column(
-                          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
+                        _buildRepliedPreview(),
+                        Stack(
+                          clipBehavior: Clip.none,
                           children: [
-                            _buildRepliedPreview(),
                             _buildMessageContent(),
+                            _buildReactionsBadge(),
+                            if (widget.message.isPinned)
+                              Positioned(
+                                top: -6.h,
+                                left: isMe ? null : -6.w,
+                                right: isMe ? -6.w : null,
+                                child: Container(
+                                  padding: EdgeInsets.all(3.r),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primaryPink
+                                        .withValues(alpha: 0.9),
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color:
+                                            Colors.black.withValues(alpha: 0.3),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 1),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Transform.rotate(
+                                    angle: isMe ? 0.5 : -0.5,
+                                    child: Icon(
+                                      Icons.push_pin_rounded,
+                                      color: Colors.white,
+                                      size: 10.sp,
+                                    ),
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
-                        _buildReactionsBadge(),
                       ],
                     ),
                   ),
@@ -370,6 +487,111 @@ class _MessageBubbleState extends State<MessageBubble> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class SwipeToReplyWrapper extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onSwipe;
+  final bool isMe;
+
+  const SwipeToReplyWrapper({
+    super.key,
+    required this.child,
+    required this.onSwipe,
+    required this.isMe,
+  });
+
+  @override
+  State<SwipeToReplyWrapper> createState() => _SwipeToReplyWrapperState();
+}
+
+class _SwipeToReplyWrapperState extends State<SwipeToReplyWrapper>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  double _dragOffset = 0.0;
+  static const double _maxDragDistance = 60.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onHorizontalDragUpdate(DragUpdateDetails details) {
+    setState(() {
+      if (widget.isMe) {
+        _dragOffset += details.primaryDelta!;
+        if (_dragOffset > 0) _dragOffset = 0;
+        if (_dragOffset < -_maxDragDistance) _dragOffset = -_maxDragDistance;
+      } else {
+        _dragOffset += details.primaryDelta!;
+        if (_dragOffset < 0) _dragOffset = 0;
+        if (_dragOffset > _maxDragDistance) _dragOffset = _maxDragDistance;
+      }
+    });
+  }
+
+  void _onHorizontalDragEnd(DragEndDetails details) {
+    if (_dragOffset.abs() >= _maxDragDistance * 0.7) {
+      widget.onSwipe();
+    }
+    final double start = _dragOffset;
+    _controller.reset();
+    final Animation<double> animation = Tween<double>(
+      begin: start,
+      end: 0.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
+
+    animation.addListener(() {
+      setState(() {
+        _dragOffset = animation.value;
+      });
+    });
+    _controller.forward();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onHorizontalDragUpdate: _onHorizontalDragUpdate,
+      onHorizontalDragEnd: _onHorizontalDragEnd,
+      behavior: HitTestBehavior.translucent,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: widget.isMe ? null : 16.w,
+            right: widget.isMe ? 16.w : null,
+            top: 0,
+            bottom: 0,
+            child: Center(
+              child: Opacity(
+                opacity: (_dragOffset.abs() / _maxDragDistance).clamp(0.0, 1.0),
+                child: Icon(
+                  Icons.reply_rounded,
+                  color: AppColors.primaryPink,
+                  size: 20.sp,
+                ),
+              ),
+            ),
+          ),
+          Transform.translate(
+            offset: Offset(_dragOffset, 0),
+            child: widget.child,
+          ),
+        ],
       ),
     );
   }

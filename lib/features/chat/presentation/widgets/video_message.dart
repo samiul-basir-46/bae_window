@@ -119,6 +119,7 @@ class _VideoPlayerFullScreenState extends State<VideoPlayerFullScreen> {
         looping: false,
         aspectRatio: _videoPlayerController.value.aspectRatio,
         allowFullScreen: true,
+        showOptions: false,
         placeholder: Container(
           color: Colors.black,
           child: const Center(
@@ -151,11 +152,12 @@ class _VideoPlayerFullScreenState extends State<VideoPlayerFullScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.close, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
       ),

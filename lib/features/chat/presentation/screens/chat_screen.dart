@@ -41,13 +41,14 @@ class ChatScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
-    final resolvedConvId = conversationId ?? 
-        ([currentUserId, partnerUid ?? '']..sort()).join('_');
+    final resolvedConvId =
+        conversationId ?? ([currentUserId, partnerUid ?? '']..sort()).join('_');
 
     return MultiBlocProvider(
       providers: [
         BlocProvider<ChatBloc>(
-          create: (context) => ChatBloc()..add(LoadMessagesEvent(resolvedConvId)),
+          create: (context) =>
+              ChatBloc()..add(LoadMessagesEvent(resolvedConvId)),
         ),
         BlocProvider<UploadBloc>(
           create: (context) => UploadBloc(),
@@ -78,7 +79,7 @@ class ChatView extends StatefulWidget {
 class _ChatViewState extends State<ChatView> {
   final ScrollController _scrollController = ScrollController();
   final ChatRepository _chatRepository = locator<ChatRepository>();
-  
+
   UserModel? _partnerUser;
   MessageModel? _editingMessage;
   StreamSubscription<UserModel>? _partnerProfileSub;
@@ -104,7 +105,8 @@ class _ChatViewState extends State<ChatView> {
   void _onScroll() {
     if (_scrollController.hasClients) {
       // In reversed ListView, scrolling to top means position.pixels is near maxScrollExtent
-      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 200) {
         context.read<ChatBloc>().add(LoadMoreMessagesEvent());
       }
     }
@@ -116,7 +118,8 @@ class _ChatViewState extends State<ChatView> {
 
     // Listen to real-time changes in partner's profile (isOnline, lastActive, etc.)
     await _partnerProfileSub?.cancel();
-    _partnerProfileSub = _chatRepository.watchUserProfile(widget.partnerUid).listen((user) {
+    _partnerProfileSub =
+        _chatRepository.watchUserProfile(widget.partnerUid).listen((user) {
       if (mounted) {
         setState(() {
           _partnerUser = user;
@@ -125,7 +128,8 @@ class _ChatViewState extends State<ChatView> {
     });
   }
 
-  void _showLongPressMenu(BuildContext context, MessageModel message, Offset position) {
+  void _showLongPressMenu(
+      BuildContext context, MessageModel message, Offset position) {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
     final isOwnMessage = message.senderId == currentUserId;
 
@@ -154,10 +158,17 @@ class _ChatViewState extends State<ChatView> {
               // Reactions row
               ReactionPicker(
                 onReactionSelected: (emoji) {
-                  context.read<ChatBloc>().add(AddReactionEvent(messageId: message.id, emoji: emoji));
-                  Navigator.pop(modalContext);
+                  context.read<ChatBloc>().add(
+                      AddReactionEvent(messageId: message.id, emoji: emoji));
+                  if (modalContext.mounted) {
+                    Navigator.pop(modalContext);
+                  }
                 },
-                onDismiss: () => Navigator.pop(modalContext),
+                onDismiss: () {
+                  if (modalContext.mounted) {
+                    Navigator.pop(modalContext);
+                  }
+                },
               ),
               SizedBox(height: 24.h),
               // Action Buttons Grid/List
@@ -174,7 +185,9 @@ class _ChatViewState extends State<ChatView> {
                       title: 'Reply',
                       onTap: () {
                         Navigator.pop(modalContext);
-                        context.read<ChatBloc>().add(ReplyToMessageEvent(message));
+                        context
+                            .read<ChatBloc>()
+                            .add(ReplyToMessageEvent(message));
                       },
                     ),
                     _buildMenuActionTile(
@@ -248,18 +261,35 @@ class _ChatViewState extends State<ChatView> {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance.collection('conversations').doc(widget.conversationId).snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('conversations')
+          .doc(widget.conversationId)
+          .snapshots(),
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          debugPrint(
+              '🔥 ChatScreen theme StreamBuilder error: ${snapshot.error}');
+        }
         final data = snapshot.data?.data() ?? {};
         final themeWallpaper = data['themeWallpaper'] as String?;
         final themeOpacity = (data['themeOpacity'] as num?)?.toDouble() ?? 0.5;
         final quickReaction = data['quickReaction'] as String? ?? '👍';
+        final nicknamesMap = Map<String, String>.from(data['nicknames'] ?? {});
+        final partnerNickname = nicknamesMap[_partnerUser?.uid];
+        final partnerDisplayName = partnerNickname != null && partnerNickname.trim().isNotEmpty
+            ? partnerNickname
+            : (_partnerUser?.displayName ?? 'Partner');
+
+        debugPrint('🍏 ChatScreen StreamBuilder update - conversationId: "${widget.conversationId}", themeWallpaper: "$themeWallpaper", themeOpacity: $themeOpacity');
 
         return Scaffold(
+          extendBodyBehindAppBar: true,
           backgroundColor: AppColors.softBlack,
           appBar: _partnerUser != null
               ? ChatAppBar(
                   partnerUser: _partnerUser!,
+                  conversationId: widget.conversationId,
+                  partnerName: partnerDisplayName,
                   isTyping: context.watch<ChatBloc>().state.isRecipientTyping,
                 )
               : AppBar(
@@ -273,31 +303,42 @@ class _ChatViewState extends State<ChatView> {
                 Positioned.fill(
                   child: Opacity(
                     opacity: themeOpacity,
-                    child: CachedNetworkImage(
-                      imageUrl: themeWallpaper,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(color: Colors.black),
-                      errorWidget: (context, url, err) => Container(color: Colors.black),
-                    ),
+                    child: themeWallpaper.startsWith('http')
+                        ? CachedNetworkImage(
+                            imageUrl: themeWallpaper,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) =>
+                                Container(color: Colors.black),
+                            errorWidget: (context, url, err) =>
+                                Container(color: Colors.black),
+                          )
+                        : Image.asset(
+                            themeWallpaper,
+                            fit: BoxFit.cover,
+                          ),
                   ),
                 ),
               Positioned.fill(
                 child: BlocListener<UploadBloc, UploadState>(
                   listener: (context, state) {
                     if (state is UploadSuccess) {
-                      final type = context.read<UploadBloc>().state is UploadingState 
-                          ? ChatMessageType.text // fallback
-                          : (state.thumbnailUrl != null ? ChatMessageType.video : ChatMessageType.image);
-                      
+                      final type =
+                          context.read<UploadBloc>().state is UploadingState
+                              ? ChatMessageType.text // fallback
+                              : (state.thumbnailUrl != null
+                                  ? ChatMessageType.video
+                                  : ChatMessageType.image);
+
                       // Auto-trigger message send upon media upload completion
                       context.read<ChatBloc>().add(SendMediaMessageEvent(
-                        content: state.mediaUrl,
-                        type: type,
-                        videoThumbnail: state.thumbnailUrl,
-                      ));
+                            content: state.mediaUrl,
+                            type: type,
+                            videoThumbnail: state.thumbnailUrl,
+                          ));
                     } else if (state is UploadFailure) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Upload failed: ${state.error}')),
+                        SnackBar(
+                            content: Text('Upload failed: ${state.error}')),
                       );
                     }
                   },
@@ -315,7 +356,8 @@ class _ChatViewState extends State<ChatView> {
                             if (messages.isEmpty) {
                               return const EmptyChatWidget(
                                 title: 'Say hello!',
-                                subtitle: 'No messages in this chat. Type a message below to start chatting.',
+                                subtitle:
+                                    'No messages in this chat. Type a message below to start chatting.',
                               );
                             }
 
@@ -323,22 +365,27 @@ class _ChatViewState extends State<ChatView> {
                             final List<Widget> listItems = [];
                             for (int i = 0; i < messages.length; i++) {
                               final msg = messages[i];
-                              final showAvatar = i == 0 || messages[i - 1].senderId != msg.senderId;
+                              final showAvatar = i == 0 ||
+                                  messages[i - 1].senderId != msg.senderId;
 
                               listItems.add(
                                 MessageBubble(
                                   message: msg,
                                   isMe: msg.senderId == currentUserId,
                                   showAvatar: showAvatar,
-                                  senderName: _partnerUser?.displayName ?? 'Partner',
+                                  senderName: partnerDisplayName,
                                   senderAvatarUrl: _partnerUser?.profilePicture,
-                                  partnerAvatarUrl: _partnerUser?.profilePicture,
+                                  partnerAvatarUrl:
+                                      _partnerUser?.profilePicture,
                                   isLastMessage: i == 0,
                                   onSwipeToReply: (messageToReply) {
-                                    context.read<ChatBloc>().add(ReplyToMessageEvent(messageToReply));
+                                    context.read<ChatBloc>().add(
+                                        ReplyToMessageEvent(messageToReply));
                                   },
-                                  onLongPressMessage: (messageToReact, position) {
-                                    _showLongPressMenu(context, messageToReact, position);
+                                  onLongPressMessage:
+                                      (messageToReact, position) {
+                                    _showLongPressMenu(
+                                        context, messageToReact, position);
                                   },
                                 ),
                               );
@@ -346,21 +393,27 @@ class _ChatViewState extends State<ChatView> {
                               // Add date separators dynamically
                               if (i < messages.length - 1) {
                                 final nextMsg = messages[i + 1];
-                                if (msg.timestamp.day != nextMsg.timestamp.day ||
-                                    msg.timestamp.month != nextMsg.timestamp.month ||
-                                    msg.timestamp.year != nextMsg.timestamp.year) {
-                                  listItems.add(DateSeparator(date: msg.timestamp));
+                                if (msg.timestamp.day !=
+                                        nextMsg.timestamp.day ||
+                                    msg.timestamp.month !=
+                                        nextMsg.timestamp.month ||
+                                    msg.timestamp.year !=
+                                        nextMsg.timestamp.year) {
+                                  listItems
+                                      .add(DateSeparator(date: msg.timestamp));
                                 }
                               } else {
                                 // Last message
-                                listItems.add(DateSeparator(date: msg.timestamp));
+                                listItems
+                                    .add(DateSeparator(date: msg.timestamp));
                               }
                             }
 
                             // Scroll to bottom when a new message is received or sent
                             return BlocListener<ChatBloc, ChatState>(
                               listenWhen: (previous, current) {
-                                return previous.messages.length != current.messages.length;
+                                return previous.messages.length !=
+                                    current.messages.length;
                               },
                               listener: (context, state) {
                                 if (_scrollController.hasClients) {
@@ -374,9 +427,16 @@ class _ChatViewState extends State<ChatView> {
                               child: ListView.builder(
                                 controller: _scrollController,
                                 reverse: true,
+                                padding: EdgeInsets.only(
+                                  top: MediaQuery.of(context).padding.top + 76.h,
+                                  bottom: 12.h,
+                                  left: 8.w,
+                                  right: 8.w,
+                                ),
                                 physics: const BouncingScrollPhysics(),
                                 itemCount: listItems.length,
-                                itemBuilder: (context, index) => listItems[index],
+                                itemBuilder: (context, index) =>
+                                    listItems[index],
                               ),
                             );
                           },
@@ -388,11 +448,14 @@ class _ChatViewState extends State<ChatView> {
                         builder: (context, state) {
                           if (state is UploadingState) {
                             return Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 16.w, vertical: 8.h),
                               child: UploadProgressWidget(
                                 progress: state.progress,
                                 onCancel: () {
-                                  context.read<UploadBloc>().add(CancelUploadEvent());
+                                  context
+                                      .read<UploadBloc>()
+                                      .add(CancelUploadEvent());
                                 },
                               ),
                             );
@@ -405,14 +468,17 @@ class _ChatViewState extends State<ChatView> {
                       BlocBuilder<ChatBloc, ChatState>(
                         builder: (context, state) {
                           if (state.replyingTo != null) {
-                            final replyUser = state.replyingTo!.senderId == currentUserId
-                                ? 'You'
-                                : (_partnerUser?.displayName ?? 'Partner');
+                            final replyUser =
+                                state.replyingTo!.senderId == currentUserId
+                                    ? 'You'
+                                    : partnerDisplayName;
                             return ReplyPreview(
                               message: state.replyingTo!,
                               senderName: replyUser,
                               onCancel: () {
-                                context.read<ChatBloc>().add(const ReplyToMessageEvent(null));
+                                context
+                                    .read<ChatBloc>()
+                                    .add(const ReplyToMessageEvent(null));
                               },
                             );
                           }
@@ -427,17 +493,23 @@ class _ChatViewState extends State<ChatView> {
                             editingMessage: _editingMessage,
                             quickReaction: quickReaction,
                             onSendText: (text) {
-                              context.read<ChatBloc>().add(SendTextMessageEvent(text));
+                              context
+                                  .read<ChatBloc>()
+                                  .add(SendTextMessageEvent(text));
                             },
                             onSendMedia: (file, type) {
-                              context.read<UploadBloc>().add(StartMediaUploadEvent(
-                                file: file,
-                                conversationId: widget.conversationId,
-                                type: type,
-                              ));
+                              context
+                                  .read<UploadBloc>()
+                                  .add(StartMediaUploadEvent(
+                                    file: file,
+                                    conversationId: widget.conversationId,
+                                    type: type,
+                                  ));
                             },
                             onTypingChanged: (isTyping) {
-                              context.read<ChatBloc>().add(UpdateTypingEvent(isTyping));
+                              context
+                                  .read<ChatBloc>()
+                                  .add(UpdateTypingEvent(isTyping));
                             },
                             onCancelEdit: () {
                               setState(() {
@@ -447,9 +519,9 @@ class _ChatViewState extends State<ChatView> {
                             onFinishEdit: (newText) {
                               if (_editingMessage != null) {
                                 context.read<ChatBloc>().add(EditMessageEvent(
-                                  messageId: _editingMessage!.id,
-                                  newContent: newText,
-                                ));
+                                      messageId: _editingMessage!.id,
+                                      newContent: newText,
+                                    ));
                                 setState(() {
                                   _editingMessage = null;
                                 });

@@ -49,6 +49,9 @@ class $AssetsIconsGen {
 class $AssetsImagesGen {
   const $AssetsImagesGen();
 
+  /// File path: assets/images/_.jpeg
+  AssetGenImage get a => const AssetGenImage('assets/images/_.jpeg');
+
   /// File path: assets/images/error_image.png
   AssetGenImage get errorImage =>
       const AssetGenImage('assets/images/error_image.png');
@@ -57,8 +60,32 @@ class $AssetsImagesGen {
   AssetGenImage get placeholderImage =>
       const AssetGenImage('assets/images/placeholder_image.jpeg');
 
+  /// File path: assets/images/theme_1.jpeg
+  AssetGenImage get theme1 => const AssetGenImage('assets/images/theme_1.jpeg');
+
+  /// File path: assets/images/theme_2.jpeg
+  AssetGenImage get theme2 => const AssetGenImage('assets/images/theme_2.jpeg');
+
+  /// File path: assets/images/theme_3.jpeg
+  AssetGenImage get theme3 => const AssetGenImage('assets/images/theme_3.jpeg');
+
+  /// File path: assets/images/theme_4.jpeg
+  AssetGenImage get theme4 => const AssetGenImage('assets/images/theme_4.jpeg');
+
+  /// File path: assets/images/theme_5.jpeg
+  AssetGenImage get theme5 => const AssetGenImage('assets/images/theme_5.jpeg');
+
   /// List of all assets
-  List<AssetGenImage> get values => [errorImage, placeholderImage];
+  List<AssetGenImage> get values => [
+    a,
+    errorImage,
+    placeholderImage,
+    theme1,
+    theme2,
+    theme3,
+    theme4,
+    theme5,
+  ];
 }
 
 class $AssetsLottieGen {
