@@ -34,9 +34,10 @@ class _MessageInputState extends State<MessageInput> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   final ImagePicker _imagePicker = ImagePicker();
-  
+
   Timer? _typingTimer;
   bool _isTyping = false;
+  bool _hasText = false;
 
   @override
   void initState() {
@@ -47,7 +48,8 @@ class _MessageInputState extends State<MessageInput> {
   @override
   void didUpdateWidget(covariant MessageInput oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.editingMessage != null && oldWidget.editingMessage != widget.editingMessage) {
+    if (widget.editingMessage != null &&
+        oldWidget.editingMessage != widget.editingMessage) {
       _controller.text = widget.editingMessage!.content;
       _focusNode.requestFocus();
     }
@@ -63,7 +65,12 @@ class _MessageInputState extends State<MessageInput> {
   }
 
   void _onTextChanged() {
-    if (_controller.text.trim().isNotEmpty) {
+    final hasText = _controller.text.trim().isNotEmpty;
+    if (hasText != _hasText) {
+      setState(() => _hasText = hasText);
+    }
+
+    if (hasText) {
       if (!_isTyping) {
         _isTyping = true;
         widget.onTypingChanged(true);
@@ -125,7 +132,8 @@ class _MessageInputState extends State<MessageInput> {
         type: FileType.any,
       );
       if (result != null && result.files.single.path != null) {
-        widget.onSendMedia(File(result.files.single.path!), ChatMessageType.file);
+        widget.onSendMedia(
+            File(result.files.single.path!), ChatMessageType.file);
       }
     } catch (_) {}
   }
@@ -188,8 +196,9 @@ class _MessageInputState extends State<MessageInput> {
     required Color color,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(28.r),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -221,29 +230,42 @@ class _MessageInputState extends State<MessageInput> {
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.editingMessage != null;
+    final canSend = _hasText || isEditing;
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-      decoration: BoxDecoration(
-        color: AppColors.navBgColor,
-        border: Border(
-          top: BorderSide(
-            color: Colors.white.withValues(alpha: 0.08),
-            width: 1.w,
-          ),
-        ),
+      margin: EdgeInsets.only(
+        left: 12.w,
+        right: 12.w,
+        bottom: 12.h + MediaQuery.of(context).padding.bottom,
+        top: 4.h,
       ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (isEditing)
-              Row(
+      decoration: BoxDecoration(
+        color: AppColors.navBgColor.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(28.r),
+        border: Border.all(
+          color: AppColors.primaryPink.withValues(alpha: 0.12),
+          width: 1.w,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 12,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isEditing)
+            Padding(
+              padding: EdgeInsets.only(bottom: 8.h),
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Padding(
-                    padding: EdgeInsets.only(left: 8.w, bottom: 8.h),
+                    padding: EdgeInsets.only(left: 8.w),
                     child: Text(
                       'Editing message...',
                       style: TextFontStyle.textStyle12c8E8E9FDMSans600.copyWith(
@@ -254,10 +276,11 @@ class _MessageInputState extends State<MessageInput> {
                   GestureDetector(
                     onTap: widget.onCancelEdit,
                     child: Padding(
-                      padding: EdgeInsets.only(right: 8.w, bottom: 8.h),
+                      padding: EdgeInsets.only(right: 8.w),
                       child: Text(
                         'Cancel',
-                        style: TextFontStyle.textStyle12c8E8E9FDMSans600.copyWith(
+                        style:
+                            TextFontStyle.textStyle12c8E8E9FDMSans600.copyWith(
                           color: AppColors.c8E8E9F,
                         ),
                       ),
@@ -265,16 +288,18 @@ class _MessageInputState extends State<MessageInput> {
                   ),
                 ],
               ),
-            Row(
-              children: [
-                if (!isEditing)
-                  GestureDetector(
+            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (!isEditing)
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
                     onTap: _showAttachmentMenu,
-                    child: Container(
+                    borderRadius: BorderRadius.circular(20.r),
+                    child: Padding(
                       padding: EdgeInsets.all(8.r),
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                      ),
                       child: Icon(
                         Icons.add_circle_outline_rounded,
                         size: 24.sp,
@@ -282,68 +307,85 @@ class _MessageInputState extends State<MessageInput> {
                       ),
                     ),
                   ),
-                SizedBox(width: 4.w),
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
+                ),
+              SizedBox(width: 4.w),
+              Expanded(
+                child: Container(
+                  constraints: BoxConstraints(minHeight: 42.h),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(24.r),
+                    border: Border.all(
                       color: Colors.white.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(24.r),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.05),
-                        width: 1.w,
-                      ),
-                    ),
-                    child: TextField(
-                      controller: _controller,
-                      focusNode: _focusNode,
-                      minLines: 1,
-                      maxLines: 4,
-                      textCapitalization: TextCapitalization.sentences,
-                      style: TextFontStyle.textStyle14c8E8E9FDMSans400.copyWith(
-                        color: Colors.white,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: isEditing ? 'Edit message...' : 'Type a message...',
-                        hintStyle: TextFontStyle.textStyle14c949494DMSans400.copyWith(
-                          color: AppColors.c8E8E9F.withValues(alpha: 0.5),
-                        ),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-                        border: InputBorder.none,
-                      ),
+                      width: 1.w,
                     ),
                   ),
-                ),
-                SizedBox(width: 8.w),
-                GestureDetector(
-                  onTap: _handleSend,
-                  child: Container(
-                    padding: EdgeInsets.all(10.r),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        colors: [AppColors.primaryPink, AppColors.primaryPurple],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primaryPink.withValues(alpha: 0.3),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Icon(
-                      isEditing ? Icons.check_rounded : Icons.send_rounded,
-                      size: 18.sp,
+                  child: TextField(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    minLines: 1,
+                    maxLines: 4,
+                    textCapitalization: TextCapitalization.sentences,
+                    style: TextFontStyle.textStyle14c8E8E9FDMSans400.copyWith(
                       color: Colors.white,
                     ),
+                    decoration: InputDecoration(
+                      hintText:
+                          isEditing ? 'Edit message...' : 'Type a message...',
+                      hintStyle:
+                          TextFontStyle.textStyle14c949494DMSans400.copyWith(
+                        color: AppColors.c8E8E9F.withValues(alpha: 0.5),
+                      ),
+                      contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16.w, vertical: 10.h),
+                      border: InputBorder.none,
+                    ),
                   ),
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+              SizedBox(width: 8.w),
+              // Send button — টেক্সট থাকলে active gradient, না থাকলে dim/disabled
+              GestureDetector(
+                onTap: canSend ? _handleSend : null,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                  padding: EdgeInsets.all(10.r),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: canSend
+                        ? const LinearGradient(
+                            colors: [
+                              AppColors.primaryPink,
+                              AppColors.primaryPurple
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : null,
+                    color:
+                        canSend ? null : Colors.white.withValues(alpha: 0.08),
+                    boxShadow: canSend
+                        ? [
+                            BoxShadow(
+                              color:
+                                  AppColors.primaryPink.withValues(alpha: 0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ]
+                        : [],
+                  ),
+                  child: Icon(
+                    isEditing ? Icons.check_rounded : Icons.send_rounded,
+                    size: 18.sp,
+                    color: canSend ? Colors.white : Colors.white38,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

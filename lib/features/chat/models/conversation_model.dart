@@ -9,6 +9,7 @@ class ConversationModel {
   final Map<String, int> unreadCounts;
   final Map<String, DateTime> lastSeen;
   final Map<String, bool> typing;
+  final Map<String, int> muteSettings;
   final DateTime updatedAt;
   final bool isGroup;
   final DateTime createdAt;
@@ -21,6 +22,7 @@ class ConversationModel {
     this.unreadCounts = const {},
     this.lastSeen = const {},
     this.typing = const {},
+    this.muteSettings = const {},
     required this.updatedAt,
     this.isGroup = false,
     required this.createdAt,
@@ -79,6 +81,13 @@ class ConversationModel {
       });
     }
 
+    final muteMap = <String, int>{};
+    if (map['muteSettings'] is Map) {
+      (map['muteSettings'] as Map).forEach((k, v) {
+        muteMap[k.toString()] = int.tryParse(v.toString()) ?? 0;
+      });
+    }
+
     MessageModel? lastMsg;
     if (map['lastMessage'] != null && map['lastMessage'] is Map) {
       final lastMsgData = map['lastMessage'] as Map<String, dynamic>;
@@ -100,6 +109,7 @@ class ConversationModel {
       unreadCounts: unreadMap,
       lastSeen: seenMap,
       typing: typingMap,
+      muteSettings: muteMap,
       updatedAt: updatedDt,
       isGroup: map['isGroup'] as bool? ?? false,
       createdAt: createdDt,
@@ -120,6 +130,7 @@ class ConversationModel {
       'unreadCounts': unreadCounts,
       'lastSeen': seenMapRaw,
       'typing': typing,
+      'muteSettings': muteSettings,
       'updatedAt': Timestamp.fromDate(updatedAt),
       'isGroup': isGroup,
       'createdAt': Timestamp.fromDate(createdAt),
@@ -133,6 +144,7 @@ class ConversationModel {
     Map<String, int>? unreadCounts,
     Map<String, DateTime>? lastSeen,
     Map<String, bool>? typing,
+    Map<String, int>? muteSettings,
     DateTime? updatedAt,
     bool? isGroup,
     DateTime? createdAt,
@@ -145,6 +157,7 @@ class ConversationModel {
       unreadCounts: unreadCounts ?? this.unreadCounts,
       lastSeen: lastSeen ?? this.lastSeen,
       typing: typing ?? this.typing,
+      muteSettings: muteSettings ?? this.muteSettings,
       updatedAt: updatedAt ?? this.updatedAt,
       isGroup: isGroup ?? this.isGroup,
       createdAt: createdAt ?? this.createdAt,

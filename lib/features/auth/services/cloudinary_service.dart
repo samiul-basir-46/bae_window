@@ -16,6 +16,16 @@ class CloudinaryService {
     return _uploadFile(audioFile, resourceType: 'video');
   }
 
+  /// Cloudinary handles video files through the video resource endpoint.
+  static Future<String?> uploadVideo(File videoFile) async {
+    return _uploadFile(videoFile, resourceType: 'video');
+  }
+
+  /// Cloudinary handles generic document files through the raw resource endpoint.
+  static Future<String?> uploadFile(File genericFile) async {
+    return _uploadFile(genericFile, resourceType: 'raw');
+  }
+
   static Future<String?> _uploadFile(
     File file, {
     required String resourceType,

@@ -6,6 +6,7 @@ import 'package:bea_window_app/features/chat/bloc/chat_event.dart';
 import 'package:bea_window_app/features/chat/bloc/chat_state.dart';
 import 'package:bea_window_app/features/chat/models/message_model.dart';
 import 'package:bea_window_app/features/chat/repositories/chat_repository.dart';
+import 'package:bea_window_app/helpers/notification_service.dart';
 import 'package:bea_window_app/helpers/di.dart';
 
 class ChatBloc extends Bloc<ChatEvent, ChatState> {
@@ -24,6 +25,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<ReplyToMessageEvent>(_onReplyToMessage);
     on<EditMessageEvent>(_onEditMessage);
     on<UpdateTypingEvent>(_onUpdateTyping);
+    on<UpdateRecipientTypingEvent>(_onUpdateRecipientTyping);
     on<AddReactionEvent>(_onAddReaction);
     on<RemoveReactionEvent>(_onRemoveReaction);
     on<MarkAsSeenEvent>(_onMarkAsSeen);
@@ -35,7 +37,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   ) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      emit(ChatError(conversationId: event.conversationId, errorMsg: 'Authentication failed.'));
+      emit(ChatError(
+          conversationId: event.conversationId,
+          errorMsg: 'Authentication failed.'));
       return;
     }
     _currentUserId = user.uid;
@@ -44,10 +48,15 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
     // Resolve partner UID from the conversation UIDs
     try {
-      final convDoc = await FirebaseFirestore.instance.collection('conversations').doc(event.conversationId).get();
+      final convDoc = await FirebaseFirestore.instance
+          .collection('conversations')
+          .doc(event.conversationId)
+          .get();
       if (convDoc.exists) {
-        final participants = List<String>.from(convDoc.data()?['participants'] ?? []);
-        _partnerUserId = participants.firstWhere((uid) => uid != _currentUserId, orElse: () => '');
+        final participants =
+            List<String>.from(convDoc.data()?['participants'] ?? []);
+        _partnerUserId = participants.firstWhere((uid) => uid != _currentUserId,
+            orElse: () => '');
       }
     } catch (_) {}
 
@@ -57,9 +66,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         .listen((messages) {
       add(UpdateMessagesEvent(messages));
     }, onError: (err) {
-      if (!isClosed) {
-        emit(ChatError(conversationId: event.conversationId, errorMsg: err.toString()));
-      }
+      // Cannot call emit from stream listener — log instead
+      print('[ChatBloc] Messages stream error: $err');
     });
 
     // Subscribe to typing indicator status changes from the conversation doc
@@ -69,15 +77,15 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         .doc(event.conversationId)
         .snapshots()
         .listen((snapshot) {
-      if (snapshot.exists && snapshot.data() != null && _partnerUserId != null && _partnerUserId!.isNotEmpty) {
+      if (snapshot.exists &&
+          snapshot.data() != null &&
+          _partnerUserId != null &&
+          _partnerUserId!.isNotEmpty) {
         final typingMap = snapshot.data()!['typing'] as Map?;
         final partnerIsTyping = typingMap?[_partnerUserId] as bool? ?? false;
-        
-        if (state is ChatLoaded && !isClosed) {
-          final currentState = state as ChatLoaded;
-          if (currentState.isRecipientTyping != partnerIsTyping) {
-            emit(currentState.copyWith(isRecipientTyping: partnerIsTyping));
-          }
+
+        if (!isClosed) {
+          add(UpdateRecipientTypingEvent(partnerIsTyping));
         }
       }
     });
@@ -103,15 +111,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           .listen((messages) {
         add(UpdateMessagesEvent(messages));
       }, onError: (err) {
-        if (!isClosed) {
-          emit(ChatError(
-            conversationId: currentState.conversationId,
-            errorMsg: err.toString(),
-            messages: currentState.messages,
-            limit: currentState.limit,
-            hasMore: currentState.hasMore,
-          ));
-        }
+        // Cannot call emit from stream listener — log instead
+        print('[ChatBloc] Load more messages stream error: $err');
       });
     }
   }
@@ -122,7 +123,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   ) {
     final conversationId = state.conversationId;
     final currentLimit = state.limit;
-    
+
     // If the number of messages returned is less than the current query limit,
     // we have fetched all messages from history.
     final hasMore = event.messages.length >= currentLimit;
@@ -195,7 +196,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   ) async {
     if (state is ChatLoaded && _currentUserId != null) {
       final currentState = state as ChatLoaded;
-      
+
       RepliedMessageModel? repliedToModel;
       if (currentState.replyingTo != null) {
         repliedToModel = RepliedMessageModel(
@@ -323,21 +324,42 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           conversationId: state.conversationId,
           currentUserId: _currentUserId!,
         );
+        // Clear local notifications for this conversation
+        unawaited(PushNotificationService.clearConversationNotifications(state.conversationId));
       } catch (_) {}
     }
   }
 
+  void _onUpdateRecipientTyping(
+    UpdateRecipientTypingEvent event,
+    Emitter<ChatState> emit,
+  ) {
+    if (state is ChatLoaded) {
+      final currentState = state as ChatLoaded;
+      if (currentState.isRecipientTyping != event.isTyping) {
+        emit(currentState.copyWith(isRecipientTyping: event.isTyping));
+      }
+    }
+  }
+
   @override
-  Future<void> close() {
+  Future<void> close() async {
     _messagesSub?.cancel();
     _convSub?.cancel();
-    // Reset typing status on exit
+    
+    // Mark messages as seen one final time upon leaving to ensure unread counts are synced
     if (_currentUserId != null && state.conversationId.isNotEmpty) {
-      _chatRepository.setTypingStatus(
-        conversationId: state.conversationId,
-        userId: _currentUserId!,
-        isTyping: false,
-      );
+      try {
+        await _chatRepository.markMessagesAsSeen(
+          conversationId: state.conversationId,
+          currentUserId: _currentUserId!,
+        );
+        await _chatRepository.setTypingStatus(
+          conversationId: state.conversationId,
+          userId: _currentUserId!,
+          isTyping: false,
+        );
+      } catch (_) {}
     }
     return super.close();
   }

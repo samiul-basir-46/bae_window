@@ -6,6 +6,7 @@ import 'package:bea_window_app/features/chat/bloc/inbox_state.dart';
 import 'package:bea_window_app/features/chat/models/conversation_model.dart';
 import 'package:bea_window_app/features/chat/models/user_model.dart';
 import 'package:bea_window_app/features/chat/repositories/chat_repository.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:bea_window_app/helpers/di.dart';
 
 class InboxBloc extends Bloc<InboxEvent, InboxState> {
@@ -62,6 +63,10 @@ class InboxBloc extends Bloc<InboxEvent, InboxState> {
         (uid) => uid != currentUser.uid,
         orElse: () => '',
       );
+
+      // Sync cloud mute settings into local GetStorage
+      final muteExpiry = conv.muteSettings[currentUser.uid] ?? 0;
+      GetStorage().write('mute_until_${conv.id}', muteExpiry);
 
       if (partnerUid.isNotEmpty) {
         if (_resolvedUsers.containsKey(partnerUid)) {

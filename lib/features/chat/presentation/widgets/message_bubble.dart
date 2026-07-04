@@ -107,7 +107,9 @@ class _MessageBubbleState extends State<MessageBubble> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            reply.senderId == widget.message.senderId ? 'Replied to self' : 'Replied to partner',
+            reply.senderId == widget.message.senderId
+                ? 'Replied to self'
+                : 'Replied to ${widget.senderName}',
             style: TextFontStyle.textStyle10c888888DMSans600.copyWith(
               color: AppColors.primaryPink.withValues(alpha: 0.8),
               fontSize: 10.sp,
@@ -189,50 +191,67 @@ class _MessageBubbleState extends State<MessageBubble> {
   Widget _buildStatusIndicator() {
     if (!widget.isMe || !widget.isLastMessage) return const SizedBox.shrink();
 
-    if (widget.message.status == MessageStatus.seen &&
-        widget.partnerAvatarUrl != null &&
-        widget.partnerAvatarUrl!.isNotEmpty) {
-      return Padding(
-        padding: EdgeInsets.only(top: 4.h, right: 8.w),
-        child: CircleAvatar(
-          radius: 7.r,
-          backgroundColor: Colors.white10,
-          backgroundImage: CachedNetworkImageProvider(widget.partnerAvatarUrl!),
-        ),
-      );
-    }
+    String statusText = '';
+    Color statusColor = AppColors.c8E8E9F.withValues(alpha: 0.7);
+    bool isSeen = widget.message.status == MessageStatus.seen;
 
-    IconData icon;
-    Color color = AppColors.c8E8E9F.withValues(alpha: 0.5);
-    
     switch (widget.message.status) {
       case MessageStatus.seen:
-        icon = Icons.done_all_rounded;
-        color = AppColors.primaryPink;
+        statusColor = AppColors.primaryPink;
         break;
       case MessageStatus.delivered:
-        icon = Icons.done_all_rounded;
+        statusText = 'Delivered';
         break;
       case MessageStatus.sent:
-        icon = Icons.done_rounded;
+        statusText = 'Sent';
         break;
       case MessageStatus.sending:
-        return Padding(
-          padding: EdgeInsets.only(top: 4.h, right: 8.w),
-          child: SizedBox(
-            width: 10.r,
-            height: 10.r,
-            child: CircularProgressIndicator(
-              strokeWidth: 1.w,
-              valueColor: const AlwaysStoppedAnimation(AppColors.primaryPink),
-            ),
-          ),
-        );
+        statusText = 'Sending...';
+        break;
     }
 
     return Padding(
-      padding: EdgeInsets.only(top: 2.h, right: 8.w),
-      child: Icon(icon, size: 12.sp, color: color),
+      padding: EdgeInsets.only(top: 4.h, right: 6.w),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          if (isSeen && widget.partnerAvatarUrl != null && widget.partnerAvatarUrl!.isNotEmpty) ...[
+            CircleAvatar(
+              radius: 9.r,
+              backgroundColor: Colors.white10,
+              backgroundImage: CachedNetworkImageProvider(widget.partnerAvatarUrl!),
+            ),
+          ] else if (widget.message.status == MessageStatus.sending) ...[
+            SizedBox(
+              width: 8.r,
+              height: 8.r,
+              child: CircularProgressIndicator(
+                strokeWidth: 1.w,
+                valueColor: const AlwaysStoppedAnimation(AppColors.primaryPink),
+              ),
+            ),
+            SizedBox(width: 5.w),
+            Text(
+              statusText,
+              style: TextStyle(
+                color: statusColor,
+                fontSize: 10.sp,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ] else ...[
+            Text(
+              statusText,
+              style: TextStyle(
+                color: statusColor,
+                fontSize: 10.sp,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 

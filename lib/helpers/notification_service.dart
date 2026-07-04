@@ -331,11 +331,84 @@ class PushNotificationService {
     ));
   }
 
+  static Future<void> clearConversationNotifications(String conversationId) async {
+    final notificationId = conversationId.hashCode;
+    await _localNotifications.cancel(id: notificationId);
+    final key = 'unread_msgs_$conversationId';
+    await GetStorage().remove(key);
+  }
+
   static Future<void> showRemoteMessage(RemoteMessage message) async {
     await initializeLocalNotifications();
     final notification = message.notification;
     final title = notification?.title ?? message.data['title']?.toString();
     final body = notification?.body ?? message.data['body']?.toString();
+    
+    final type = message.data['type']?.toString();
+    if (type == 'chat') {
+      final conversationId = message.data['conversationId']?.toString() ?? '';
+      if (conversationId.isNotEmpty) {
+        final activeId = GetStorage().read<String>('active_conversation_id');
+        if (activeId == conversationId) {
+          // User is currently viewing this conversation, do not show notification
+          return;
+        }
+
+        final muteExpiry = GetStorage().read<int>('mute_until_$conversationId') ?? 0;
+        if (muteExpiry == -1 || (muteExpiry > 0 && DateTime.now().millisecondsSinceEpoch < muteExpiry)) {
+          // Conversation is muted
+          return;
+        }
+      }
+
+      final senderName = message.data['senderName']?.toString() ?? title ?? 'Partner';
+      final messageText = body ?? message.data['body']?.toString() ?? '';
+      
+      final key = 'unread_msgs_$conversationId';
+      final storage = GetStorage();
+      final List<dynamic> rawList = storage.read<List<dynamic>>(key) ?? [];
+      final List<String> list = rawList.map((e) => e.toString()).toList();
+      list.add(messageText);
+      storage.write(key, list);
+
+      final notificationId = conversationId.hashCode;
+      final summaryText = '${list.length} new messages';
+
+      final inboxStyle = InboxStyleInformation(
+        list,
+        contentTitle: senderName,
+        summaryText: summaryText,
+      );
+
+      final androidDetails = AndroidNotificationDetails(
+        'chat_messages',
+        'Chat Messages',
+        channelDescription: 'Real-time chat messages from your partner',
+        importance: Importance.max,
+        priority: Priority.high,
+        styleInformation: inboxStyle,
+        groupKey: conversationId,
+        setAsGroupSummary: false,
+      );
+
+      final darwinDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        threadIdentifier: conversationId,
+      );
+
+      await _localNotifications.show(
+        id: notificationId,
+        title: senderName,
+        body: list.length > 1 ? '${list.length} new messages: ${list.last}' : list.last,
+        notificationDetails: NotificationDetails(android: androidDetails, iOS: darwinDetails),
+        payload: jsonEncode(message.data),
+      );
+
+      return;
+    }
+
     if (title == null && body == null) return;
 
     final isQuiet = message.data['quiet'] == 'true';
@@ -428,6 +501,30 @@ class PushNotificationService {
 
   static void _openNotification(Map<String, dynamic> data) {
     final route = data['route']?.toString();
+    if (route == 'chat') {
+      final conversationId = data['conversationId']?.toString() ?? '';
+      final partnerUid = data['partnerUid']?.toString() ?? '';
+
+      // Clear notifications for this conversation
+      unawaited(clearConversationNotifications(conversationId));
+
+      void navigate() {
+        NavigationService.navigatorKey.currentState?.pushNamed(
+          Routes.chatScreen,
+          arguments: {
+            'conversationId': conversationId,
+            'partnerUid': partnerUid,
+          },
+        );
+      }
+
+      if (NavigationService.navigatorKey.currentState == null) {
+        Future<void>.delayed(const Duration(milliseconds: 800), navigate);
+      } else {
+        navigate();
+      }
+      return;
+    }
 
     if (route == 'trivia') {
       final questionText = data['questionText']?.toString() ?? '';
@@ -520,6 +617,28 @@ class PushNotificationService {
       );
       _cachedAccessToken = null;
       _tokenExpiresAt = null;
+      return null;
+    }
+  }
+
+  static Future<String?> _getPartnerUid() async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+    try {
+      final userSnapshot = await _firestore.collection('users').doc(user.uid).get();
+      if (!userSnapshot.exists) return null;
+      final userData = userSnapshot.data();
+      if (userData == null || userData['pairStatus'] != 'paired') return null;
+      final pairId = userData['pairId'] as String?;
+      if (pairId == null || pairId.isEmpty) return null;
+      final coupleSnapshot = await _firestore.collection('couples').doc(pairId).get();
+      if (!coupleSnapshot.exists) return null;
+      final coupleData = coupleSnapshot.data();
+      if (coupleData == null) return null;
+      final user1Uid = coupleData['user1Uid'] as String?;
+      final user2Uid = coupleData['user2Uid'] as String?;
+      return (user1Uid == user.uid) ? user2Uid : user1Uid;
+    } catch (_) {
       return null;
     }
   }
@@ -655,6 +774,22 @@ class PushNotificationService {
             'FCM v1 failed to send notification: ${response.statusCode} - ${response.body}',
             name: 'PushNotificationService',
           );
+          // If the token is unregistered/invalid (404), remove it from the partner's list in Firestore
+          if (response.statusCode == 404) {
+            try {
+              final bodyJson = jsonDecode(response.body);
+              final errorCode = bodyJson['error']?['details']?[0]?['errorCode'];
+              if (errorCode == 'UNREGISTERED') {
+                final partnerUid = await _getPartnerUid();
+                if (partnerUid != null && partnerUid.isNotEmpty) {
+                  await _firestore.collection('users').doc(partnerUid).update({
+                    'fcmTokens': FieldValue.arrayRemove([token]),
+                  });
+                  dev.log('Removed unregistered FCM token from partner profile.', name: 'PushNotificationService');
+                }
+              }
+            } catch (_) {}
+          }
         }
       }
     } catch (e) {

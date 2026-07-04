@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:bea_window_app/features/chat/models/message_model.dart';
+import 'package:bea_window_app/helpers/notification_service.dart';
+import 'dart:developer' as dev;
 
 class MessageService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -46,11 +48,21 @@ class MessageService {
     int? fileSize,
     String? videoThumbnail,
   }) async {
-    final messageRef = _firestore
-        .collection('conversations')
-        .doc(conversationId)
-        .collection('messages')
-        .doc();
+    final convRef = _firestore.collection('conversations').doc(conversationId);
+    
+    // Ensure conversation exists first
+    final convDoc = await convRef.get();
+    if (!convDoc.exists) {
+      final parts = conversationId.split('_');
+      if (parts.length == 2) {
+        await ensureConversationExists(
+          conversationId: conversationId,
+          participants: parts,
+        );
+      }
+    }
+
+    final messageRef = convRef.collection('messages').doc();
 
     final message = MessageModel(
       id: messageRef.id,
@@ -68,26 +80,63 @@ class MessageService {
     // Save message document
     await messageRef.set(message.toMap());
 
-    // Find recipient UIDs (participants that are not the sender)
-    final convDoc = await _firestore.collection('conversations').doc(conversationId).get();
-    final participants = List<String>.from(convDoc.data()?['participants'] ?? []);
-    final recipients = participants.where((uid) => uid != senderId).toList();
+    // Safely update conversation metadata and increment unread counts using a transaction
+    await _firestore.runTransaction((transaction) async {
+      final freshConvDoc = await transaction.get(convRef);
+      if (!freshConvDoc.exists) return;
 
-    final updates = <String, dynamic>{
-      'lastMessage': message.toMap(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    };
+      final participants = List<String>.from(freshConvDoc.data()?['participants'] ?? []);
+      final recipients = participants.where((uid) => uid != senderId).toList();
 
-    // Increment unread count for recipients
-    for (final recipientId in recipients) {
-      updates['unreadCounts.$recipientId'] = FieldValue.increment(1);
+      final updates = <String, dynamic>{
+        'lastMessage': message.toMap(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      for (final recipientId in recipients) {
+        final currentCount = (freshConvDoc.data()?['unreadCounts']?[recipientId] as int?) ?? 0;
+        updates['unreadCounts.$recipientId'] = currentCount + 1;
+      }
+
+      transaction.update(convRef, updates);
+    });
+
+    // Send FCM notification to partner
+    try {
+      final senderName = await PushNotificationService.getSenderName();
+      String bodySnippet = '';
+      switch (type) {
+        case ChatMessageType.image:
+          bodySnippet = '📷 Photo';
+          break;
+        case ChatMessageType.video:
+          bodySnippet = '🎥 Video';
+          break;
+        case ChatMessageType.file:
+          bodySnippet = '📁 File';
+          break;
+        default:
+          bodySnippet = content;
+      }
+
+      await PushNotificationService.sendNotificationToPartner(
+        title: senderName,
+        body: bodySnippet,
+        type: 'chat',
+        route: 'chat',
+        extraData: {
+          'conversationId': conversationId,
+          'partnerUid': senderId,
+          'senderName': senderName,
+        },
+      );
+    } catch (e) {
+      dev.log('Failed to send message notification: $e', name: 'MessageService');
     }
-
-    await _firestore.collection('conversations').doc(conversationId).update(updates);
   }
 
-  /// Paginated message stream
-  Stream<List<MessageModel>> getMessagesStream(String conversationId, int limit) {
+  Stream<List<MessageModel>> getMessagesStream(
+      String conversationId, int limit) {
     return _firestore
         .collection('conversations')
         .doc(conversationId)
@@ -100,20 +149,17 @@ class MessageService {
             .toList());
   }
 
-  /// Marks unread messages sent by others as seen and resets current user's unread counts
   Future<void> markMessagesAsSeen({
     required String conversationId,
     required String currentUserId,
   }) async {
     final convRef = _firestore.collection('conversations').doc(conversationId);
-    
-    // 1. Reset current user's unread count and record last seen timestamp
+
     await convRef.update({
       'unreadCounts.$currentUserId': 0,
       'lastSeen.$currentUserId': FieldValue.serverTimestamp(),
     });
 
-    // 2. Query other user's sent messages in this chat which are not 'seen'
     final unreadQuery = await _firestore
         .collection('conversations')
         .doc(conversationId)
@@ -121,16 +167,16 @@ class MessageService {
         .where('senderId', isNotEqualTo: currentUserId)
         .get();
 
-    if (unreadQuery.docs.isNotEmpty) {
+    final unreadDocs = unreadQuery.docs.where((doc) => doc.data()['status'] != 'seen').toList();
+
+    if (unreadDocs.isNotEmpty) {
       final batch = _firestore.batch();
-      for (final doc in unreadQuery.docs) {
-        if (doc.data()['status'] != 'seen') {
-          batch.update(doc.reference, {'status': 'seen'});
-        }
+      for (final doc in unreadDocs) {
+        batch.update(doc.reference, {'status': 'seen'});
       }
       await batch.commit();
-      
-      // Also update the status of the last message in the conversation, if it's the one we just updated
+
+      // Also update the status of the last message in the conversation
       final updatedConvDoc = await convRef.get();
       final lastMsgData = updatedConvDoc.data()?['lastMessage'];
       if (lastMsgData != null && lastMsgData['senderId'] != currentUserId) {
@@ -158,7 +204,6 @@ class MessageService {
       'isEdited': true,
     });
 
-    // Update conversation's lastMessage reference if this message was the latest
     final convRef = _firestore.collection('conversations').doc(conversationId);
     final convDoc = await convRef.get();
     final lastMsgData = convDoc.data()?['lastMessage'];
@@ -170,14 +215,16 @@ class MessageService {
     }
   }
 
-  /// Sets typing indicators
   Future<void> setTypingStatus({
     required String conversationId,
     required String userId,
     required bool isTyping,
   }) async {
-    await _firestore.collection('conversations').doc(conversationId).update({
-      'typing.$userId': isTyping,
-    });
+    // Set with merge options so it doesn't fail if the document is being created
+    await _firestore.collection('conversations').doc(conversationId).set({
+      'typing': {
+        userId: isTyping,
+      }
+    }, SetOptions(merge: true));
   }
 }

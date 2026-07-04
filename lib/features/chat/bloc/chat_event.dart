@@ -65,3 +65,8 @@ class RemoveReactionEvent extends ChatEvent {
 }
 
 class MarkAsSeenEvent extends ChatEvent {}
+
+class UpdateRecipientTypingEvent extends ChatEvent {
+  final bool isTyping;
+  const UpdateRecipientTypingEvent(this.isTyping);
+}

@@ -13,6 +13,8 @@ import 'package:bea_window_app/helpers/all_routes.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/constants/text_font_style.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:get_storage/get_storage.dart';
 
 class InboxScreen extends StatelessWidget {
   const InboxScreen({super.key});
@@ -128,54 +130,57 @@ class _InboxViewState extends State<InboxView> {
                               itemCount: users.length,
                               itemBuilder: (context, index) {
                                 final user = users[index];
-                                return ListTile(
-                                  onTap: () {
-                                    Navigator.pop(modalContext);
-                                    _startChatWithUser(context, user);
-                                  },
-                                  contentPadding: EdgeInsets.symmetric(vertical: 4.h),
-                                  leading: Stack(
-                                    children: [
-                                      CircleAvatar(
-                                        radius: 22.r,
-                                        backgroundColor: Colors.white10,
-                                        backgroundImage: user.profilePicture != null &&
-                                                user.profilePicture!.isNotEmpty
-                                            ? CachedNetworkImageProvider(user.profilePicture!)
-                                            : null,
-                                        child: user.profilePicture == null ||
-                                                user.profilePicture!.isEmpty
-                                            ? Icon(Icons.person, color: Colors.white30, size: 20.sp)
-                                            : null,
-                                      ),
-                                      if (user.isOnline)
-                                        Positioned(
-                                          right: 0,
-                                          bottom: 0,
-                                          child: Container(
-                                            width: 12.r,
-                                            height: 12.r,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              color: Colors.green,
-                                              border: Border.all(
-                                                color: AppColors.softBlack,
-                                                width: 1.5.w,
+                                return Material(
+                                  color: Colors.transparent,
+                                  child: ListTile(
+                                    onTap: () {
+                                      Navigator.pop(modalContext);
+                                      _startChatWithUser(context, user);
+                                    },
+                                    contentPadding: EdgeInsets.symmetric(vertical: 4.h),
+                                    leading: Stack(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 22.r,
+                                          backgroundColor: Colors.white10,
+                                          backgroundImage: user.profilePicture != null &&
+                                                  user.profilePicture!.isNotEmpty
+                                              ? CachedNetworkImageProvider(user.profilePicture!)
+                                              : null,
+                                          child: user.profilePicture == null ||
+                                                  user.profilePicture!.isEmpty
+                                              ? Icon(Icons.person, color: Colors.white30, size: 20.sp)
+                                              : null,
+                                        ),
+                                        if (user.isOnline)
+                                          Positioned(
+                                            right: 0,
+                                            bottom: 0,
+                                            child: Container(
+                                              width: 12.r,
+                                              height: 12.r,
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                color: Colors.green,
+                                                border: Border.all(
+                                                  color: AppColors.softBlack,
+                                                  width: 1.5.w,
+                                                ),
                                               ),
                                             ),
                                           ),
-                                        ),
-                                    ],
-                                  ),
-                                  title: Text(
-                                    user.displayName,
-                                    style: TextFontStyle.textStyle14cFFFFFFDMSans600,
-                                  ),
-                                  subtitle: Text(
-                                    user.isOnline ? 'Online' : 'Offline',
-                                    style: TextStyle(
-                                      color: user.isOnline ? Colors.green : AppColors.c8E8E9F,
-                                      fontSize: 12.sp,
+                                      ],
+                                    ),
+                                    title: Text(
+                                      user.displayName,
+                                      style: TextFontStyle.textStyle14cFFFFFFDMSans600,
+                                    ),
+                                    subtitle: Text(
+                                      user.isOnline ? 'Online' : 'Offline',
+                                      style: TextStyle(
+                                        color: user.isOnline ? Colors.green : AppColors.c8E8E9F,
+                                        fontSize: 12.sp,
+                                      ),
                                     ),
                                   ),
                                 );

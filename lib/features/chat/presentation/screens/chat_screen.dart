@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -22,6 +23,7 @@ import 'package:bea_window_app/features/chat/presentation/widgets/reaction_picke
 import 'package:bea_window_app/features/chat/presentation/widgets/upload_progress_widget.dart';
 import 'package:bea_window_app/features/chat/repositories/chat_repository.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:bea_window_app/helpers/di.dart';
 
 class ChatScreen extends StatelessWidget {
@@ -77,7 +79,6 @@ class _ChatViewState extends State<ChatView> {
   
   UserModel? _partnerUser;
   MessageModel? _editingMessage;
-  OverlayEntry? _reactionOverlayEntry;
   StreamSubscription<UserModel>? _partnerProfileSub;
 
   @override
@@ -85,6 +86,8 @@ class _ChatViewState extends State<ChatView> {
     super.initState();
     _scrollController.addListener(_onScroll);
     _loadPartnerProfile();
+    // Suppress notifications for this conversation while active
+    GetStorage().write('active_conversation_id', widget.conversationId);
   }
 
   @override
@@ -92,7 +95,7 @@ class _ChatViewState extends State<ChatView> {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _partnerProfileSub?.cancel();
-    _dismissReactionPicker();
+    GetStorage().remove('active_conversation_id');
     super.dispose();
   }
 
@@ -120,82 +123,109 @@ class _ChatViewState extends State<ChatView> {
     });
   }
 
-  void _showReactionPicker(BuildContext context, MessageModel message, Offset position) {
-    _dismissReactionPicker();
-    _reactionOverlayEntry = OverlayEntry(
-      builder: (overlayContext) {
-        return Stack(
-          children: [
-            GestureDetector(
-              onTap: _dismissReactionPicker,
-              behavior: HitTestBehavior.translucent,
-              child: Container(
-                color: Colors.transparent,
-                width: double.infinity,
-                height: double.infinity,
-              ),
-            ),
-            Positioned(
-              // Place the reaction bar slightly above the long press coordinates
-              top: (position.dy - 64.h).clamp(50.h, MediaQuery.of(context).size.height - 100.h),
-              left: (position.dx - 150.w).clamp(16.w, MediaQuery.of(context).size.width - 320.w),
-              child: ReactionPicker(
-                onReactionSelected: (emoji) {
-                  context.read<ChatBloc>().add(AddReactionEvent(messageId: message.id, emoji: emoji));
-                  _dismissReactionPicker();
-                },
-                onDismiss: _dismissReactionPicker,
-              ),
-            ),
-          ],
-        );
-      },
-    );
-    Overlay.of(context).insert(_reactionOverlayEntry!);
-  }
-
-  void _dismissReactionPicker() {
-    _reactionOverlayEntry?.remove();
-    _reactionOverlayEntry = null;
-  }
-
   void _showLongPressMenu(BuildContext context, MessageModel message, Offset position) {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
     final isOwnMessage = message.senderId == currentUserId;
 
-    _showReactionPicker(context, message, position);
-
-    // If it's the sender's own text message, show an options dialog too
-    if (isOwnMessage && message.type == ChatMessageType.text) {
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (!context.mounted) return;
-        showDialog(
-          context: context,
-          builder: (dialogContext) {
-            return AlertDialog(
-              backgroundColor: AppColors.navBgColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-              contentPadding: EdgeInsets.symmetric(vertical: 8.h),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.edit_rounded, color: Colors.white70),
-                    title: const Text('Edit Message', style: TextStyle(color: Colors.white)),
-                    onTap: () {
-                      Navigator.pop(dialogContext);
-                      setState(() {
-                        _editingMessage = message;
-                      });
-                    },
-                  ),
-                ],
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.navBgColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+      ),
+      builder: (modalContext) {
+        return Container(
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Swipe/Drag handle
+              Container(
+                width: 36.w,
+                height: 4.h,
+                margin: EdgeInsets.only(bottom: 20.h),
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2.r),
+                ),
               ),
-            );
-          },
+              // Reactions row
+              ReactionPicker(
+                onReactionSelected: (emoji) {
+                  context.read<ChatBloc>().add(AddReactionEvent(messageId: message.id, emoji: emoji));
+                  Navigator.pop(modalContext);
+                },
+                onDismiss: () => Navigator.pop(modalContext),
+              ),
+              SizedBox(height: 24.h),
+              // Action Buttons Grid/List
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.03),
+                  borderRadius: BorderRadius.circular(16.r),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildMenuActionTile(
+                      icon: Icons.reply_rounded,
+                      title: 'Reply',
+                      onTap: () {
+                        Navigator.pop(modalContext);
+                        context.read<ChatBloc>().add(ReplyToMessageEvent(message));
+                      },
+                    ),
+                    _buildMenuActionTile(
+                      icon: Icons.copy_all_rounded,
+                      title: 'Copy Text',
+                      onTap: () {
+                        Navigator.pop(modalContext);
+                        Clipboard.setData(ClipboardData(text: message.content));
+                      },
+                    ),
+                    if (isOwnMessage && message.type == ChatMessageType.text)
+                      _buildMenuActionTile(
+                        icon: Icons.edit_rounded,
+                        title: 'Edit Message',
+                        onTap: () {
+                          Navigator.pop(modalContext);
+                          setState(() {
+                            _editingMessage = message;
+                          });
+                        },
+                      ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 12.h),
+            ],
+          ),
         );
-      });
-    }
+      },
+    );
+  }
+
+  Widget _buildMenuActionTile({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: ListTile(
+        leading: Icon(icon, color: Colors.white70, size: 22.sp),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        onTap: onTap,
+        contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 2.h),
+      ),
+    );
   }
 
   @override
@@ -255,7 +285,7 @@ class _ChatViewState extends State<ChatView> {
                   final List<Widget> listItems = [];
                   for (int i = 0; i < messages.length; i++) {
                     final msg = messages[i];
-                    final showAvatar = i == messages.length - 1 || messages[i + 1].senderId != msg.senderId;
+                    final showAvatar = i == 0 || messages[i - 1].senderId != msg.senderId;
 
                     listItems.add(
                       MessageBubble(
@@ -289,12 +319,27 @@ class _ChatViewState extends State<ChatView> {
                     }
                   }
 
-                  return ListView.builder(
-                    controller: _scrollController,
-                    reverse: true,
-                    physics: const BouncingScrollPhysics(),
-                    itemCount: listItems.length,
-                    itemBuilder: (context, index) => listItems[index],
+                  // Scroll to bottom when a new message is received or sent
+                  return BlocListener<ChatBloc, ChatState>(
+                    listenWhen: (previous, current) {
+                      return previous.messages.length != current.messages.length;
+                    },
+                    listener: (context, state) {
+                      if (_scrollController.hasClients) {
+                        _scrollController.animateTo(
+                          0.0,
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOut,
+                        );
+                      }
+                    },
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      reverse: true,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: listItems.length,
+                      itemBuilder: (context, index) => listItems[index],
+                    ),
                   );
                 },
               ),
