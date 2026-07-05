@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -333,51 +334,99 @@ class HomeScreenView extends StatelessWidget {
             ),
             Positioned(
               right: 24.w,
-              bottom: 100.h,
+              bottom: 124.h,
               child: BlocBuilder<HomeBloc, HomeState>(
                 builder: (context, state) {
                   if (state is HomeLoaded && state.isPaired && state.coupleId != null) {
                     final parts = state.coupleId!.split('_');
-                    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+                    final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
                     final partnerUid = parts.firstWhere((id) => id != currentUserId, orElse: () => '');
                     if (partnerUid.isNotEmpty) {
-                      return GestureDetector(
-                        onTap: () {
-                          Navigator.pushNamed(
-                            context,
-                            Routes.chatScreen,
-                            arguments: {
-                              'conversationId': state.coupleId,
-                              'partnerUid': partnerUid,
-                            },
+                      return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                        stream: FirebaseFirestore.instance
+                            .collection('conversations')
+                            .doc(state.coupleId)
+                            .snapshots(),
+                        builder: (context, snapshot) {
+                          int unreadCount = 0;
+                          if (snapshot.hasData && snapshot.data!.exists) {
+                            final data = snapshot.data!.data();
+                            final unreadCounts = data?['unreadCounts'] as Map<String, dynamic>?;
+                            if (unreadCounts != null) {
+                              unreadCount = (unreadCounts[currentUserId] as num?)?.toInt() ?? 0;
+                            }
+                          }
+
+                          return Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    Routes.chatScreen,
+                                    arguments: {
+                                      'conversationId': state.coupleId,
+                                      'partnerUid': partnerUid,
+                                    },
+                                  );
+                                },
+                                child: Container(
+                                  width: 56.w,
+                                  height: 56.h,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: const LinearGradient(
+                                      colors: [AppColors.primaryPink, AppColors.primaryPurple],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.primaryPink.withValues(alpha: 0.35),
+                                        blurRadius: 16,
+                                        offset: const Offset(0, 6),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Center(
+                                    child: Assets.icons.message.image(
+                                      width: 24.w,
+                                      height: 24.w,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              if (unreadCount > 0)
+                                Positioned(
+                                  top: -4.h,
+                                  right: -4.w,
+                                  child: Container(
+                                    padding: EdgeInsets.all(6.w),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFE060A0),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    constraints: BoxConstraints(
+                                      minWidth: 20.w,
+                                      minHeight: 20.h,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        unreadCount > 99 ? '99+' : '$unreadCount',
+                                        style: GoogleFonts.dmSans(
+                                          color: Colors.white,
+                                          fontSize: 10.sp,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           );
                         },
-                        child: Container(
-                          width: 56.w,
-                          height: 56.h,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              colors: [AppColors.primaryPink, AppColors.primaryPurple],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.primaryPink.withValues(alpha: 0.35),
-                                blurRadius: 16,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: Assets.icons.message.image(
-                              width: 24.w,
-                              height: 24.w,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
                       );
                     }
                   }

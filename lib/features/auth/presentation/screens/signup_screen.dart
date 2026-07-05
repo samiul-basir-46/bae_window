@@ -168,8 +168,8 @@ class _SignUpScreenState extends State<SignUpScreen>
                               hintText: 'Confirm password',
                               prefixIcon: Icons.lock_outline_rounded,
                               isPassword: true,
-                              validator: (val) =>
-                                  confirmPasswordValidator(val, _passwordController.text),
+                              validator: (val) => confirmPasswordValidator(
+                                  val, _passwordController.text),
                             ),
                             UIHelper.verticalSpace(10.h),
                             _buildStrengthBar(),
@@ -190,47 +190,66 @@ class _SignUpScreenState extends State<SignUpScreen>
                               label: 'Create Account',
                               isLoading: isLoading,
                               showArrow: true,
-                              onTap: () {
-                                if (_formKey.currentState?.validate() ?? false) {
-                                  context.read<AuthBloc>().add(
-                                        SignUpRequestedEvent(
-                                          name: _nameController.text.trim(),
-                                          email: _emailController.text.trim(),
-                                          password: _passwordController.text,
-                                        ),
-                                      );
-                                }
-                              },
+                              onTap: isLoading
+                                  ? null
+                                  : () {
+                                      setState(() {
+                                        _blocErrorMessage = null;
+                                      });
+                                      final isFormValid =
+                                          _formKey.currentState?.validate() ??
+                                              false;
+                                      if (_nameController.text.trim().isEmpty ||
+                                          _emailController.text.trim().isEmpty ||
+                                          _passwordController.text.isEmpty ||
+                                          _confirmPasswordController.text.isEmpty) {
+                                        setState(() {
+                                          _blocErrorMessage =
+                                              'Please fill in all fields';
+                                        });
+                                      } else if (isFormValid) {
+                                        context.read<AuthBloc>().add(
+                                              SignUpRequestedEvent(
+                                                name:
+                                                    _nameController.text.trim(),
+                                                email: _emailController.text
+                                                    .trim(),
+                                                password:
+                                                    _passwordController.text,
+                                              ),
+                                            );
+                                      }
+                                    },
                             ),
-                          UIHelper.verticalSpace(20.h),
-                          _buildOrDivider(),
-                          UIHelper.verticalSpace(16.h),
-                          _buildGoogleButton(context, isLoading),
-                          if (Platform.isIOS) ...[
-                            UIHelper.verticalSpace(10.h),
-                            _buildAppleButton(context, isLoading),
+                            UIHelper.verticalSpace(20.h),
+                            _buildOrDivider(),
+                            UIHelper.verticalSpace(16.h),
+                            _buildGoogleButton(context, isLoading),
+                            if (Platform.isIOS) ...[
+                              UIHelper.verticalSpace(10.h),
+                              _buildAppleButton(context, isLoading),
+                            ],
+                            UIHelper.verticalSpace(16.h),
+                            _buildTerms(),
+                            UIHelper.verticalSpace(16.h),
+                            _buildBottomLink(
+                              prefix: 'Already have an account? ',
+                              action: 'Sign In →',
+                              onTap: () => Navigator.pushReplacementNamed(
+                                context,
+                                Routes.loginScreen,
+                              ),
+                            ),
+                            UIHelper.verticalSpace(28.h),
                           ],
-                          UIHelper.verticalSpace(16.h),
-                          _buildTerms(),
-                          UIHelper.verticalSpace(16.h),
-                          _buildBottomLink(
-                            prefix: 'Already have an account? ',
-                            action: 'Sign In →',
-                            onTap: () => Navigator.pushReplacementNamed(
-                              context,
-                              Routes.loginScreen,
-                            ),
-                          ),
-                          UIHelper.verticalSpace(28.h),
-                        ],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
         );
       },
     );

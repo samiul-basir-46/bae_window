@@ -112,17 +112,14 @@ class _ChatAppBarState extends State<ChatAppBar> {
                       ? CachedNetworkImage(
                           imageUrl: widget.partnerUser.profilePicture!,
                           fit: BoxFit.cover,
-                          placeholder: (context, url) => Icon(
-                              Icons.person,
-                              color: Colors.white30,
-                              size: 20.sp),
+                          placeholder: (context, url) => Icon(Icons.person,
+                              color: Colors.white30, size: 20.sp),
                           errorWidget: (context, url, error) => Icon(
                               Icons.person,
                               color: Colors.white30,
                               size: 20.sp),
                         )
-                      : Icon(Icons.person,
-                          color: Colors.white30, size: 20.sp),
+                      : Icon(Icons.person, color: Colors.white30, size: 20.sp),
                 ),
                 if (widget.partnerUser.isOnline)
                   Positioned(
@@ -390,6 +387,7 @@ class _ChatAppBarState extends State<ChatAppBar> {
   }
 
   void _showPartnerProfile(BuildContext context) {
+    FocusManager.instance.primaryFocus?.unfocus();
     Navigator.pushNamed(
       context,
       Routes.chatDetails,

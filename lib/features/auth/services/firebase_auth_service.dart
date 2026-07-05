@@ -77,7 +77,7 @@ class FirebaseAuthService {
       'name': name,
       'email': email,
       'createdAt': FieldValue.serverTimestamp(),
-      'bio': 'Hey there! I am using Bea Window.',
+      'bio': 'Hey there! I am using Bloom.',
       'profilePicture': '',
       'profileComplete': false,
       'pairStatus': 'none',
@@ -190,7 +190,8 @@ class FirebaseAuthService {
   }
 
   /// Retrieve user profile details from Firestore
-  Future<Map<String, dynamic>?> getUserProfile(String uid, {GetOptions? options}) async {
+  Future<Map<String, dynamic>?> getUserProfile(String uid,
+      {GetOptions? options}) async {
     final doc = await _firestore.collection('users').doc(uid).get(options);
     return doc.exists ? doc.data() : null;
   }

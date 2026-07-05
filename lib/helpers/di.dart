@@ -1,5 +1,3 @@
-//import 'package:firebase_messaging/firebase_messaging.dart';
-
 import 'package:get_it/get_it.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:bea_window_app/features/chat/repositories/chat_repository.dart';

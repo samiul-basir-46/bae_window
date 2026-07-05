@@ -6,14 +6,14 @@ import 'bae_loader.dart';
 class CustomAuthButton extends StatelessWidget {
   final String label;
   final bool isLoading;
-  final VoidCallback onTap;
+  final void Function()? onTap;
   final bool showArrow;
 
   const CustomAuthButton({
     super.key,
     required this.label,
     required this.isLoading,
-    required this.onTap,
+    this.onTap,
     this.showArrow = false,
   });
 

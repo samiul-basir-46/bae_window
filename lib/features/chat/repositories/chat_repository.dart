@@ -85,6 +85,7 @@ class ChatRepository {
     String? fileName,
     int? fileSize,
     String? videoThumbnail,
+    List<MediaItemModel>? mediaItems,
   }) {
     return _messageService.sendMessage(
       conversationId: conversationId,
@@ -95,6 +96,7 @@ class ChatRepository {
       fileName: fileName,
       fileSize: fileSize,
       videoThumbnail: videoThumbnail,
+      mediaItems: mediaItems,
     );
   }
 
@@ -195,5 +197,19 @@ class ChatRepository {
 
   Future<void> cancelVideoUpload(String localPath) {
     return _mediaUploadService.cancelVideoUpload(localPath);
+  }
+
+  Future<void> deleteMessage({
+    required String conversationId,
+    required String messageId,
+    required String userId,
+    required bool deleteForEveryone,
+  }) {
+    return _messageService.deleteMessage(
+      conversationId: conversationId,
+      messageId: messageId,
+      userId: userId,
+      deleteForEveryone: deleteForEveryone,
+    );
   }
 }

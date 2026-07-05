@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -23,6 +22,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<UpdateMessagesEvent>(_onUpdateMessages);
     on<SendTextMessageEvent>(_onSendTextMessage);
     on<SendMediaMessageEvent>(_onSendMediaMessage);
+    on<SendMultipleMediaMessageEvent>(_onSendMultipleMediaMessage);
     on<ReplyToMessageEvent>(_onReplyToMessage);
     on<EditMessageEvent>(_onEditMessage);
     on<UpdateTypingEvent>(_onUpdateTyping);
@@ -30,6 +30,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<AddReactionEvent>(_onAddReaction);
     on<RemoveReactionEvent>(_onRemoveReaction);
     on<MarkAsSeenEvent>(_onMarkAsSeen);
+    on<DeleteMessageEvent>(_onDeleteMessage);
   }
 
   Future<void> _onLoadMessages(
@@ -45,76 +46,57 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
     _currentUserId = user.uid;
 
-    emit(ChatLoading(conversationId: event.conversationId));
+    final conversationId = event.conversationId;
+    final parts = conversationId.split('_');
+    _partnerUserId = parts.firstWhere((id) => id != _currentUserId,
+        orElse: () => '');
 
-    // Resolve partner UID from the conversation UIDs
-    try {
-      final convDoc = await FirebaseFirestore.instance
-          .collection('conversations')
-          .doc(event.conversationId)
-          .get();
-      if (convDoc.exists) {
-        final participants =
-            List<String>.from(convDoc.data()?['participants'] ?? []);
-        _partnerUserId = participants.firstWhere((uid) => uid != _currentUserId,
-            orElse: () => '');
-      }
-    } catch (_) {}
+    emit(ChatLoading(
+      conversationId: conversationId,
+      limit: state.limit,
+    ));
 
     await _messagesSub?.cancel();
     _messagesSub = _chatRepository
-        .getMessagesStream(event.conversationId, 20)
+        .getMessagesStream(conversationId, state.limit)
         .listen((messages) {
       add(UpdateMessagesEvent(messages));
-    }, onError: (err) {
-      // Cannot call emit from stream listener — log instead
-      log('[ChatBloc] Messages stream error: $err');
     });
 
-    // Subscribe to typing indicator status changes from the conversation doc
     await _convSub?.cancel();
     _convSub = FirebaseFirestore.instance
         .collection('conversations')
-        .doc(event.conversationId)
+        .doc(conversationId)
         .snapshots()
         .listen((snapshot) {
-      if (snapshot.exists &&
-          snapshot.data() != null &&
-          _partnerUserId != null &&
-          _partnerUserId!.isNotEmpty) {
-        final typingMap = snapshot.data()!['typing'] as Map?;
-        final partnerIsTyping = typingMap?[_partnerUserId] as bool? ?? false;
-
-        if (!isClosed) {
-          add(UpdateRecipientTypingEvent(partnerIsTyping));
+      if (snapshot.exists) {
+        final data = snapshot.data();
+        if (data != null) {
+          final typing = data['typing'] ?? {};
+          final isPartnerTyping = typing[_partnerUserId] ?? false;
+          add(UpdateRecipientTypingEvent(isPartnerTyping));
         }
       }
     });
-
-    // Mark all current messages in the room as seen
-    add(MarkAsSeenEvent());
   }
 
   void _onLoadMoreMessages(
     LoadMoreMessagesEvent event,
     Emitter<ChatState> emit,
   ) {
-    if (state is ChatLoaded) {
-      final currentState = state as ChatLoaded;
-      if (!currentState.hasMore) return;
+    if (state is ChatLoaded && state.hasMore) {
+      final currentLimit = state.limit;
+      final newLimit = currentLimit + 20;
 
-      final newLimit = currentState.limit + 20;
-
-      // Re-subscribe to messages stream with higher pagination limit
+      // Update subscription with the new limit
       _messagesSub?.cancel();
       _messagesSub = _chatRepository
-          .getMessagesStream(currentState.conversationId, newLimit)
+          .getMessagesStream(state.conversationId, newLimit)
           .listen((messages) {
         add(UpdateMessagesEvent(messages));
-      }, onError: (err) {
-        // Cannot call emit from stream listener — log instead
-        log('[ChatBloc] Load more messages stream error: $err');
       });
+
+      emit((state as ChatLoaded).copyWith(limit: newLimit));
     }
   }
 
@@ -124,6 +106,16 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   ) {
     final conversationId = state.conversationId;
     final currentLimit = state.limit;
+
+    // Filter out messages that the user deleted/hid for themselves
+    final filteredMessages = event.messages
+        .where((msg) => !msg.deletedFor.contains(_currentUserId ?? ''))
+        .toList();
+
+    final deletedMessageIds = event.messages
+        .where((msg) => msg.isDeleted || msg.deletedFor.contains(_currentUserId ?? ''))
+        .map((msg) => msg.id)
+        .toSet();
 
     // If the number of messages returned is less than the current query limit,
     // we have fetched all messages from history.
@@ -137,16 +129,20 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       replyToMsg = currentState.replyingTo;
     }
 
+    if (replyToMsg != null && deletedMessageIds.contains(replyToMsg.id)) {
+      replyToMsg = null;
+    }
+
     emit(ChatLoaded(
       conversationId: conversationId,
-      messages: event.messages,
+      messages: filteredMessages,
       limit: currentLimit,
       hasMore: hasMore,
       isRecipientTyping: isTyping,
       replyingTo: replyToMsg,
+      deletedMessageIds: deletedMessageIds,
     ));
 
-    // Instantly mark messages as read if we receive incoming items while active in room
     add(MarkAsSeenEvent());
   }
 
@@ -156,8 +152,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   ) async {
     if (state is ChatLoaded && _currentUserId != null) {
       final currentState = state as ChatLoaded;
-      final text = event.content.trim();
-      if (text.isEmpty) return;
 
       RepliedMessageModel? repliedToModel;
       if (currentState.replyingTo != null) {
@@ -169,17 +163,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         );
       }
 
-      // Clear draft message
-      _chatRepository.clearMessageDraft(currentState.conversationId);
-
-      // Clear reply state locally
       emit(currentState.copyWith(replyingTo: () => null));
 
       try {
         await _chatRepository.sendMessage(
           conversationId: currentState.conversationId,
           senderId: _currentUserId!,
-          content: text,
+          content: event.content,
           type: ChatMessageType.text,
           repliedTo: repliedToModel,
         );
@@ -220,6 +210,42 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           fileName: event.fileName,
           fileSize: event.fileSize,
           videoThumbnail: event.videoThumbnail,
+        );
+      } catch (err) {
+        if (!isClosed) {
+          emit(currentState.copyWith(error: () => err.toString()));
+        }
+      }
+    }
+  }
+
+  Future<void> _onSendMultipleMediaMessage(
+    SendMultipleMediaMessageEvent event,
+    Emitter<ChatState> emit,
+  ) async {
+    if (state is ChatLoaded && _currentUserId != null) {
+      final currentState = state as ChatLoaded;
+
+      RepliedMessageModel? repliedToModel;
+      if (currentState.replyingTo != null) {
+        repliedToModel = RepliedMessageModel(
+          messageId: currentState.replyingTo!.id,
+          senderId: currentState.replyingTo!.senderId,
+          content: currentState.replyingTo!.content,
+          type: currentState.replyingTo!.type,
+        );
+      }
+
+      emit(currentState.copyWith(replyingTo: () => null));
+
+      try {
+        await _chatRepository.sendMessage(
+          conversationId: currentState.conversationId,
+          senderId: _currentUserId!,
+          content: event.textContent ?? '',
+          type: ChatMessageType.image,
+          repliedTo: repliedToModel,
+          mediaItems: event.mediaItems,
         );
       } catch (err) {
         if (!isClosed) {
@@ -326,7 +352,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           currentUserId: _currentUserId!,
         );
         // Clear local notifications for this conversation
-        unawaited(PushNotificationService.clearConversationNotifications(state.conversationId));
+        unawaited(PushNotificationService.clearConversationNotifications(
+            state.conversationId));
       } catch (_) {}
     }
   }
@@ -343,12 +370,34 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
   }
 
+  Future<void> _onDeleteMessage(
+    DeleteMessageEvent event,
+    Emitter<ChatState> emit,
+  ) async {
+    if (state is ChatLoaded && _currentUserId != null) {
+      final currentState = state as ChatLoaded;
+      final isOwnMessage = event.message.senderId == _currentUserId;
+
+      try {
+        await _chatRepository.deleteMessage(
+          conversationId: currentState.conversationId,
+          messageId: event.message.id,
+          userId: _currentUserId!,
+          deleteForEveryone: isOwnMessage,
+        );
+      } catch (err) {
+        if (!isClosed) {
+          emit(currentState.copyWith(error: () => err.toString()));
+        }
+      }
+    }
+  }
+
   @override
   Future<void> close() async {
     _messagesSub?.cancel();
     _convSub?.cancel();
-    
-    // Mark messages as seen one final time upon leaving to ensure unread counts are synced
+
     if (_currentUserId != null && state.conversationId.isNotEmpty) {
       try {
         await _chatRepository.markMessagesAsSeen(

@@ -3,7 +3,6 @@ import 'dart:developer' as dev;
 import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:bea_window_app/features/auth/services/firebase_auth_service.dart';
 import 'package:bea_window_app/features/auth/services/cloudinary_service.dart';
 
@@ -88,10 +87,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         try {
           final userDoc = await _authService.getUserProfile(
             credential.user!.uid,
-            options: const GetOptions(source: Source.server),
           );
           if (userDoc != null) {
-            final isProfileComplete = userDoc['profileComplete'] as bool? ?? false;
+            final isProfileComplete = (userDoc['profileComplete'] as bool? ?? false) ||
+                (userDoc['nickname'] as String? ?? '').isNotEmpty;
             if (!isProfileComplete) {
               dev.log('User logged in but profile is not completed.', name: 'AuthBloc');
               emit(ProfileSetupPendingState());

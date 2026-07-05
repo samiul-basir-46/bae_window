@@ -34,6 +34,7 @@ class ChatDetailsScreen extends StatefulWidget {
 class _ChatDetailsScreenState extends State<ChatDetailsScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+
   DocumentReference<Map<String, dynamic>> get _convRef =>
       _firestore.collection('conversations').doc(widget.conversationId);
   Future<void> _ensureParticipants() async {
@@ -234,6 +235,7 @@ class _ChatDetailsScreenState extends State<ChatDetailsScreen> {
                   subtitle: "Browse photos and videos shared in chat",
                   onTap: () => _showSharedMedia(context),
                 ),
+
                 _buildListTile(
                   icon: Icons.push_pin_rounded,
                   title: "Pinned messages",

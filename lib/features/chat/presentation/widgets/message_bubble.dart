@@ -4,10 +4,16 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:bea_window_app/features/chat/bloc/chat_bloc.dart';
+import 'package:bea_window_app/features/chat/bloc/chat_event.dart';
 import 'package:bea_window_app/features/chat/models/message_model.dart';
 import 'package:bea_window_app/features/chat/presentation/widgets/image_message.dart';
 import 'package:bea_window_app/features/chat/presentation/widgets/video_message.dart';
 import 'package:bea_window_app/features/chat/presentation/widgets/file_message.dart';
+import 'package:bea_window_app/features/chat/presentation/widgets/media_grid.dart';
+import 'package:bea_window_app/features/chat/presentation/screens/media_viewer_screen.dart';
 import 'package:bea_window_app/constants/text_font_style.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 
@@ -23,6 +29,8 @@ class MessageBubble extends StatefulWidget {
   final Function(MessageModel message) onSwipeToReply;
   final Function(MessageModel message, Offset position) onLongPressMessage;
   final bool isLastMessage;
+  final bool isRepliedMessageDeleted;
+  final FocusNode? focusNode;
 
   const MessageBubble({
     super.key,
@@ -35,6 +43,8 @@ class MessageBubble extends StatefulWidget {
     required this.onSwipeToReply,
     required this.onLongPressMessage,
     this.isLastMessage = false,
+    this.isRepliedMessageDeleted = false,
+    this.focusNode,
   });
 
   @override
@@ -51,6 +61,46 @@ class _MessageBubbleState extends State<MessageBubble> {
   }
 
   Widget _buildMessageContent() {
+    if (widget.message.isDeleted) {
+      return Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18.r),
+          color: Colors.white.withValues(alpha: 0.05),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.05),
+            width: 1.w,
+          ),
+        ),
+        child: Text(
+          'Message deleted',
+          style: TextFontStyle.textStyle14cFFFFFFDMSans600.copyWith(
+            color: Colors.white30,
+            fontStyle: FontStyle.italic,
+            fontWeight: FontWeight.w400,
+            fontSize: 14.5.sp,
+          ),
+        ),
+      );
+    }
+
+    if (widget.message.mediaItems != null && widget.message.mediaItems!.isNotEmpty) {
+      return MediaGrid(
+        mediaItems: widget.message.mediaItems!,
+        onMediaTap: (initialIndex) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => MediaViewerScreen(
+                mediaItems: widget.message.mediaItems!,
+                initialIndex: initialIndex,
+              ),
+            ),
+          );
+        },
+      );
+    }
+
     switch (widget.message.type) {
       case ChatMessageType.image:
         return ImageMessage(imageUrl: widget.message.content);
@@ -160,7 +210,7 @@ class _MessageBubbleState extends State<MessageBubble> {
 
   Widget _buildRepliedPreview() {
     final reply = widget.message.repliedTo;
-    if (reply == null) return const SizedBox.shrink();
+    if (reply == null || widget.isRepliedMessageDeleted) return const SizedBox.shrink();
 
     return Container(
       margin: EdgeInsets.only(bottom: 4.h),
@@ -208,6 +258,89 @@ class _MessageBubbleState extends State<MessageBubble> {
     );
   }
 
+  void _showReactionsDetails(BuildContext context) {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final wasKeyboardFocused = widget.focusNode?.hasFocus == true;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.navBgColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Container(
+            padding: EdgeInsets.symmetric(vertical: 20.h, horizontal: 16.w),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Reactions',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 16.h),
+                ...widget.message.reactions.entries.map((entry) {
+                  final userId = entry.key;
+                  final emoji = entry.value;
+                  final isMe = userId == currentUserId;
+                  final displayName = isMe ? 'You' : widget.senderName;
+
+                  return ListTile(
+                    contentPadding: EdgeInsets.symmetric(vertical: 4.h),
+                    leading: Text(
+                      emoji,
+                      style: TextStyle(fontSize: 24.sp),
+                    ),
+                    title: Text(
+                      displayName,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    subtitle: isMe
+                        ? Text(
+                            'Tap to remove',
+                            style: TextStyle(
+                              color: AppColors.primaryPink.withValues(alpha: 0.7),
+                              fontSize: 11.sp,
+                            ),
+                          )
+                        : null,
+                    onTap: isMe
+                        ? () {
+                            Navigator.pop(sheetContext);
+                            context
+                                .read<ChatBloc>()
+                                .add(RemoveReactionEvent(widget.message.id));
+                            if (wasKeyboardFocused) {
+                              Future.delayed(const Duration(milliseconds: 100), () {
+                                widget.focusNode?.requestFocus();
+                              });
+                            } else {
+                              Future.delayed(const Duration(milliseconds: 100), () {
+                                FocusManager.instance.primaryFocus?.unfocus();
+                              });
+                            }
+                          }
+                        : null,
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildReactionsBadge() {
     if (widget.message.reactions.isEmpty) return const SizedBox.shrink();
 
@@ -218,42 +351,45 @@ class _MessageBubbleState extends State<MessageBubble> {
       bottom: -6.h,
       right: widget.isMe ? 12.w : null,
       left: widget.isMe ? null : 12.w,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-        decoration: BoxDecoration(
-          color: AppColors.navBgColor,
-          borderRadius: BorderRadius.circular(10.r),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.1),
-            width: 1.w,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+      child: GestureDetector(
+        onTap: () => _showReactionsDetails(context),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+          decoration: BoxDecoration(
+            color: AppColors.navBgColor,
+            borderRadius: BorderRadius.circular(10.r),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.1),
+              width: 1.w,
             ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              emojis.join(''),
-              style: TextStyle(fontSize: 10.sp),
-            ),
-            if (widget.message.reactions.length > 1) ...[
-              UIHelper.horizontalSpace(2.w),
-              Text(
-                widget.message.reactions.length.toString(),
-                style: TextStyle(
-                  color: AppColors.c8E8E9F,
-                  fontSize: 8.sp,
-                  fontWeight: FontWeight.w600,
-                ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
               ),
             ],
-          ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                emojis.join(''),
+                style: TextStyle(fontSize: 10.sp),
+              ),
+              if (widget.message.reactions.length > 1) ...[
+                UIHelper.horizontalSpace(2.w),
+                Text(
+                  widget.message.reactions.length.toString(),
+                  style: TextStyle(
+                    color: AppColors.c8E8E9F,
+                    fontSize: 8.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
@@ -346,6 +482,84 @@ class _MessageBubbleState extends State<MessageBubble> {
   Widget build(BuildContext context) {
     final timeStr = DateFormat('h:mm a').format(widget.message.timestamp);
     final isMe = widget.isMe;
+
+    if (widget.message.isDeleted) {
+      return GestureDetector(
+        onTap: _toggleShowTime,
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 4.h, horizontal: 16.w),
+          child: Column(
+            crossAxisAlignment:
+                isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment:
+                    isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (!isMe && widget.showAvatar) ...[
+                    Container(
+                      width: 28.r,
+                      height: 28.r,
+                      decoration: const BoxDecoration(
+                        color: Colors.white10,
+                        shape: BoxShape.circle,
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: widget.senderAvatarUrl != null &&
+                              widget.senderAvatarUrl!.isNotEmpty &&
+                              widget.senderAvatarUrl != 'null'
+                          ? CachedNetworkImage(
+                              imageUrl: widget.senderAvatarUrl!,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Icon(Icons.person,
+                                  color: Colors.white30, size: 14.sp),
+                              errorWidget: (context, url, error) => Icon(
+                                  Icons.person,
+                                  color: Colors.white30,
+                                  size: 14.sp),
+                            )
+                          : Icon(Icons.person,
+                              color: Colors.white30, size: 14.sp),
+                    ),
+                    UIHelper.horizontalSpace(8.w),
+                  ] else if (!isMe && !widget.showAvatar) ...[
+                    UIHelper.horizontalSpace(36.w),
+                  ],
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: isMe
+                          ? CrossAxisAlignment.end
+                          : CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildMessageContent(),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (_showTime)
+                Padding(
+                  padding: EdgeInsets.only(
+                    top: 4.h,
+                    left: isMe ? 0 : 36.w,
+                    right: isMe ? 8.w : 0,
+                  ),
+                  child: Text(
+                    timeStr,
+                    style: TextFontStyle.textStyle10c888888DMSans600.copyWith(
+                      color: Colors.white30,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return GestureDetector(
       onTap: _toggleShowTime,
