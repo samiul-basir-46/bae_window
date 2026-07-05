@@ -93,6 +93,7 @@ class UtillScreenMobile extends StatelessWidget {
               ),
             ],
             child: MaterialApp(
+                title: 'Bloom',
                 theme: ThemeData(
                     unselectedWidgetColor: Colors.white,
                     primarySwatch: CustomTheme.kToDark,

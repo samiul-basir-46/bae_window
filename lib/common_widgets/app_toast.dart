@@ -157,7 +157,6 @@ class _ToastWidgetState extends State<_ToastWidget>
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Left Accent Bar
                         Container(
                           width: 4.w,
                           decoration: BoxDecoration(
@@ -168,7 +167,6 @@ class _ToastWidgetState extends State<_ToastWidget>
                             ),
                           ),
                         ),
-                        // Content inside the card
                         Expanded(
                           child: Padding(
                             padding: EdgeInsets.symmetric(
@@ -177,7 +175,6 @@ class _ToastWidgetState extends State<_ToastWidget>
                             ),
                             child: Row(
                               children: [
-                                // Icon badge
                                 Container(
                                   width: 30.w,
                                   height: 30.h,
@@ -194,7 +191,6 @@ class _ToastWidgetState extends State<_ToastWidget>
                                   ),
                                 ),
                                 SizedBox(width: 12.w),
-                                // Text Content
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
