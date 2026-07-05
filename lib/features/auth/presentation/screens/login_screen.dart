@@ -146,8 +146,19 @@ class _LoginScreenState extends State<LoginScreen>
                               onTap: isLoading
                                   ? null
                                   : () {
-                                      if (_formKey.currentState?.validate() ??
-                                          false) {
+                                      setState(() {
+                                        _loginErrorMessage = null;
+                                      });
+                                      final isFormValid =
+                                          _formKey.currentState?.validate() ??
+                                              false;
+                                      if (_emailController.text.trim().isEmpty ||
+                                          _passwordController.text.isEmpty) {
+                                        setState(() {
+                                          _loginErrorMessage =
+                                              'Please enter both email and password';
+                                        });
+                                      } else if (isFormValid) {
                                         context.read<AuthBloc>().add(
                                               LoginRequestedEvent(
                                                 email: _emailController.text

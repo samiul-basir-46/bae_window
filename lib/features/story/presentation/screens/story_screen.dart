@@ -350,7 +350,7 @@ class _StoryScreenViewState extends State<StoryScreenView> {
           // Floating Action Button
           Positioned(
             right: 24.w,
-            bottom: 100.h,
+            bottom: 124.h,
             child: GestureDetector(
               onTap: () => _openNewMemorySheet(context),
               child: Container(

@@ -193,8 +193,21 @@ class _SignUpScreenState extends State<SignUpScreen>
                               onTap: isLoading
                                   ? null
                                   : () {
-                                      if (_formKey.currentState?.validate() ??
-                                          false) {
+                                      setState(() {
+                                        _blocErrorMessage = null;
+                                      });
+                                      final isFormValid =
+                                          _formKey.currentState?.validate() ??
+                                              false;
+                                      if (_nameController.text.trim().isEmpty ||
+                                          _emailController.text.trim().isEmpty ||
+                                          _passwordController.text.isEmpty ||
+                                          _confirmPasswordController.text.isEmpty) {
+                                        setState(() {
+                                          _blocErrorMessage =
+                                              'Please fill in all fields';
+                                        });
+                                      } else if (isFormValid) {
                                         context.read<AuthBloc>().add(
                                               SignUpRequestedEvent(
                                                 name:
