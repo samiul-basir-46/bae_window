@@ -334,6 +334,10 @@ class PushNotificationService {
   static Future<void> clearConversationNotifications(String conversationId) async {
     final notificationId = conversationId.hashCode;
     await _localNotifications.cancel(id: notificationId);
+    // Cancel all potential bundled message notifications in the range
+    for (int i = 1; i <= 50; i++) {
+      await _localNotifications.cancel(id: notificationId + i);
+    }
     final key = 'unread_msgs_$conversationId';
     await GetStorage().remove(key);
   }
@@ -380,17 +384,6 @@ class PushNotificationService {
         summaryText: summaryText,
       );
 
-      final androidDetails = AndroidNotificationDetails(
-        'chat_messages',
-        'Chat Messages',
-        channelDescription: 'Real-time chat messages from your partner',
-        importance: Importance.max,
-        priority: Priority.high,
-        styleInformation: inboxStyle,
-        groupKey: conversationId,
-        setAsGroupSummary: false,
-      );
-
       final darwinDetails = DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
@@ -398,11 +391,43 @@ class PushNotificationService {
         threadIdentifier: conversationId,
       );
 
+      // 1. Show individual message notification with a unique ID inside the group
+      final int messageNotificationId = notificationId + (list.length % 50 + 1);
+      final androidMessageDetails = AndroidNotificationDetails(
+        'chat_messages',
+        'Chat Messages',
+        channelDescription: 'Real-time chat messages from your partner',
+        importance: Importance.max,
+        priority: Priority.high,
+        groupKey: conversationId,
+        setAsGroupSummary: false,
+      );
+
+      await _localNotifications.show(
+        id: messageNotificationId,
+        title: senderName,
+        body: messageText,
+        notificationDetails: NotificationDetails(android: androidMessageDetails, iOS: darwinDetails),
+        payload: jsonEncode(message.data),
+      );
+
+      // 2. Show/Update the group summary notification
+      final androidSummaryDetails = AndroidNotificationDetails(
+        'chat_messages',
+        'Chat Messages',
+        channelDescription: 'Real-time chat messages from your partner',
+        importance: Importance.max,
+        priority: Priority.high,
+        styleInformation: inboxStyle,
+        groupKey: conversationId,
+        setAsGroupSummary: true,
+      );
+
       await _localNotifications.show(
         id: notificationId,
         title: senderName,
-        body: list.length > 1 ? '${list.length} new messages: ${list.last}' : list.last,
-        notificationDetails: NotificationDetails(android: androidDetails, iOS: darwinDetails),
+        body: summaryText,
+        notificationDetails: NotificationDetails(android: androidSummaryDetails, iOS: darwinDetails),
         payload: jsonEncode(message.data),
       );
 
@@ -731,10 +756,11 @@ class PushNotificationService {
           body: jsonEncode({
             'message': {
               'token': token,
-              'notification': {
-                'title': title,
-                'body': body,
-              },
+              if (type != 'chat')
+                'notification': {
+                  'title': title,
+                  'body': body,
+                },
               'data': {
                 'click_action': 'FLUTTER_NOTIFICATION_CLICK',
                 if (type != null) 'type': type,
@@ -745,10 +771,11 @@ class PushNotificationService {
               },
               'android': {
                 'priority': 'high',
-                'notification': {
-                  'channel_id': type == 'thinkingPulse' ? pulseChannelId : activityChannelId,
-                  'sound': 'default',
-                }
+                if (type != 'chat')
+                  'notification': {
+                    'channel_id': type == 'thinkingPulse' ? pulseChannelId : activityChannelId,
+                    'sound': 'default',
+                  }
               },
               'apns': {
                 'headers': {
@@ -760,6 +787,11 @@ class PushNotificationService {
                     'sound': 'default',
                     'badge': 1,
                     'content-available': 1,
+                    if (type == 'chat')
+                      'alert': {
+                        'title': title,
+                        'body': body,
+                      },
                   }
                 }
               }

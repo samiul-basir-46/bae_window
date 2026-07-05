@@ -9,6 +9,7 @@ abstract class ChatState {
   final bool isRecipientTyping;
   final bool isLoading;
   final String? error;
+  final Set<String> deletedMessageIds;
 
   const ChatState({
     required this.conversationId,
@@ -19,6 +20,7 @@ abstract class ChatState {
     this.isRecipientTyping = false,
     this.isLoading = false,
     this.error,
+    this.deletedMessageIds = const {},
   });
 }
 
@@ -40,6 +42,7 @@ class ChatLoaded extends ChatState {
     super.isRecipientTyping,
     super.isLoading,
     super.error,
+    super.deletedMessageIds,
   });
 
   ChatLoaded copyWith({
@@ -50,6 +53,7 @@ class ChatLoaded extends ChatState {
     bool? isRecipientTyping,
     bool? isLoading,
     String? Function()? error,
+    Set<String>? deletedMessageIds,
   }) {
     return ChatLoaded(
       conversationId: conversationId,
@@ -60,6 +64,7 @@ class ChatLoaded extends ChatState {
       isRecipientTyping: isRecipientTyping ?? this.isRecipientTyping,
       isLoading: isLoading ?? this.isLoading,
       error: error != null ? error() : this.error,
+      deletedMessageIds: deletedMessageIds ?? this.deletedMessageIds,
     );
   }
 }
@@ -71,5 +76,6 @@ class ChatError extends ChatState {
     super.messages,
     super.limit,
     super.hasMore,
+    super.deletedMessageIds,
   }) : super(error: errorMsg);
 }

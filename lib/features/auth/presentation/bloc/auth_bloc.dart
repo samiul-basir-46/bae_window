@@ -91,7 +91,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             options: const GetOptions(source: Source.server),
           );
           if (userDoc != null) {
-            final isProfileComplete = userDoc['profileComplete'] as bool? ?? false;
+            final isProfileComplete = (userDoc['profileComplete'] as bool? ?? false) ||
+                (userDoc['nickname'] as String? ?? '').isNotEmpty;
             if (!isProfileComplete) {
               dev.log('User logged in but profile is not completed.', name: 'AuthBloc');
               emit(ProfileSetupPendingState());

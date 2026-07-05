@@ -37,6 +37,16 @@ class SendMediaMessageEvent extends ChatEvent {
   });
 }
 
+class SendMultipleMediaMessageEvent extends ChatEvent {
+  final List<MediaItemModel> mediaItems;
+  final String? textContent;
+
+  const SendMultipleMediaMessageEvent({
+    required this.mediaItems,
+    this.textContent,
+  });
+}
+
 class ReplyToMessageEvent extends ChatEvent {
   final MessageModel? message;
   const ReplyToMessageEvent(this.message);
@@ -69,4 +79,9 @@ class MarkAsSeenEvent extends ChatEvent {}
 class UpdateRecipientTypingEvent extends ChatEvent {
   final bool isTyping;
   const UpdateRecipientTypingEvent(this.isTyping);
+}
+
+class DeleteMessageEvent extends ChatEvent {
+  final MessageModel message;
+  const DeleteMessageEvent(this.message);
 }

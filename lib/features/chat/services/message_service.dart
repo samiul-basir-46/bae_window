@@ -47,6 +47,7 @@ class MessageService {
     String? fileName,
     int? fileSize,
     String? videoThumbnail,
+    List<MediaItemModel>? mediaItems,
   }) async {
     final convRef = _firestore.collection('conversations').doc(conversationId);
     
@@ -75,6 +76,7 @@ class MessageService {
       fileName: fileName,
       fileSize: fileSize,
       videoThumbnail: videoThumbnail,
+      mediaItems: mediaItems,
     );
 
     // Save message document
@@ -226,5 +228,52 @@ class MessageService {
         userId: isTyping,
       }
     }, SetOptions(merge: true));
+  }
+
+  Future<void> deleteMessage({
+    required String conversationId,
+    required String messageId,
+    required String userId,
+    required bool deleteForEveryone,
+  }) async {
+    final msgRef = _firestore
+        .collection('conversations')
+        .doc(conversationId)
+        .collection('messages')
+        .doc(messageId);
+
+    if (deleteForEveryone) {
+      await msgRef.update({
+        'content': 'Message deleted',
+        'isDeleted': true,
+        'type': ChatMessageType.text.name,
+        'reactions': {},
+        'fileName': null,
+        'fileSize': null,
+        'videoThumbnail': null,
+        'mediaItems': null,
+      });
+
+      // Update lastMessage if it matches the deleted message
+      final convRef = _firestore.collection('conversations').doc(conversationId);
+      final convDoc = await convRef.get();
+      final lastMsgData = convDoc.data()?['lastMessage'];
+      if (lastMsgData != null && lastMsgData['id'] == messageId) {
+        await convRef.update({
+          'lastMessage.content': 'Message deleted',
+          'lastMessage.isDeleted': true,
+          'lastMessage.type': ChatMessageType.text.name,
+          'lastMessage.reactions': {},
+          'lastMessage.fileName': null,
+          'lastMessage.fileSize': null,
+          'lastMessage.videoThumbnail': null,
+          'lastMessage.mediaItems': null,
+        });
+      }
+    } else {
+      await msgRef.update({
+        'deletedFor': FieldValue.arrayUnion([userId]),
+      });
+    }
   }
 }

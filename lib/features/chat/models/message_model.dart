@@ -39,6 +39,37 @@ class RepliedMessageModel {
   }
 }
 
+class MediaItemModel {
+  final String url;
+  final ChatMessageType type;
+  final String? thumbnail;
+
+  MediaItemModel({
+    required this.url,
+    required this.type,
+    this.thumbnail,
+  });
+
+  factory MediaItemModel.fromMap(Map<String, dynamic> map) {
+    return MediaItemModel(
+      url: map['url'] as String? ?? '',
+      type: ChatMessageType.values.firstWhere(
+        (e) => e.name == (map['type'] as String? ?? 'image'),
+        orElse: () => ChatMessageType.image,
+      ),
+      thumbnail: map['thumbnail'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'url': url,
+      'type': type.name,
+      if (thumbnail != null) 'thumbnail': thumbnail,
+    };
+  }
+}
+
 class MessageModel {
   final String id;
   final String senderId;
@@ -53,6 +84,9 @@ class MessageModel {
   final bool isEdited;
   final String? videoThumbnail;
   final bool isPinned;
+  final bool isDeleted;
+  final List<String> deletedFor;
+  final List<MediaItemModel>? mediaItems;
 
   MessageModel({
     required this.id,
@@ -68,6 +102,9 @@ class MessageModel {
     this.isEdited = false,
     this.videoThumbnail,
     this.isPinned = false,
+    this.isDeleted = false,
+    this.deletedFor = const [],
+    this.mediaItems,
   });
 
   factory MessageModel.fromMap(String id, Map<String, dynamic> map) {
@@ -88,6 +125,18 @@ class MessageModel {
       (map['reactions'] as Map).forEach((k, v) {
         reactionsMap[k.toString()] = v.toString();
       });
+    }
+
+    final deletedForList = <String>[];
+    if (map['deletedFor'] is List) {
+      deletedForList.addAll(List<String>.from(map['deletedFor'] as List));
+    }
+
+    List<MediaItemModel>? mediaItemsList;
+    if (map['mediaItems'] is List) {
+      mediaItemsList = (map['mediaItems'] as List)
+          .map((item) => MediaItemModel.fromMap(Map<String, dynamic>.from(item as Map)))
+          .toList();
     }
 
     return MessageModel(
@@ -112,6 +161,9 @@ class MessageModel {
       isEdited: map['isEdited'] as bool? ?? false,
       videoThumbnail: map['videoThumbnail'] as String?,
       isPinned: map['isPinned'] as bool? ?? false,
+      isDeleted: map['isDeleted'] as bool? ?? false,
+      deletedFor: deletedForList,
+      mediaItems: mediaItemsList,
     );
   }
 
@@ -130,6 +182,10 @@ class MessageModel {
       'isEdited': isEdited,
       'videoThumbnail': videoThumbnail,
       'isPinned': isPinned,
+      'isDeleted': isDeleted,
+      'deletedFor': deletedFor,
+      if (mediaItems != null)
+        'mediaItems': mediaItems!.map((item) => item.toMap()).toList(),
     };
   }
 
@@ -147,6 +203,9 @@ class MessageModel {
     bool? isEdited,
     String? videoThumbnail,
     bool? isPinned,
+    bool? isDeleted,
+    List<String>? deletedFor,
+    List<MediaItemModel>? mediaItems,
   }) {
     return MessageModel(
       id: id ?? this.id,
@@ -162,6 +221,9 @@ class MessageModel {
       isEdited: isEdited ?? this.isEdited,
       videoThumbnail: videoThumbnail ?? this.videoThumbnail,
       isPinned: isPinned ?? this.isPinned,
+      isDeleted: isDeleted ?? this.isDeleted,
+      deletedFor: deletedFor ?? this.deletedFor,
+      mediaItems: mediaItems ?? this.mediaItems,
     );
   }
 }

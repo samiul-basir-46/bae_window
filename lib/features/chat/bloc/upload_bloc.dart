@@ -10,11 +10,15 @@ class UploadBloc extends Bloc<UploadEvent, UploadState> {
   final ChatRepository _chatRepository = locator<ChatRepository>();
 
   File? _activeFile;
-  String? _activeConversationId;
   ChatMessageType? _activeType;
+
+  List<File>? _activeFiles;
+  List<ChatMessageType>? _activeTypes;
+  String? _activeConversationId;
 
   UploadBloc() : super(UploadInitial()) {
     on<StartMediaUploadEvent>(_onStartMediaUpload);
+    on<StartMultipleMediaUploadEvent>(_onStartMultipleMediaUpload);
     on<UpdateUploadProgressEvent>(_onUpdateUploadProgress);
     on<CancelUploadEvent>(_onCancelUpload);
     on<RetryUploadEvent>(_onRetryUpload);
@@ -27,6 +31,8 @@ class UploadBloc extends Bloc<UploadEvent, UploadState> {
     _activeFile = event.file;
     _activeConversationId = event.conversationId;
     _activeType = event.type;
+    _activeFiles = null;
+    _activeTypes = null;
 
     emit(UploadingState(progress: 0.0, localFilePath: event.file.path));
 
@@ -63,6 +69,97 @@ class UploadBloc extends Bloc<UploadEvent, UploadState> {
     }
   }
 
+  Future<void> _onStartMultipleMediaUpload(
+    StartMultipleMediaUploadEvent event,
+    Emitter<UploadState> emit,
+  ) async {
+    _activeFiles = event.files;
+    _activeTypes = event.types;
+    _activeConversationId = event.conversationId;
+    _activeFile = null;
+    _activeType = null;
+
+    final totalCount = event.files.length;
+    final List<MediaItemModel> mediaItems = [];
+    final List<double> progresses = List.filled(totalCount, 0.0);
+
+    emit(UploadingMultipleState(
+      progress: 0.0,
+      completedCount: 0,
+      totalCount: totalCount,
+    ));
+
+    try {
+      final uploadTasks = <Future<void>>[];
+      for (int i = 0; i < totalCount; i++) {
+        final file = event.files[i];
+        final type = event.types[i];
+
+        final task = () async {
+          String url = '';
+          String? thumbnail;
+
+          if (type == ChatMessageType.image) {
+            url = await _chatRepository.uploadImage(
+              file,
+              conversationId: event.conversationId,
+              onProgress: (p) {
+                progresses[i] = p;
+                final overallProgress = progresses.reduce((a, b) => a + b) / totalCount;
+                if (!isClosed) {
+                  add(UpdateUploadProgressEvent(overallProgress));
+                }
+              },
+            );
+          } else if (type == ChatMessageType.video) {
+            final urls = await _chatRepository.uploadVideo(
+              videoFile: file,
+              conversationId: event.conversationId,
+              onProgress: (p) {
+                progresses[i] = p;
+                final overallProgress = progresses.reduce((a, b) => a + b) / totalCount;
+                if (!isClosed) {
+                  add(UpdateUploadProgressEvent(overallProgress));
+                }
+              },
+            );
+            url = urls['videoUrl'] ?? '';
+            thumbnail = urls['thumbnailUrl'];
+          } else {
+            url = await _chatRepository.uploadFile(
+              file,
+              conversationId: event.conversationId,
+              onProgress: (p) {
+                progresses[i] = p;
+                final overallProgress = progresses.reduce((a, b) => a + b) / totalCount;
+                if (!isClosed) {
+                  add(UpdateUploadProgressEvent(overallProgress));
+                }
+              },
+            );
+          }
+
+          mediaItems.add(MediaItemModel(
+            url: url,
+            type: type,
+            thumbnail: thumbnail,
+          ));
+        }();
+        uploadTasks.add(task);
+      }
+
+      await Future.wait(uploadTasks);
+
+      if (!isClosed) {
+        emit(UploadMultipleSuccess(mediaItems: mediaItems));
+      }
+    } catch (e) {
+      if (!isClosed) {
+        emit(UploadFailure(e.toString()));
+      }
+    }
+  }
+
   void _onUpdateUploadProgress(
     UpdateUploadProgressEvent event,
     Emitter<UploadState> emit,
@@ -73,6 +170,13 @@ class UploadBloc extends Bloc<UploadEvent, UploadState> {
         progress: event.progress,
         localFilePath: currentState.localFilePath,
       ));
+    } else if (state is UploadingMultipleState) {
+      final currentState = state as UploadingMultipleState;
+      emit(UploadingMultipleState(
+        progress: event.progress,
+        completedCount: currentState.completedCount,
+        totalCount: currentState.totalCount,
+      ));
     }
   }
 
@@ -80,14 +184,24 @@ class UploadBloc extends Bloc<UploadEvent, UploadState> {
     CancelUploadEvent event,
     Emitter<UploadState> emit,
   ) async {
-    if (_activeFile != null && _activeType == ChatMessageType.video) {
+    if (_activeFiles != null && _activeTypes != null) {
+      for (int i = 0; i < _activeFiles!.length; i++) {
+        if (_activeTypes![i] == ChatMessageType.video) {
+          try {
+            await _chatRepository.cancelVideoUpload(_activeFiles![i].path);
+          } catch (_) {}
+        }
+      }
+    } else if (_activeFile != null && _activeType == ChatMessageType.video) {
       try {
         await _chatRepository.cancelVideoUpload(_activeFile!.path);
       } catch (_) {}
     }
     _activeFile = null;
-    _activeConversationId = null;
+    _activeFiles = null;
+    _activeTypes = null;
     _activeType = null;
+    _activeConversationId = null;
     emit(UploadInitial());
   }
 
@@ -95,7 +209,13 @@ class UploadBloc extends Bloc<UploadEvent, UploadState> {
     RetryUploadEvent event,
     Emitter<UploadState> emit,
   ) {
-    if (_activeFile != null && _activeConversationId != null && _activeType != null) {
+    if (_activeFiles != null && _activeConversationId != null && _activeTypes != null) {
+      add(StartMultipleMediaUploadEvent(
+        files: _activeFiles!,
+        types: _activeTypes!,
+        conversationId: _activeConversationId!,
+      ));
+    } else if (_activeFile != null && _activeConversationId != null && _activeType != null) {
       add(StartMediaUploadEvent(
         file: _activeFile!,
         conversationId: _activeConversationId!,

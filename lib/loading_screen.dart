@@ -61,19 +61,17 @@ class _LoadingState extends State<Loading> {
           final doc = await FirebaseFirestore.instance
               .collection('users')
               .doc(refreshedUser.uid)
-              .get(const GetOptions(source: Source.cache));
+              .get(const GetOptions(source: Source.server))
+              .timeout(const Duration(seconds: 4));
           if (doc.exists && doc.data() != null) {
             data = doc.data()!;
           }
-        } catch (_) {}
-
-        if (data == null) {
+        } catch (_) {
           try {
             final doc = await FirebaseFirestore.instance
                 .collection('users')
                 .doc(refreshedUser.uid)
-                .get(const GetOptions(source: Source.server))
-                .timeout(const Duration(seconds: 8));
+                .get(const GetOptions(source: Source.cache));
             if (doc.exists && doc.data() != null) {
               data = doc.data()!;
             }
@@ -81,7 +79,8 @@ class _LoadingState extends State<Loading> {
         }
 
         if (data != null) {
-          final isProfileComplete = data['profileComplete'] as bool? ?? false;
+          final isProfileComplete = (data['profileComplete'] as bool? ?? false) ||
+              (data['nickname'] as String? ?? '').isNotEmpty;
           if (!isProfileComplete) {
             _initialScreen = const ProfileSetupScreen();
           } else {

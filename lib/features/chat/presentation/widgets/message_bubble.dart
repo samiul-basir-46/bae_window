@@ -8,6 +8,8 @@ import 'package:bea_window_app/features/chat/models/message_model.dart';
 import 'package:bea_window_app/features/chat/presentation/widgets/image_message.dart';
 import 'package:bea_window_app/features/chat/presentation/widgets/video_message.dart';
 import 'package:bea_window_app/features/chat/presentation/widgets/file_message.dart';
+import 'package:bea_window_app/features/chat/presentation/widgets/media_grid.dart';
+import 'package:bea_window_app/features/chat/presentation/screens/media_viewer_screen.dart';
 import 'package:bea_window_app/constants/text_font_style.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 
@@ -23,6 +25,7 @@ class MessageBubble extends StatefulWidget {
   final Function(MessageModel message) onSwipeToReply;
   final Function(MessageModel message, Offset position) onLongPressMessage;
   final bool isLastMessage;
+  final bool isRepliedMessageDeleted;
 
   const MessageBubble({
     super.key,
@@ -35,6 +38,7 @@ class MessageBubble extends StatefulWidget {
     required this.onSwipeToReply,
     required this.onLongPressMessage,
     this.isLastMessage = false,
+    this.isRepliedMessageDeleted = false,
   });
 
   @override
@@ -51,6 +55,46 @@ class _MessageBubbleState extends State<MessageBubble> {
   }
 
   Widget _buildMessageContent() {
+    if (widget.message.isDeleted) {
+      return Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18.r),
+          color: Colors.white.withValues(alpha: 0.05),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.05),
+            width: 1.w,
+          ),
+        ),
+        child: Text(
+          'Message deleted',
+          style: TextFontStyle.textStyle14cFFFFFFDMSans600.copyWith(
+            color: Colors.white30,
+            fontStyle: FontStyle.italic,
+            fontWeight: FontWeight.w400,
+            fontSize: 14.5.sp,
+          ),
+        ),
+      );
+    }
+
+    if (widget.message.mediaItems != null && widget.message.mediaItems!.isNotEmpty) {
+      return MediaGrid(
+        mediaItems: widget.message.mediaItems!,
+        onMediaTap: (initialIndex) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => MediaViewerScreen(
+                mediaItems: widget.message.mediaItems!,
+                initialIndex: initialIndex,
+              ),
+            ),
+          );
+        },
+      );
+    }
+
     switch (widget.message.type) {
       case ChatMessageType.image:
         return ImageMessage(imageUrl: widget.message.content);
@@ -160,7 +204,7 @@ class _MessageBubbleState extends State<MessageBubble> {
 
   Widget _buildRepliedPreview() {
     final reply = widget.message.repliedTo;
-    if (reply == null) return const SizedBox.shrink();
+    if (reply == null || widget.isRepliedMessageDeleted) return const SizedBox.shrink();
 
     return Container(
       margin: EdgeInsets.only(bottom: 4.h),
@@ -346,6 +390,84 @@ class _MessageBubbleState extends State<MessageBubble> {
   Widget build(BuildContext context) {
     final timeStr = DateFormat('h:mm a').format(widget.message.timestamp);
     final isMe = widget.isMe;
+
+    if (widget.message.isDeleted) {
+      return GestureDetector(
+        onTap: _toggleShowTime,
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 4.h, horizontal: 16.w),
+          child: Column(
+            crossAxisAlignment:
+                isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment:
+                    isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (!isMe && widget.showAvatar) ...[
+                    Container(
+                      width: 28.r,
+                      height: 28.r,
+                      decoration: const BoxDecoration(
+                        color: Colors.white10,
+                        shape: BoxShape.circle,
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: widget.senderAvatarUrl != null &&
+                              widget.senderAvatarUrl!.isNotEmpty &&
+                              widget.senderAvatarUrl != 'null'
+                          ? CachedNetworkImage(
+                              imageUrl: widget.senderAvatarUrl!,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Icon(Icons.person,
+                                  color: Colors.white30, size: 14.sp),
+                              errorWidget: (context, url, error) => Icon(
+                                  Icons.person,
+                                  color: Colors.white30,
+                                  size: 14.sp),
+                            )
+                          : Icon(Icons.person,
+                              color: Colors.white30, size: 14.sp),
+                    ),
+                    UIHelper.horizontalSpace(8.w),
+                  ] else if (!isMe && !widget.showAvatar) ...[
+                    UIHelper.horizontalSpace(36.w),
+                  ],
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: isMe
+                          ? CrossAxisAlignment.end
+                          : CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildMessageContent(),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (_showTime)
+                Padding(
+                  padding: EdgeInsets.only(
+                    top: 4.h,
+                    left: isMe ? 0 : 36.w,
+                    right: isMe ? 8.w : 0,
+                  ),
+                  child: Text(
+                    timeStr,
+                    style: TextFontStyle.textStyle10c888888DMSans600.copyWith(
+                      color: Colors.white30,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return GestureDetector(
       onTap: _toggleShowTime,

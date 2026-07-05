@@ -17,6 +17,18 @@ class StartMediaUploadEvent extends UploadEvent {
   });
 }
 
+class StartMultipleMediaUploadEvent extends UploadEvent {
+  final List<File> files;
+  final List<ChatMessageType> types;
+  final String conversationId;
+
+  const StartMultipleMediaUploadEvent({
+    required this.files,
+    required this.types,
+    required this.conversationId,
+  });
+}
+
 class UpdateUploadProgressEvent extends UploadEvent {
   final double progress;
   const UpdateUploadProgressEvent(this.progress);
