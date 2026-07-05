@@ -1,8 +1,5 @@
 import 'package:bea_window_app/features/onboarding/presentation/bloc/onboarding_bloc.dart';
 import 'package:bea_window_app/loading_screen.dart';
-import 'package:bea_window_app/features/chat_overlay/presentation/overlay_screen.dart';
-import 'package:bea_window_app/features/chat_overlay/services/chat_head_sync_service.dart';
-import 'dart:io';
 import 'package:bea_window_app/features/story/presentation/bloc/story_bloc.dart';
 import 'package:bea_window_app/features/story/presentation/bloc/story_event.dart';
 import 'package:bea_window_app/features/space_screen/bloc/space_screen_bloc.dart';
@@ -36,9 +33,6 @@ void main() async {
   // initiInternetChecker();
   // await LocationService.instance.initialize();
   DioSingleton.instance.create();
-  if (Platform.isAndroid) {
-    ChatHeadSyncService().startSync();
-  }
   runApp(const MyApp());
 }
 
@@ -121,20 +115,4 @@ class UtillScreenMobile extends StatelessWidget {
   }
 }
 
-@pragma("vm:entry-point")
-void overlayMain() {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(
-    ScreenUtilInit(
-      designSize: const Size(375, 812),
-      minTextAdapt: true,
-      splitScreenMode: true,
-      builder: (context, child) {
-        return const MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: OverlayScreen(),
-        );
-      },
-    ),
-  );
-}
+

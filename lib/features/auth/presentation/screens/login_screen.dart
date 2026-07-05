@@ -67,7 +67,8 @@ class _LoginScreenState extends State<LoginScreen>
           appData.write(kKeyIsLoggedIn, true);
           Navigator.pushReplacementNamed(context, Routes.navigationScreen);
         } else if (state is EmailVerificationPending) {
-          Navigator.pushReplacementNamed(context, Routes.emailVerificationScreen);
+          Navigator.pushReplacementNamed(
+              context, Routes.emailVerificationScreen);
         } else if (state is ProfileSetupPendingState) {
           appData.write(kKeyIsLoggedIn, true);
           Navigator.pushReplacementNamed(context, Routes.profileSetupScreen);
@@ -104,7 +105,8 @@ class _LoginScreenState extends State<LoginScreen>
                               logoIcon: Icons.favorite_rounded,
                               eyebrow: 'Welcome back',
                               headline: 'Your window\nawaits ✦',
-                              subtitle: 'Sign in to reconnect with your person.',
+                              subtitle:
+                                  'Sign in to reconnect with your person.',
                             ),
                             UIHelper.verticalSpace(32.h),
                             CustomAuthTextField(
@@ -141,16 +143,21 @@ class _LoginScreenState extends State<LoginScreen>
                               label: 'Sign In',
                               isLoading: isLoading,
                               showArrow: true,
-                              onTap: () {
-                                if (_formKey.currentState?.validate() ?? false) {
-                                  context.read<AuthBloc>().add(
-                                        LoginRequestedEvent(
-                                          email: _emailController.text.trim(),
-                                          password: _passwordController.text,
-                                        ),
-                                      );
-                                }
-                              },
+                              onTap: isLoading
+                                  ? null
+                                  : () {
+                                      if (_formKey.currentState?.validate() ??
+                                          false) {
+                                        context.read<AuthBloc>().add(
+                                              LoginRequestedEvent(
+                                                email: _emailController.text
+                                                    .trim(),
+                                                password:
+                                                    _passwordController.text,
+                                              ),
+                                            );
+                                      }
+                                    },
                             ),
                             UIHelper.verticalSpace(20.h),
                             _buildOrDivider(),
@@ -184,10 +191,6 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-
-
-
-
   Widget _buildForgotPassword() {
     return Align(
       alignment: Alignment.centerRight,
@@ -204,8 +207,6 @@ class _LoginScreenState extends State<LoginScreen>
       ),
     );
   }
-
-
 
   Widget _buildOrDivider() {
     return Row(children: [
