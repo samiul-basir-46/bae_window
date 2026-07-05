@@ -222,7 +222,8 @@ class _ConnectionCardState extends State<ConnectionCard>
                                     ? Image.network(
                                         widget.partnerAvatarUrl,
                                         fit: BoxFit.cover,
-                                        errorBuilder: (context, e, s) => Container(
+                                        errorBuilder: (context, e, s) =>
+                                            Container(
                                           color: const Color(0xFFFF6E7F),
                                           child: Icon(Icons.favorite_rounded,
                                               color: Colors.white, size: 18.sp),
@@ -236,7 +237,8 @@ class _ConnectionCardState extends State<ConnectionCard>
                                 : Container(
                                     color: Colors.white.withValues(alpha: 0.05),
                                     child: Icon(Icons.add_rounded,
-                                        color: AppColors.primaryPink, size: 20.sp),
+                                        color: AppColors.primaryPink,
+                                        size: 20.sp),
                                   ),
                           ),
                         ),
@@ -259,7 +261,9 @@ class _ConnectionCardState extends State<ConnectionCard>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.isPaired ? "You & ${widget.partnerName}" : "Solo Mode",
+                    widget.isPaired
+                        ? "You & ${widget.partnerName}"
+                        : "Solo Mode",
                     style: GoogleFonts.dmSans(
                       color: Colors.white,
                       fontSize: 15.sp,

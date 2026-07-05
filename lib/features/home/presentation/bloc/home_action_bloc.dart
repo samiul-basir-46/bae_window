@@ -2,6 +2,7 @@ import 'package:bea_window_app/features/auth/services/cloudinary_service.dart';
 import 'package:bea_window_app/features/auth/services/firebase_auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_storage/get_storage.dart';
 
 import 'home_action_event.dart';
 import 'home_action_state.dart';
@@ -28,7 +29,9 @@ class HomeActionBloc extends Bloc<HomeActionEvent, HomeActionState> {
       HomeMediaType.drawing => 'drawing',
       HomeMediaType.voice => 'voice message',
     };
-    emit(HomeActionLoading('Uploading $label to Bae...'));
+    final partnerName =
+        GetStorage().read<String>('partner_nickname') ?? 'Partner';
+    emit(HomeActionLoading('Uploading $label to $partnerName...'));
 
     try {
       final url = event.mediaType == HomeMediaType.voice
@@ -47,7 +50,7 @@ class HomeActionBloc extends Bloc<HomeActionEvent, HomeActionState> {
         snapUrl: url,
         snapType: snapType,
       );
-      emit(HomeActionSuccess('${_capitalize(label)} sent to Bae!'));
+      emit(HomeActionSuccess('${_capitalize(label)} sent to $partnerName!'));
     } catch (e) {
       emit(HomeActionFailure(_cleanError(e)));
     }
@@ -58,10 +61,12 @@ class HomeActionBloc extends Bloc<HomeActionEvent, HomeActionState> {
     Emitter<HomeActionState> emit,
   ) async {
     if (state is HomeActionLoading) return;
-    emit(const HomeActionLoading('Sending pulse to Bae...'));
+    final partnerName =
+        GetStorage().read<String>('partner_nickname') ?? 'Partner';
+    emit(HomeActionLoading('Sending pulse to $partnerName...'));
     try {
       await _authService.sendPulse();
-      emit(const HomeActionSuccess('Pulse sent to your Bae!'));
+      emit(HomeActionSuccess('Pulse sent to $partnerName!'));
     } catch (e) {
       emit(HomeActionFailure(_cleanError(e)));
     }

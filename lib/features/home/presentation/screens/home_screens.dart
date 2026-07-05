@@ -171,7 +171,7 @@ class HomeScreenView extends StatelessWidget {
                               imageUrl: state.livePeekImageUrl,
                               drawingUrl: state.livePeekDrawingUrl,
                               voiceUrl: state.livePeekVoiceUrl,
-                              partnerName: state.partnerName ?? 'Bae',
+                              partnerName: state.partnerName ?? 'Partner',
                               snapType: state.latestSnapType,
                               onTap: () {
                                 const SwitchTabNotification(1)
@@ -183,7 +183,7 @@ class HomeScreenView extends StatelessWidget {
                               UIHelper.verticalSpace(24.h),
                               RelationshipPulseCard(
                                 data: state.relationshipPulse,
-                                partnerName: state.partnerName ?? 'Bae',
+                                partnerName: state.partnerName ?? 'Partner',
                               ),
                             ],
                             if (state.questionOfTheDay != null) ...[

@@ -286,20 +286,20 @@ class _BreathingGlowAvatarState extends State<BreathingGlowAvatar>
                       widget.avatarUrl,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) => Container(
-                        color: AppColors.navBgColor,
+                        color: const Color(0xFFFF6E7F),
                         child: Icon(
-                          Icons.person_3_rounded,
-                          color: Colors.white.withValues(alpha: 0.5),
-                          size: 28.sp,
+                          Icons.favorite_rounded,
+                          color: Colors.white,
+                          size: 26.sp,
                         ),
                       ),
                     )
                   : Container(
-                      color: AppColors.navBgColor,
+                      color: const Color(0xFFFF6E7F),
                       child: Icon(
-                        Icons.person_3_rounded,
-                        color: Colors.white.withValues(alpha: 0.5),
-                        size: 28.sp,
+                        Icons.favorite_rounded,
+                        color: Colors.white,
+                        size: 26.sp,
                       ),
                     ),
             ),

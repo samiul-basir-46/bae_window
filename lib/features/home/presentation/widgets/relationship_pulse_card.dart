@@ -120,7 +120,7 @@ class RelationshipPulseCard extends StatelessWidget {
                       _buildLegendItem("You", AppColors.primaryPurple),
                       SizedBox(width: 16.w),
                       _buildLegendItem(
-                        partnerName.trim().isEmpty ? "Bae" : partnerName,
+                        partnerName.trim().isEmpty ? "Partner" : partnerName,
                         AppColors.primaryPink,
                       ),
                     ],
