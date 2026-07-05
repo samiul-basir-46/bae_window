@@ -476,7 +476,17 @@ class HomeScreenView extends StatelessWidget {
                   ),
                 ),
                 child: Center(
-                  child: Text(emoji, style: TextStyle(fontSize: 22.sp)),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    transitionBuilder: (Widget child, Animation<double> animation) {
+                      return ScaleTransition(scale: animation, child: child);
+                    },
+                    child: Text(
+                      emoji,
+                      key: ValueKey<String>(emoji),
+                      style: TextStyle(fontSize: 22.sp),
+                    ),
+                  ),
                 ),
               ),
               UIHelper.horizontalSpace(14.w),
@@ -493,12 +503,37 @@ class HomeScreenView extends StatelessWidget {
                       ),
                     ),
                     UIHelper.verticalSpace(2.h),
-                    Text(
-                      text,
-                      style: GoogleFonts.dmSans(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w600,
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+                        return Stack(
+                          alignment: Alignment.centerLeft,
+                          children: <Widget>[
+                            ...previousChildren,
+                            if (currentChild != null) currentChild,
+                          ],
+                        );
+                      },
+                      transitionBuilder: (Widget child, Animation<double> animation) {
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0.0, 0.2),
+                              end: Offset.zero,
+                            ).animate(animation),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: Text(
+                        text,
+                        key: ValueKey<String>(text),
+                        style: GoogleFonts.dmSans(
+                          color: Colors.white.withValues(alpha: 0.8),
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],

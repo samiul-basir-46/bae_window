@@ -191,9 +191,16 @@ class MoodCard extends StatelessWidget {
                     ),
                   ),
                   child: Center(
-                    child: Text(
-                      moodEmoji,
-                      style: TextStyle(fontSize: 26.sp),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      transitionBuilder: (Widget child, Animation<double> animation) {
+                        return ScaleTransition(scale: animation, child: child);
+                      },
+                      child: Text(
+                        moodEmoji,
+                        key: ValueKey<String>(moodEmoji),
+                        style: TextStyle(fontSize: 26.sp),
+                      ),
                     ),
                   ),
                 ),
@@ -211,12 +218,37 @@ class MoodCard extends StatelessWidget {
                         ),
                       ),
                       UIHelper.verticalSpace(4.h),
-                      Text(
-                        moodText,
-                        style: GoogleFonts.dmSans(
-                          color: Colors.white,
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.bold,
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+                          return Stack(
+                            alignment: Alignment.centerLeft,
+                            children: <Widget>[
+                              ...previousChildren,
+                              if (currentChild != null) currentChild,
+                            ],
+                          );
+                        },
+                        transitionBuilder: (Widget child, Animation<double> animation) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position: Tween<Offset>(
+                                begin: const Offset(0.0, 0.2),
+                                end: Offset.zero,
+                              ).animate(animation),
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: Text(
+                          moodText,
+                          key: ValueKey<String>(moodText),
+                          style: GoogleFonts.dmSans(
+                            color: Colors.white,
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
