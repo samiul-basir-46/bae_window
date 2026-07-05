@@ -12,6 +12,8 @@ import '../widgets/auth_background_blobs.dart';
 import '../widgets/auth_header.dart';
 import '../../../../gen/assets.gen.dart';
 import '../bloc/auth_bloc.dart';
+import 'package:bea_window_app/helpers/di.dart';
+import 'package:bea_window_app/constants/app_constants.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -84,7 +86,6 @@ class _SignUpScreenState extends State<SignUpScreen>
     if (_passwordStrength == 3) return 'Good';
     return 'Strong ✦';
   }
-
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<AuthBloc, AuthState>(
@@ -95,7 +96,14 @@ class _SignUpScreenState extends State<SignUpScreen>
           });
         }
         if (state is AuthSuccess) {
-          Navigator.pushReplacementNamed(context, '/couple_link');
+          appData.write(kKeyIsLoggedIn, true);
+          Navigator.pushReplacementNamed(context, Routes.navigationScreen);
+        } else if (state is ProfileSetupPendingState) {
+          appData.write(kKeyIsLoggedIn, true);
+          Navigator.pushReplacementNamed(context, Routes.profileSetupScreen);
+        } else if (state is PairingPendingState) {
+          appData.write(kKeyIsLoggedIn, true);
+          Navigator.pushReplacementNamed(context, Routes.pairingScreen);
         } else if (state is AuthFailure) {
           setState(() {
             _blocErrorMessage = state.errorMessage;

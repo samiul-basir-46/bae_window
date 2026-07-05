@@ -149,7 +149,7 @@ class PushNotificationService {
     if (_localNotificationsInitialized) return;
 
     const initializationSettings = InitializationSettings(
-      android: AndroidInitializationSettings('ic_notification'),
+      android: AndroidInitializationSettings('ic_launcher'),
       iOS: DarwinInitializationSettings(
         requestAlertPermission: false,
         requestBadgePermission: false,

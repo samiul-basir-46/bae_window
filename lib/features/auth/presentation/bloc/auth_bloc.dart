@@ -3,9 +3,9 @@ import 'dart:developer' as dev;
 import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:bea_window_app/features/auth/services/firebase_auth_service.dart';
 import 'package:bea_window_app/features/auth/services/cloudinary_service.dart';
-
 
 part 'auth_event.dart';
 part 'auth_state.dart';
@@ -204,17 +204,66 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-
-
   Future<void> _onGoogleSignInRequested(
     GoogleSignInRequestedEvent event,
     Emitter<AuthState> emit,
   ) async {
     emit(AuthLoading());
     try {
-      await Future.delayed(const Duration(seconds: 2));
+      final googleSignIn = GoogleSignIn.instance;
+      
+      try {
+        await googleSignIn.initialize();
+      } catch (e) {
+        dev.log('GoogleSignIn.initialize() info/warn: $e', name: 'AuthBloc');
+      }
+
+      await googleSignIn.signOut();
+      final googleUser = await googleSignIn.authenticate();
+
+      final googleAuth = googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        idToken: googleAuth.idToken,
+      );
+
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      final user = userCredential.user;
+
+      if (user != null) {
+        var userDoc = await _authService.getUserProfile(user.uid);
+        if (userDoc == null) {
+          await _authService.saveUserProfile(
+            uid: user.uid,
+            name: user.displayName ?? 'Google User',
+            email: user.email ?? '',
+          );
+          userDoc = await _authService.getUserProfile(user.uid);
+        }
+
+        if (userDoc != null) {
+          final isProfileComplete = (userDoc['profileComplete'] as bool? ?? false) ||
+              (userDoc['nickname'] as String? ?? '').isNotEmpty;
+          if (!isProfileComplete) {
+            dev.log('Google User logged in but profile is not completed.', name: 'AuthBloc');
+            emit(ProfileSetupPendingState());
+            return;
+          }
+          final pairStatus = userDoc['pairStatus'] as String? ?? 'none';
+          if (pairStatus != 'paired' && pairStatus != 'unpaired') {
+            dev.log('Google User logged in but pairing is pending.', name: 'AuthBloc');
+            emit(PairingPendingState());
+            return;
+          }
+        } else {
+          emit(ProfileSetupPendingState());
+          return;
+        }
+      }
+
       emit(AuthSuccess());
-    } catch (e) {
+    } catch (e, stack) {
+      dev.log('Exception during Google Sign-In: $e',
+          error: e, stackTrace: stack, name: 'AuthBloc');
       emit(AuthFailure(e.toString()));
     }
   }
