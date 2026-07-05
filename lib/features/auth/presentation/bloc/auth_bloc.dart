@@ -89,35 +89,44 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             credential.user!.uid,
           );
           if (userDoc != null) {
-            final isProfileComplete = (userDoc['profileComplete'] as bool? ?? false) ||
-                (userDoc['nickname'] as String? ?? '').isNotEmpty;
+            final isProfileComplete =
+                (userDoc['profileComplete'] as bool? ?? false) ||
+                    (userDoc['nickname'] as String? ?? '').isNotEmpty;
             if (!isProfileComplete) {
-              dev.log('User logged in but profile is not completed.', name: 'AuthBloc');
+              dev.log('User logged in but profile is not completed.',
+                  name: 'AuthBloc');
               emit(ProfileSetupPendingState());
               return;
             }
             final pairStatus = userDoc['pairStatus'] as String? ?? 'none';
             if (pairStatus != 'paired' && pairStatus != 'unpaired') {
-              dev.log('User logged in but pairing is pending.', name: 'AuthBloc');
+              dev.log('User logged in but pairing is pending.',
+                  name: 'AuthBloc');
               emit(PairingPendingState());
               return;
             }
           } else {
-            dev.log('User logged in but Firestore document does not exist.', name: 'AuthBloc');
+            dev.log('User logged in but Firestore document does not exist.',
+                name: 'AuthBloc');
             emit(ProfileSetupPendingState());
             return;
           }
         } catch (firestoreError) {
-          dev.log('Firestore unavailable during login gating check, skipping: $firestoreError', name: 'AuthBloc');
+          dev.log(
+              'Firestore unavailable during login gating check, skipping: $firestoreError',
+              name: 'AuthBloc');
         }
       }
-      dev.log('Login successful, profile complete, and paired.', name: 'AuthBloc');
+      dev.log('Login successful, profile complete, and paired.',
+          name: 'AuthBloc');
       emit(AuthSuccess());
     } on FirebaseAuthException catch (e, stack) {
       dev.log('FirebaseAuthException during login: [${e.code}] ${e.message}',
           error: e, stackTrace: stack, name: 'AuthBloc');
       String errorMsg = e.message ?? 'An error occurred during login.';
-      if (e.code == 'wrong-password' || e.code == 'invalid-credential' || e.code == 'user-not-found') {
+      if (e.code == 'wrong-password' ||
+          e.code == 'invalid-credential' ||
+          e.code == 'user-not-found') {
         errorMsg = 'Incorrect email or password. Please try again.';
       }
       emit(AuthFailure(errorMsg));
@@ -211,7 +220,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
     try {
       final googleSignIn = GoogleSignIn.instance;
-      
+
       try {
         await googleSignIn.initialize();
       } catch (e) {
@@ -226,7 +235,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         idToken: googleAuth.idToken,
       );
 
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      final userCredential =
+          await FirebaseAuth.instance.signInWithCredential(credential);
       final user = userCredential.user;
 
       if (user != null) {
@@ -241,16 +251,19 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         }
 
         if (userDoc != null) {
-          final isProfileComplete = (userDoc['profileComplete'] as bool? ?? false) ||
-              (userDoc['nickname'] as String? ?? '').isNotEmpty;
+          final isProfileComplete =
+              (userDoc['profileComplete'] as bool? ?? false) ||
+                  (userDoc['nickname'] as String? ?? '').isNotEmpty;
           if (!isProfileComplete) {
-            dev.log('Google User logged in but profile is not completed.', name: 'AuthBloc');
+            dev.log('Google User logged in but profile is not completed.',
+                name: 'AuthBloc');
             emit(ProfileSetupPendingState());
             return;
           }
           final pairStatus = userDoc['pairStatus'] as String? ?? 'none';
           if (pairStatus != 'paired' && pairStatus != 'unpaired') {
-            dev.log('Google User logged in but pairing is pending.', name: 'AuthBloc');
+            dev.log('Google User logged in but pairing is pending.',
+                name: 'AuthBloc');
             emit(PairingPendingState());
             return;
           }
@@ -264,7 +277,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     } catch (e, stack) {
       dev.log('Exception during Google Sign-In: $e',
           error: e, stackTrace: stack, name: 'AuthBloc');
-      emit(AuthFailure(e.toString()));
+      emit(AuthInitial());
     }
   }
 
@@ -323,7 +336,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-
   Future<void> _onGenerateInviteCodeRequested(
     GenerateInviteCodeRequested event,
     Emitter<AuthState> emit,
@@ -334,7 +346,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final code = await _authService.generateInviteCode();
       emit(PairingCodeGenerated(code));
     } catch (e, stack) {
-      dev.log('Error generating pairing code: $e', error: e, stackTrace: stack, name: 'AuthBloc');
+      dev.log('Error generating pairing code: $e',
+          error: e, stackTrace: stack, name: 'AuthBloc');
       emit(PairingFailure(e.toString()));
     }
   }
@@ -345,11 +358,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(PairingInProgress());
     try {
-      dev.log('Attempting to join with partner code: ${event.code}', name: 'AuthBloc');
+      dev.log('Attempting to join with partner code: ${event.code}',
+          name: 'AuthBloc');
       await _authService.joinWithCode(event.code);
       emit(PairingSuccess());
     } catch (e, stack) {
-      dev.log('Error joining with code: $e', error: e, stackTrace: stack, name: 'AuthBloc');
+      dev.log('Error joining with code: $e',
+          error: e, stackTrace: stack, name: 'AuthBloc');
       emit(PairingFailure(e.toString()));
     }
   }
@@ -364,9 +379,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       await _authService.skipPairing();
       emit(PairingSkipped());
     } catch (e, stack) {
-      dev.log('Error skipping pairing: $e', error: e, stackTrace: stack, name: 'AuthBloc');
+      dev.log('Error skipping pairing: $e',
+          error: e, stackTrace: stack, name: 'AuthBloc');
       emit(PairingFailure(e.toString()));
     }
   }
-
 }

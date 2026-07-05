@@ -34,8 +34,6 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     await PushNotificationService.showRemoteMessage(message);
   }
 
-  // Always try to update the home screen widget from the FCM data payload,
-  // even when the app is fully killed.
   await PushNotificationService.updateWidgetFromMessageData(message.data);
 }
 
@@ -73,9 +71,11 @@ class PushNotificationService {
 
       tz.initializeTimeZones();
 
-      const androidPlatformChannelSpecifics = AndroidNotificationDetails(
+      final partnerName = await getPartnerNickname();
+
+      final androidPlatformChannelSpecifics = AndroidNotificationDetails(
         activityChannelId,
-        'Bae activity',
+        '$partnerName activity',
         channelDescription: 'Snaps, drawings, voice, pulse, mood and task updates',
         importance: Importance.high,
         priority: Priority.high,
@@ -87,7 +87,7 @@ class PushNotificationService {
         presentSound: true,
       );
 
-      const platformChannelSpecifics = NotificationDetails(
+      final platformChannelSpecifics = NotificationDetails(
         android: androidPlatformChannelSpecifics,
         iOS: iosPlatformChannelSpecifics,
       );
@@ -149,7 +149,7 @@ class PushNotificationService {
     if (_localNotificationsInitialized) return;
 
     const initializationSettings = InitializationSettings(
-      android: AndroidInitializationSettings('ic_launcher'),
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       iOS: DarwinInitializationSettings(
         requestAlertPermission: false,
         requestBadgePermission: false,
@@ -178,7 +178,7 @@ class PushNotificationService {
       AndroidNotificationChannel(
         pulseChannelId,
         'Love pulse',
-        description: 'Priority love pulses from your Bae',
+        description: 'Priority love pulses from your partner',
         importance: Importance.max,
         playSound: true,
         enableVibration: true,
@@ -188,7 +188,7 @@ class PushNotificationService {
     await androidPlugin?.createNotificationChannel(
       const AndroidNotificationChannel(
         activityChannelId,
-        'Bae activity',
+        'Partner activity',
         description: 'Snaps, drawings, voice, pulse, mood and task updates',
         importance: Importance.high,
         playSound: true,
@@ -199,7 +199,7 @@ class PushNotificationService {
       const AndroidNotificationChannel(
         quietChannelId,
         'Quiet hours',
-        description: 'Silent Bae Window notifications during quiet hours',
+        description: 'Silent notifications during quiet hours',
         importance: Importance.low,
         playSound: false,
         enableVibration: false,
@@ -443,6 +443,9 @@ class PushNotificationService {
         : isQuiet
             ? quietChannelId
             : activityChannelId;
+
+    final partnerName = await getPartnerNickname();
+
     await _localNotifications.show(
       id: message.messageId?.hashCode ??
           DateTime.now().millisecondsSinceEpoch.remainder(1 << 31),
@@ -455,12 +458,12 @@ class PushNotificationService {
               ? 'Love pulse'
               : isQuiet
                   ? 'Quiet hours'
-                  : 'Bae activity',
+                  : '$partnerName activity',
           channelDescription: isPulse
-              ? 'Priority love pulses from your Bae'
+              ? 'Priority love pulses from your $partnerName'
               : isQuiet
                   ? 'Silent notifications during quiet hours'
-                  : 'Bae Window partner activity',
+                  : '$partnerName activity',
           importance: isPulse
               ? Importance.max
               : isQuiet
@@ -905,6 +908,44 @@ class PushNotificationService {
         error: e,
       );
     }
+  }
+
+  static Future<String> getPartnerNickname() async {
+    final storage = GetStorage();
+    final cached = storage.read<String>('partner_nickname');
+    if (cached != null && cached.isNotEmpty) {
+      return cached;
+    }
+
+    final user = _auth.currentUser;
+    if (user == null) return "Partner";
+    try {
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      if (userDoc.exists && userDoc.data() != null) {
+        final coupleId = userDoc.data()!['coupleId'] as String?;
+        if (coupleId != null && coupleId.isNotEmpty) {
+          final coupleDoc = await _firestore.collection('couples').doc(coupleId).get();
+          if (coupleDoc.exists && coupleDoc.data() != null) {
+            final data = coupleDoc.data()!;
+            final user1 = data['user1Uid'] as String?;
+            final user2 = data['user2Uid'] as String?;
+            final partnerUid = (user1 == user.uid) ? user2 : user1;
+            if (partnerUid != null && partnerUid.isNotEmpty) {
+              final partnerDoc = await _firestore.collection('users').doc(partnerUid).get();
+              if (partnerDoc.exists && partnerDoc.data() != null) {
+                final pData = partnerDoc.data()!;
+                final nickname = pData['nickname'] as String? ?? pData['name'] as String?;
+                if (nickname != null && nickname.isNotEmpty) {
+                  await storage.write('partner_nickname', nickname);
+                  return nickname;
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (_) {}
+    return "Partner";
   }
 
   static Future<void> dispose() async {

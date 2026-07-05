@@ -122,7 +122,6 @@ class _ConnectionCardState extends State<ConnectionCard>
         ),
         child: Row(
           children: [
-            // Interlocking Gradient Circles with Swap Animation
             GestureDetector(
               onTap: _triggerCircleSwap,
               behavior: HitTestBehavior.opaque,
@@ -134,7 +133,6 @@ class _ConnectionCardState extends State<ConnectionCard>
                   builder: (context, child) {
                     final sep = _separationAnimation.value;
 
-                    // Dynamic scaling for 3D orbiting effect
                     double leftScale = 1.0;
                     double rightScale = 1.0;
 
@@ -195,7 +193,6 @@ class _ConnectionCardState extends State<ConnectionCard>
                       ),
                     );
 
-                    // Circle B (Right, Partner Avatar / Invite Placeholder)
                     final Widget rightCircle = Positioned(
                       left: 24.w + sep,
                       child: Transform.scale(
