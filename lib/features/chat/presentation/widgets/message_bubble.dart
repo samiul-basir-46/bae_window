@@ -4,6 +4,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:bea_window_app/features/chat/bloc/chat_bloc.dart';
+import 'package:bea_window_app/features/chat/bloc/chat_event.dart';
 import 'package:bea_window_app/features/chat/models/message_model.dart';
 import 'package:bea_window_app/features/chat/presentation/widgets/image_message.dart';
 import 'package:bea_window_app/features/chat/presentation/widgets/video_message.dart';
@@ -26,6 +30,7 @@ class MessageBubble extends StatefulWidget {
   final Function(MessageModel message, Offset position) onLongPressMessage;
   final bool isLastMessage;
   final bool isRepliedMessageDeleted;
+  final FocusNode? focusNode;
 
   const MessageBubble({
     super.key,
@@ -39,6 +44,7 @@ class MessageBubble extends StatefulWidget {
     required this.onLongPressMessage,
     this.isLastMessage = false,
     this.isRepliedMessageDeleted = false,
+    this.focusNode,
   });
 
   @override
@@ -252,6 +258,89 @@ class _MessageBubbleState extends State<MessageBubble> {
     );
   }
 
+  void _showReactionsDetails(BuildContext context) {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final wasKeyboardFocused = widget.focusNode?.hasFocus == true;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.navBgColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Container(
+            padding: EdgeInsets.symmetric(vertical: 20.h, horizontal: 16.w),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Reactions',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 16.h),
+                ...widget.message.reactions.entries.map((entry) {
+                  final userId = entry.key;
+                  final emoji = entry.value;
+                  final isMe = userId == currentUserId;
+                  final displayName = isMe ? 'You' : widget.senderName;
+
+                  return ListTile(
+                    contentPadding: EdgeInsets.symmetric(vertical: 4.h),
+                    leading: Text(
+                      emoji,
+                      style: TextStyle(fontSize: 24.sp),
+                    ),
+                    title: Text(
+                      displayName,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    subtitle: isMe
+                        ? Text(
+                            'Tap to remove',
+                            style: TextStyle(
+                              color: AppColors.primaryPink.withValues(alpha: 0.7),
+                              fontSize: 11.sp,
+                            ),
+                          )
+                        : null,
+                    onTap: isMe
+                        ? () {
+                            Navigator.pop(sheetContext);
+                            context
+                                .read<ChatBloc>()
+                                .add(RemoveReactionEvent(widget.message.id));
+                            if (wasKeyboardFocused) {
+                              Future.delayed(const Duration(milliseconds: 100), () {
+                                widget.focusNode?.requestFocus();
+                              });
+                            } else {
+                              Future.delayed(const Duration(milliseconds: 100), () {
+                                FocusManager.instance.primaryFocus?.unfocus();
+                              });
+                            }
+                          }
+                        : null,
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildReactionsBadge() {
     if (widget.message.reactions.isEmpty) return const SizedBox.shrink();
 
@@ -262,42 +351,45 @@ class _MessageBubbleState extends State<MessageBubble> {
       bottom: -6.h,
       right: widget.isMe ? 12.w : null,
       left: widget.isMe ? null : 12.w,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-        decoration: BoxDecoration(
-          color: AppColors.navBgColor,
-          borderRadius: BorderRadius.circular(10.r),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.1),
-            width: 1.w,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+      child: GestureDetector(
+        onTap: () => _showReactionsDetails(context),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+          decoration: BoxDecoration(
+            color: AppColors.navBgColor,
+            borderRadius: BorderRadius.circular(10.r),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.1),
+              width: 1.w,
             ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              emojis.join(''),
-              style: TextStyle(fontSize: 10.sp),
-            ),
-            if (widget.message.reactions.length > 1) ...[
-              UIHelper.horizontalSpace(2.w),
-              Text(
-                widget.message.reactions.length.toString(),
-                style: TextStyle(
-                  color: AppColors.c8E8E9F,
-                  fontSize: 8.sp,
-                  fontWeight: FontWeight.w600,
-                ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
               ),
             ],
-          ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                emojis.join(''),
+                style: TextStyle(fontSize: 10.sp),
+              ),
+              if (widget.message.reactions.length > 1) ...[
+                UIHelper.horizontalSpace(2.w),
+                Text(
+                  widget.message.reactions.length.toString(),
+                  style: TextStyle(
+                    color: AppColors.c8E8E9F,
+                    fontSize: 8.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );

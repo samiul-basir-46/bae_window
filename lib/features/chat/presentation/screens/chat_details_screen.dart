@@ -8,6 +8,9 @@ import 'package:get_storage/get_storage.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/features/chat/models/user_model.dart';
 import 'package:bea_window_app/common_widgets/app_toast.dart';
+import 'package:bea_window_app/features/chat_overlay/services/overlay_service.dart' show OverlayService;
+import 'package:bea_window_app/features/chat_overlay/services/overlay_permission_service.dart' show OverlayPermissionService;
+import 'dart:io';
 import '../widgets/theme_picker_sheet.dart';
 import '../widgets/quick_reaction_picker_dialog.dart';
 import '../widgets/edit_nicknames_dialog.dart';
@@ -33,6 +36,56 @@ class ChatDetailsScreen extends StatefulWidget {
 
 class _ChatDetailsScreenState extends State<ChatDetailsScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  bool _isChatHeadEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _isChatHeadEnabled = GetStorage().read<bool>('chat_head_enabled_${widget.conversationId}') ?? false;
+  }
+
+  void _toggleChatHead(bool enabled) async {
+    if (enabled) {
+      if (Platform.isAndroid) {
+        final permService = OverlayPermissionService();
+        final hasPerm = await permService.checkPermission();
+        if (hasPerm) {
+          await GetStorage().write('chat_head_enabled_${widget.conversationId}', true);
+          await OverlayService().showChatHead();
+          setState(() {
+            _isChatHeadEnabled = true;
+          });
+        } else {
+          final granted = await permService.requestPermission();
+          if (granted) {
+            await GetStorage().write('chat_head_enabled_${widget.conversationId}', true);
+            await OverlayService().showChatHead();
+            setState(() {
+              _isChatHeadEnabled = true;
+            });
+          } else {
+            setState(() {
+              _isChatHeadEnabled = false;
+            });
+            if (mounted) {
+              AppToast.show(
+                context,
+                title: "Permission Denied",
+                message: "Please enable 'Draw over other apps' permission to use Chat Heads.",
+                type: ToastType.error,
+              );
+            }
+          }
+        }
+      }
+    } else {
+      await GetStorage().write('chat_head_enabled_${widget.conversationId}', false);
+      await OverlayService().closeChatHead();
+      setState(() {
+        _isChatHeadEnabled = false;
+      });
+    }
+  }
 
   DocumentReference<Map<String, dynamic>> get _convRef =>
       _firestore.collection('conversations').doc(widget.conversationId);
@@ -234,6 +287,19 @@ class _ChatDetailsScreenState extends State<ChatDetailsScreen> {
                   subtitle: "Browse photos and videos shared in chat",
                   onTap: () => _showSharedMedia(context),
                 ),
+                if (Platform.isAndroid)
+                  _buildListTile(
+                    icon: Icons.chat_bubble_outline_rounded,
+                    title: "Floating Chat Head",
+                    subtitle: "Show overlay bubble over other apps",
+                    trailing: Switch(
+                      value: _isChatHeadEnabled,
+                      activeThumbColor: AppColors.primaryPink,
+                      activeTrackColor: AppColors.primaryPink.withValues(alpha: 0.5),
+                      onChanged: (val) => _toggleChatHead(val),
+                    ),
+                    onTap: () => _toggleChatHead(!_isChatHeadEnabled),
+                  ),
                 _buildListTile(
                   icon: Icons.push_pin_rounded,
                   title: "Pinned messages",

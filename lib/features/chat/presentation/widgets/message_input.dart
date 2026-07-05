@@ -21,6 +21,7 @@ class MessageInput extends StatefulWidget {
   final VoidCallback? onCancelEdit;
   final Function(String newContent)? onFinishEdit;
   final String quickReaction;
+  final FocusNode? focusNode;
 
   const MessageInput({
     super.key,
@@ -32,6 +33,7 @@ class MessageInput extends StatefulWidget {
     this.onCancelEdit,
     this.onFinishEdit,
     this.quickReaction = '👍',
+    this.focusNode,
   });
 
   @override
@@ -40,7 +42,7 @@ class MessageInput extends StatefulWidget {
 
 class _MessageInputState extends State<MessageInput> with SingleTickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
-  final FocusNode _focusNode = FocusNode();
+  late final FocusNode _focusNode;
   final ImagePicker _imagePicker = ImagePicker();
 
   Timer? _typingTimer;
@@ -57,6 +59,7 @@ class _MessageInputState extends State<MessageInput> with SingleTickerProviderSt
   void initState() {
     super.initState();
     _controller.addListener(_onTextChanged);
+    _focusNode = widget.focusNode ?? FocusNode();
     _toggleAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 250),
@@ -82,7 +85,9 @@ class _MessageInputState extends State<MessageInput> with SingleTickerProviderSt
   void dispose() {
     _controller.removeListener(_onTextChanged);
     _controller.dispose();
-    _focusNode.dispose();
+    if (widget.focusNode == null) {
+      _focusNode.dispose();
+    }
     _typingTimer?.cancel();
     _toggleAnimationController.dispose();
     super.dispose();

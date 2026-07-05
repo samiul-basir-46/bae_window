@@ -79,6 +79,7 @@ class ChatView extends StatefulWidget {
 class _ChatViewState extends State<ChatView> {
   final ScrollController _scrollController = ScrollController();
   final ChatRepository _chatRepository = locator<ChatRepository>();
+  final FocusNode _inputFocusNode = FocusNode();
 
   UserModel? _partnerUser;
   MessageModel? _editingMessage;
@@ -101,6 +102,7 @@ class _ChatViewState extends State<ChatView> {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _partnerProfileSub?.cancel();
+    _inputFocusNode.dispose();
     GetStorage().remove('active_conversation_id');
     super.dispose();
   }
@@ -143,6 +145,7 @@ class _ChatViewState extends State<ChatView> {
     if (message.isDeleted) return;
     final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
     final isOwnMessage = message.senderId == currentUserId;
+    final wasKeyboardFocused = _inputFocusNode.hasFocus;
 
     showModalBottomSheet(
       context: context,
@@ -174,10 +177,28 @@ class _ChatViewState extends State<ChatView> {
                   if (modalContext.mounted) {
                     Navigator.pop(modalContext);
                   }
+                  if (wasKeyboardFocused) {
+                    Future.delayed(const Duration(milliseconds: 100), () {
+                      _inputFocusNode.requestFocus();
+                    });
+                  } else {
+                    Future.delayed(const Duration(milliseconds: 100), () {
+                      FocusManager.instance.primaryFocus?.unfocus();
+                    });
+                  }
                 },
                 onDismiss: () {
                   if (modalContext.mounted) {
                     Navigator.pop(modalContext);
+                  }
+                  if (wasKeyboardFocused) {
+                    Future.delayed(const Duration(milliseconds: 100), () {
+                      _inputFocusNode.requestFocus();
+                    });
+                  } else {
+                    Future.delayed(const Duration(milliseconds: 100), () {
+                      FocusManager.instance.primaryFocus?.unfocus();
+                    });
                   }
                 },
               ),
@@ -444,6 +465,7 @@ class _ChatViewState extends State<ChatView> {
                                       messages[i - 1].senderId != msg.senderId;
                                   listItems.add(
                                     MessageBubble(
+                                      focusNode: _inputFocusNode,
                                       message: msg,
                                       isMe: msg.senderId == currentUserId,
                                       showAvatar: showAvatar,
@@ -555,6 +577,7 @@ class _ChatViewState extends State<ChatView> {
                           BlocBuilder<ChatBloc, ChatState>(
                             builder: (context, state) {
                               return MessageInput(
+                                focusNode: _inputFocusNode,
                                 editingMessage: _editingMessage,
                                 replyingTo: state.replyingTo,
                                 quickReaction: quickReaction,

@@ -1,6 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:app_links/app_links.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:bea_window_app/features/chat/models/user_model.dart';
+import 'package:bea_window_app/helpers/all_routes.dart';
+import 'package:bea_window_app/helpers/navigation_service.dart';
 import 'package:bea_window_app/navigation_screen.dart';
 
 class DeepLinkHelper {
@@ -28,9 +33,9 @@ class DeepLinkHelper {
     _widgetClickSubscription?.cancel();
   }
 
-  static void _handleUri(BuildContext context, Uri uri) {
+  static void _handleUri(BuildContext context, Uri uri) async {
     // URI format: baewindow://camera, baewindow://draw, etc.
-    final path = uri.host; // "camera", "draw", "pulse", "voice"
+    final path = uri.host; // "camera", "draw", "pulse", "voice", "chat"
 
     switch (path) {
       case 'home':
@@ -51,6 +56,33 @@ class DeepLinkHelper {
       case 'voice':
         // Navigate to SpaceScreen/Voice or NestScreen
         const SwitchTabNotification(2).dispatch(context);
+        break;
+      case 'chat':
+        final conversationId = uri.queryParameters['conversationId'];
+        if (conversationId != null) {
+          final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+          if (currentUserId == null) return;
+
+          final parts = conversationId.split('_');
+          final partnerUid = parts.firstWhere((id) => id != currentUserId, orElse: () => '');
+          if (partnerUid.isEmpty) return;
+
+          try {
+            final userDoc = await FirebaseFirestore.instance.collection('users').doc(partnerUid).get();
+            if (userDoc.exists && userDoc.data() != null) {
+              final partnerUser = UserModel.fromMap(userDoc.id, userDoc.data()!);
+              NavigationService.navigatorKey.currentState?.pushNamed(
+                Routes.chatDetails,
+                arguments: {
+                  'conversationId': conversationId,
+                  'partnerUser': partnerUser,
+                },
+              );
+            }
+          } catch (e) {
+            debugPrint('Failed to navigate to chat from deep link: $e');
+          }
+        }
         break;
     }
   }
