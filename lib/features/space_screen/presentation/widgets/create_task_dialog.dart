@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
 import 'package:bea_window_app/common_widgets/custom_auth_text_field.dart';
-import 'dart:ui';
 
 class CreateTaskDialog extends StatefulWidget {
   final String partnerNickname;
@@ -32,10 +31,8 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-      child: AlertDialog(
-        backgroundColor: AppColors.navBgColor.withValues(alpha: 0.95),
+    return AlertDialog(
+      backgroundColor: AppColors.navBgColor.withValues(alpha: 0.95),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(28.r),
           side: BorderSide(
@@ -217,7 +214,6 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
             ],
           ),
         ],
-      ),
-    );
+      );
   }
 }
