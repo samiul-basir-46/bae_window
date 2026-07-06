@@ -4,7 +4,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
 import 'package:bea_window_app/constants/text_font_style.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
-import '../widgets/glowing_heart_widget.dart';
 import '../bloc/splash_bloc.dart';
 import '../bloc/splash_event.dart';
 import '../bloc/splash_state.dart';
@@ -18,126 +17,103 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-  late AnimationController _entranceController;
-  late Animation<double> _heartFadeAnimation;
-  late Animation<double> _titleFadeAnimation;
-  late Animation<double> _titleSlideAnimation;
-  late Animation<double> _subtitleFadeAnimation;
-  late Animation<double> _footerFadeAnimation;
+  late AnimationController _logoController;
+  late Animation<double> _logoScaleAnimation;
+  late Animation<double> _logoFadeAnimation;
 
-  late AnimationController _pulseController;
-  late Animation<double> _heartScaleAnimation;
-  late Animation<double> _glowIntensityAnimation;
+  late AnimationController _glowController;
+  late Animation<double> _glowAnimation;
+  late AnimationController _textController;
+  late Animation<double> _titleSlideAnimation;
+  late Animation<double> _titleFadeAnimation;
+  late Animation<double> _subtitleFadeAnimation;
 
   @override
   void initState() {
     super.initState();
 
-    _entranceController = AnimationController(
+    _logoController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2200),
+      duration: const Duration(milliseconds: 900),
     );
 
-    _heartFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+    _logoScaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.0, end: 1.15)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 60,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.15, end: 0.92)
+            .chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 20,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.92, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 20,
+      ),
+    ]).animate(_logoController);
+
+    _logoFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _entranceController,
-        curve: const Interval(0.0, 0.4, curve: Curves.easeOut),
+        parent: _logoController,
+        curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
       ),
     );
 
-    // Brand Title fades + slides in
+    _glowController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    );
+
+    _glowAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
+    );
+
+    _textController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+
+    _titleSlideAnimation = Tween<double>(begin: 24.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _textController,
+        curve: const Interval(0.0, 0.7, curve: Curves.easeOutCubic),
+      ),
+    );
+
     _titleFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _entranceController,
-        curve: const Interval(0.25, 0.65, curve: Curves.easeOut),
+        parent: _textController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
       ),
     );
-    _titleSlideAnimation = Tween<double>(begin: 15.0, end: 0.0).animate(
+
+    _subtitleFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _entranceController,
-        curve: const Interval(0.25, 0.65, curve: Curves.easeOutCubic),
+        parent: _textController,
+        curve: const Interval(0.4, 1.0, curve: Curves.easeOut),
       ),
     );
 
-    _subtitleFadeAnimation = Tween<double>(begin: 0.0, end: 0.75).animate(
-      CurvedAnimation(
-        parent: _entranceController,
-        curve: const Interval(0.45, 0.85, curve: Curves.easeOut),
-      ),
-    );
+    _startAnimations();
+  }
 
-    _footerFadeAnimation = Tween<double>(begin: 0.0, end: 0.45).animate(
-      CurvedAnimation(
-        parent: _entranceController,
-        curve: const Interval(0.65, 1.0, curve: Curves.easeOut),
-      ),
-    );
+  Future<void> _startAnimations() async {
+    await _logoController.forward();
 
-    _entranceController.forward();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1800),
-    )..repeat();
+    _glowController.repeat(reverse: true);
 
-    _heartScaleAnimation = TweenSequence<double>([
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1.0, end: 1.08)
-            .chain(CurveTween(curve: Curves.easeOutCubic)),
-        weight: 12,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1.08, end: 1.03)
-            .chain(CurveTween(curve: Curves.easeInCubic)),
-        weight: 10,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1.03, end: 1.15)
-            .chain(CurveTween(curve: Curves.easeOutCubic)),
-        weight: 14,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1.15, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeInOutCubic)),
-        weight: 24,
-      ),
-      TweenSequenceItem(
-        tween: ConstantTween<double>(1.0),
-        weight: 40,
-      ),
-    ]).animate(_pulseController);
-
-    _glowIntensityAnimation = TweenSequence<double>([
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 0.45, end: 0.75)
-            .chain(CurveTween(curve: Curves.easeOut)),
-        weight: 12,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 0.75, end: 0.55)
-            .chain(CurveTween(curve: Curves.easeIn)),
-        weight: 10,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 0.55, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeOut)),
-        weight: 14,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1.0, end: 0.45)
-            .chain(CurveTween(curve: Curves.easeInOut)),
-        weight: 24,
-      ),
-      TweenSequenceItem(
-        tween: ConstantTween<double>(0.45),
-        weight: 40,
-      ),
-    ]).animate(_pulseController);
+    await Future.delayed(const Duration(milliseconds: 150));
+    await _textController.forward();
   }
 
   @override
   void dispose() {
-    _entranceController.dispose();
-    _pulseController.dispose();
+    _logoController.dispose();
+    _glowController.dispose();
+    _textController.dispose();
     super.dispose();
   }
 
@@ -155,97 +131,116 @@ class _SplashScreenState extends State<SplashScreen>
         },
         child: Scaffold(
           backgroundColor: AppColors.c121212,
-          body: Stack(
-            alignment: Alignment.center,
-            children: [
-              Positioned(
-                child: Center(
-                  child: AnimatedBuilder(
-                    animation: _pulseController,
-                    builder: (context, child) {
-                      return Container(
-                        width: 280.w,
-                        height: 280.h,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: RadialGradient(
-                            colors: [
-                              AppColors.cFFB3C6.withValues(
-                                  alpha: 0.08 * _glowIntensityAnimation.value),
-                              Colors.transparent,
-                            ],
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedBuilder(
+                  animation: Listenable.merge([_logoController, _glowController]),
+                  builder: (context, child) {
+                    return Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Outer glow
+                        Container(
+                          width: 140.w,
+                          height: 140.w,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: RadialGradient(
+                              colors: [
+                                const Color(0xFFB03085).withValues(
+                                    alpha: 0.22 * _glowAnimation.value *
+                                        _logoFadeAnimation.value),
+                                Colors.transparent,
+                              ],
+                            ),
                           ),
                         ),
-                      );
-                    },
+                        // Logo box
+                        Transform.scale(
+                          scale: _logoScaleAnimation.value,
+                          child: Opacity(
+                            opacity: _logoFadeAnimation.value,
+                            child: child,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                  child: Container(
+                    width: 90.w,
+                    height: 90.w,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(27.r),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Color(0xFFFF8FB8),
+                          Color(0xFFD94E98),
+                          Color(0xFFB03085),
+                        ],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFB03085).withValues(alpha: 0.45),
+                          blurRadius: 28,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Icon(
+                        Icons.favorite_rounded,
+                        color: Colors.white,
+                        size: 44.sp,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    GlowingHeartWidget(
-                      fadeAnimation: _heartFadeAnimation,
-                      scaleAnimation: _heartScaleAnimation,
-                      glowIntensityAnimation: _glowIntensityAnimation,
-                      pulseController: _pulseController,
-                    ),
-                    SizedBox(height: 52.h),
-                    AnimatedBuilder(
-                      animation: _entranceController,
-                      builder: (context, child) {
-                        return Opacity(
+
+                SizedBox(height: 40.h),
+
+                // Title + Subtitle
+                AnimatedBuilder(
+                  animation: _textController,
+                  builder: (context, _) {
+                    return Column(
+                      children: [
+                        // "Bloom"
+                        Opacity(
                           opacity: _titleFadeAnimation.value,
                           child: Transform.translate(
                             offset: Offset(0, _titleSlideAnimation.value),
-                            child: child,
-                          ),
-                        );
-                      },
-                      child: Column(
-                        children: [
-                          Text(
-                            "BaeWindow",
-                            style: TextFontStyle.textStyle38cFFFFFFSerif700,
-                          ),
-                          SizedBox(height: 10.h),
-                          AnimatedBuilder(
-                            animation: _entranceController,
-                            builder: (context, child) {
-                              return Opacity(
-                                opacity: _subtitleFadeAnimation.value,
-                                child: child,
-                              );
-                            },
                             child: Text(
-                              "just a glance away",
-                              style: TextFontStyle.textStyle16cCCCCCCSerifItalic,
+                              "Bloom",
+                              style: TextFontStyle.textStyle38cFFFFFFSerif700,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Positioned(
-                bottom: 50.h,
-                child: AnimatedBuilder(
-                  animation: _entranceController,
-                  builder: (context, child) {
-                    return Opacity(
-                      opacity: _footerFadeAnimation.value,
-                      child: child,
+                        ),
+
+                        SizedBox(height: 10.h),
+
+                        // "just for two"
+                        Opacity(
+                          opacity: _subtitleFadeAnimation.value,
+                          child: Transform.translate(
+                            offset: Offset(
+                                0, _titleSlideAnimation.value * 0.5),
+                            child: Text(
+                              "just for two",
+                              style:
+                                  TextFontStyle.textStyle16cCCCCCCSerifItalic,
+                            ),
+                          ),
+                        ),
+                      ],
                     );
                   },
-                  child: Text(
-                    "MADE FOR TWO",
-                    style: TextFontStyle.textStyle10c888888DMSans600,
-                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

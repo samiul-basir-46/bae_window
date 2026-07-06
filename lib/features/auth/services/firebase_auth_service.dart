@@ -375,6 +375,13 @@ class FirebaseAuthService {
           'senderName': senderName,
         },
       ));
+      unawaited(PushNotificationService.sendSilentWidgetSyncToPartner(
+        extraData: {
+          'moodEmoji': emoji,
+          'moodText': text,
+          'senderName': senderName,
+        },
+      ));
     } catch (e) {
       dev.log('Error triggering mood FCM notification client-side: $e');
     }
@@ -538,6 +545,13 @@ class FirebaseAuthService {
             : type.toLowerCase() == 'voice'
                 ? 'voiceFragment'
                 : 'newSnap',
+        extraData: {
+          'latestSnapUrl': snapUrl,
+          'latestSnapType': type,
+          'senderName': senderName,
+        },
+      ));
+      unawaited(PushNotificationService.sendSilentWidgetSyncToPartner(
         extraData: {
           'latestSnapUrl': snapUrl,
           'latestSnapType': type,

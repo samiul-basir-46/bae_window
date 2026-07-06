@@ -57,6 +57,7 @@ dependencies:
   path: any
   firebase_storage: any
   google_sign_in: ^7.2.0
+  workmanager: ^0.9.0+3
 
 
 

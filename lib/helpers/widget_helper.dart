@@ -65,6 +65,26 @@ class WidgetHelper {
     await HomeWidget.saveWidgetData<String>('timestamp', timestamp);
     await HomeWidget.saveWidgetData<String>('avatarLetter', avatar);
     await HomeWidget.saveWidgetData<String>(
+      'latestSnapUrl',
+      latestSnapUrl ?? '',
+    );
+    await HomeWidget.saveWidgetData<String>(
+      'latestSnapType',
+      latestSnapType ?? '',
+    );
+    await HomeWidget.saveWidgetData<String>(
+      'latestImageUrl',
+      latestImageUrl ?? '',
+    );
+    await HomeWidget.saveWidgetData<String>(
+      'latestDrawingUrl',
+      latestDrawingUrl ?? '',
+    );
+    await HomeWidget.saveWidgetData<String>(
+      'latestVoiceUrl',
+      latestVoiceUrl ?? '',
+    );
+    await HomeWidget.saveWidgetData<String>(
       'partnerMoodEmoji',
       partnerMoodEmoji ?? '',
     );
@@ -131,6 +151,16 @@ class WidgetHelper {
     }
 
     try {
+      final cachedUrlKey = '${preferenceKey}Url';
+      final previousUrl = await HomeWidget.getWidgetData<String>(cachedUrlKey);
+      final previousPath = await HomeWidget.getWidgetData<String>(preferenceKey);
+      if (previousUrl == url &&
+          previousPath != null &&
+          previousPath.isNotEmpty &&
+          File(previousPath).existsSync()) {
+        return;
+      }
+
       final directory = await getApplicationDocumentsDirectory();
       final filePath = '${directory.path}/$fileName';
       final response =
@@ -140,11 +170,14 @@ class WidgetHelper {
         final file = File(filePath);
         await file.writeAsBytes(response.bodyBytes, flush: true);
         await HomeWidget.saveWidgetData<String>(preferenceKey, filePath);
+        await HomeWidget.saveWidgetData<String>(cachedUrlKey, url);
       } else {
         await HomeWidget.saveWidgetData<String>(preferenceKey, null);
+        await HomeWidget.saveWidgetData<String>(cachedUrlKey, null);
       }
     } catch (_) {
       await HomeWidget.saveWidgetData<String>(preferenceKey, null);
+      await HomeWidget.saveWidgetData<String>('${preferenceKey}Url', null);
     }
   }
 }

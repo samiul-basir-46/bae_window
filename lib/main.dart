@@ -22,6 +22,7 @@ import 'helpers/di.dart';
 import 'helpers/helper_methods.dart';
 import 'helpers/navigation_service.dart';
 import 'helpers/notification_service.dart';
+import 'helpers/widget_background_sync_service.dart';
 import 'networks/dio/dio.dart';
 
 void main() async {
@@ -38,6 +39,7 @@ void main() async {
   diSetup();
   PushNotificationService.registerBackgroundHandler();
   await PushNotificationService.initialize();
+  await WidgetBackgroundSyncService.initialize();
   // initiInternetChecker();
   // await LocationService.instance.initialize();
   DioSingleton.instance.create();

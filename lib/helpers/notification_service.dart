@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:googleapis_auth/auth_io.dart' as auth;
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 import '../constants/app_constants.dart';
 import '../firebase_options.dart';
@@ -29,13 +30,18 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await GetStorage.init();
   await PushNotificationService.initializeLocalNotifications();
 
-  if (message.notification == null) {
+  final isSilentWidgetSync =
+      PushNotificationService.isSilentWidgetSyncData(message.data);
+  if (message.notification == null && !isSilentWidgetSync) {
     await PushNotificationService.showRemoteMessage(message);
   }
 
-  await PushNotificationService.updateWidgetFromMessageData(message.data)
+  await (isSilentWidgetSync
+          ? PushNotificationService.syncWidgetFromFirestore()
+          : PushNotificationService.updateWidgetFromMessageData(message.data))
       .timeout(
     const Duration(seconds: 5),
     onTimeout: () => dev.log(
@@ -638,6 +644,20 @@ class PushNotificationService {
           partnerMoodText: moodText,
           partnerBatteryLevel: battery,
         );
+        await _cacheWidgetSyncLocally(
+          partnerName: partnerName,
+          latestSnapUrl: snapUrl,
+          latestSnapType: snapType,
+          latestImageUrl:
+              (snapType != 'draw' && snapType != 'voice') ? snapUrl : null,
+          latestDrawingUrl: snapType == 'draw' ? snapUrl : null,
+          latestVoiceUrl: snapType == 'voice' ? snapUrl : null,
+          partnerMoodEmoji: moodEmoji,
+          partnerMoodText: moodText,
+          partnerBatteryLevel: battery,
+        );
+      } else if (isSilentWidgetSyncData(data)) {
+        await syncWidgetFromFirestore();
       }
     } catch (e) {
       dev.log(
@@ -645,6 +665,165 @@ class PushNotificationService {
         name: 'PushNotificationService',
         error: e,
       );
+    }
+  }
+
+  static bool isSilentWidgetSyncData(Map<String, dynamic> data) {
+    return data['silentWidgetSync']?.toString() == 'true' ||
+        data['widgetSync']?.toString() == 'true' ||
+        data['type']?.toString() == 'widgetSync';
+  }
+
+  static Future<bool> syncWidgetFromFirestore() async {
+    try {
+      await GetStorage.init();
+
+      final user = _auth.currentUser;
+      if (user == null) return false;
+
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      final userData = userDoc.data();
+      if (userData == null) return false;
+
+      final pairStatus = userData['pairStatus'] as String? ?? 'none';
+      final pairId = userData['pairId'] as String?;
+      if (pairStatus != 'paired' || pairId == null || pairId.isEmpty) {
+        await WidgetHelper.updateWidget(
+          isPaired: false,
+          partnerName: null,
+          daysTogether: null,
+          latestSnapUrl: null,
+        );
+        return true;
+      }
+
+      final coupleDoc = await _firestore.collection('couples').doc(pairId).get();
+      final coupleData = coupleDoc.data();
+      if (coupleData == null) return false;
+
+      final user1 = coupleData['user1Uid'] as String?;
+      final user2 = coupleData['user2Uid'] as String?;
+      final partnerUid = user1 == user.uid ? user2 : user2 == user.uid ? user1 : null;
+      if (partnerUid == null || partnerUid.isEmpty) return false;
+
+      final partnerDoc =
+          await _firestore.collection('users').doc(partnerUid).get();
+      final partnerData = partnerDoc.data();
+      if (partnerData == null) return false;
+
+      final partnerName = partnerData['nickname'] as String? ??
+          partnerData['name'] as String? ??
+          'Partner';
+      final latestSnapUrl = partnerData['latestSnapUrl'] as String? ?? '';
+      final latestSnapType = partnerData['latestSnapType'] as String?;
+      final normalizedType = latestSnapType?.toLowerCase();
+
+      final latestImageUrl =
+          partnerData['latestImageUrl'] as String? ?? '';
+      final latestDrawingUrl =
+          partnerData['latestDrawingUrl'] as String? ?? '';
+      final latestVoiceUrl =
+          partnerData['latestVoiceUrl'] as String? ?? '';
+      final partnerMood = partnerData['mood'] as Map<String, dynamic>?;
+      final rawBattery = partnerData['batteryLevel'];
+      final partnerBatteryLevel =
+          rawBattery is num ? rawBattery.toInt().clamp(0, 100).toInt() : null;
+
+      final resolvedImageUrl = latestImageUrl.isNotEmpty
+          ? latestImageUrl
+          : normalizedType != 'draw' && normalizedType != 'voice'
+              ? latestSnapUrl
+              : '';
+      final resolvedDrawingUrl = latestDrawingUrl.isNotEmpty
+          ? latestDrawingUrl
+          : normalizedType == 'draw'
+              ? latestSnapUrl
+              : '';
+      final resolvedVoiceUrl = latestVoiceUrl.isNotEmpty
+          ? latestVoiceUrl
+          : normalizedType == 'voice'
+              ? latestSnapUrl
+              : '';
+
+      await WidgetHelper.updateWidget(
+        isPaired: true,
+        partnerName: partnerName,
+        daysTogether:
+            _calculateDaysTogether(userData) ?? _calculateDaysTogether(partnerData),
+        latestSnapUrl: latestSnapUrl,
+        latestSnapType: latestSnapType,
+        latestImageUrl: resolvedImageUrl,
+        latestDrawingUrl: resolvedDrawingUrl,
+        latestVoiceUrl: resolvedVoiceUrl,
+        avatarLetter: partnerName.isNotEmpty ? partnerName[0].toUpperCase() : 'B',
+        partnerMoodEmoji: partnerMood?['emoji'] as String?,
+        partnerMoodText: partnerMood?['text'] as String?,
+        partnerBatteryLevel: partnerBatteryLevel,
+      );
+
+      await _cacheWidgetSyncLocally(
+        partnerName: partnerName,
+        latestSnapUrl: latestSnapUrl,
+        latestSnapType: latestSnapType,
+        latestImageUrl: resolvedImageUrl,
+        latestDrawingUrl: resolvedDrawingUrl,
+        latestVoiceUrl: resolvedVoiceUrl,
+        partnerMoodEmoji: partnerMood?['emoji'] as String?,
+        partnerMoodText: partnerMood?['text'] as String?,
+        partnerBatteryLevel: partnerBatteryLevel,
+      );
+      return true;
+    } catch (e, stack) {
+      dev.log(
+        'Error syncing widget from Firestore',
+        name: 'PushNotificationService',
+        error: e,
+        stackTrace: stack,
+      );
+      return false;
+    }
+  }
+
+  static Future<void> _cacheWidgetSyncLocally({
+    required String partnerName,
+    String? latestSnapUrl,
+    String? latestSnapType,
+    String? latestImageUrl,
+    String? latestDrawingUrl,
+    String? latestVoiceUrl,
+    String? partnerMoodEmoji,
+    String? partnerMoodText,
+    int? partnerBatteryLevel,
+  }) async {
+    final storage = GetStorage();
+    await storage.write('widget_partner_name', partnerName);
+    await storage.write('widget_latest_snap_url', latestSnapUrl ?? '');
+    await storage.write('widget_latest_snap_type', latestSnapType ?? '');
+    await storage.write('widget_latest_image_url', latestImageUrl ?? '');
+    await storage.write('widget_latest_drawing_url', latestDrawingUrl ?? '');
+    await storage.write('widget_latest_voice_url', latestVoiceUrl ?? '');
+    await storage.write('widget_partner_mood_emoji', partnerMoodEmoji ?? '');
+    await storage.write('widget_partner_mood_text', partnerMoodText ?? '');
+    await storage.write('widget_partner_battery_level', partnerBatteryLevel);
+    await storage.write(
+      'widget_last_sync_at',
+      DateTime.now().toUtc().millisecondsSinceEpoch,
+    );
+    if (partnerName.isNotEmpty) {
+      await storage.write('partner_nickname', partnerName);
+    }
+  }
+
+  static int? _calculateDaysTogether(Map<String, dynamic> data) {
+    final dateStr = data['relationshipStartDate'] as String?;
+    if (dateStr == null || dateStr.isEmpty) return null;
+
+    try {
+      final date = DateFormat('MMM d, yyyy').parse(dateStr);
+      return DateTime.now().difference(date).inDays;
+    } catch (_) {
+      final date = DateTime.tryParse(dateStr);
+      return date == null ? null : DateTime.now().difference(date).inDays;
     }
   }
 
@@ -847,6 +1026,70 @@ class PushNotificationService {
         error: e,
       );
       return [];
+    }
+  }
+
+  static Future<void> sendSilentWidgetSyncToPartner({
+    Map<String, String>? extraData,
+  }) async {
+    try {
+      final tokens = await _getPartnerFcmTokens();
+      if (tokens.isEmpty) return;
+
+      final accessToken = await _getAccessToken();
+      if (accessToken == null) return;
+
+      final projectId = DefaultFirebaseOptions.currentPlatform.projectId;
+      final url = Uri.parse(
+          'https://fcm.googleapis.com/v1/projects/$projectId/messages:send');
+
+      for (final token in tokens) {
+        final response = await http.post(
+          url,
+          headers: <String, String>{
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $accessToken',
+          },
+          body: jsonEncode({
+            'message': {
+              'token': token,
+              'data': {
+                'type': 'widgetSync',
+                'silentWidgetSync': 'true',
+                'widgetSync': 'true',
+                ...?extraData,
+              },
+              'android': {
+                'priority': 'high',
+              },
+              'apns': {
+                'headers': {
+                  'apns-priority': '5',
+                  'apns-push-type': 'background',
+                },
+                'payload': {
+                  'aps': {
+                    'content-available': 1,
+                  }
+                }
+              }
+            }
+          }),
+        );
+
+        if (response.statusCode != 200) {
+          dev.log(
+            'Silent widget FCM failed: ${response.statusCode} - ${response.body}',
+            name: 'PushNotificationService',
+          );
+        }
+      }
+    } catch (e) {
+      dev.log(
+        'Error sending silent widget sync',
+        name: 'PushNotificationService',
+        error: e,
+      );
     }
   }
 
