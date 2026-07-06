@@ -59,7 +59,6 @@ class NestBloc extends Bloc<NestEvent, NestState> {
         _partnerSubscription = null;
       }
 
-      // Guard: bloc may have closed while awaiting above
       if (isClosed) return;
 
       emit(NestLoaded(

@@ -355,12 +355,10 @@ class _MessageInputState extends State<MessageInput>
             SizedBox(width: 6.w),
             Expanded(
               child: Text('Upload failed',
-                  style:
-                      TextStyle(color: Colors.redAccent, fontSize: 11.sp)),
+                  style: TextStyle(color: Colors.redAccent, fontSize: 11.sp)),
             ),
             GestureDetector(
-              onTap: () =>
-                  context.read<UploadBloc>().add(RetryUploadEvent()),
+              onTap: () => context.read<UploadBloc>().add(RetryUploadEvent()),
               child: Text('Retry',
                   style: TextStyle(
                       color: AppColors.primaryPink,
@@ -369,10 +367,9 @@ class _MessageInputState extends State<MessageInput>
             ),
             SizedBox(width: 10.w),
             GestureDetector(
-              onTap: () =>
-                  context.read<UploadBloc>().add(CancelUploadEvent()),
-              child: Icon(Icons.close_rounded,
-                  color: Colors.white54, size: 15.sp),
+              onTap: () => context.read<UploadBloc>().add(CancelUploadEvent()),
+              child:
+                  Icon(Icons.close_rounded, color: Colors.white54, size: 15.sp),
             ),
           ],
         ),
@@ -391,8 +388,7 @@ class _MessageInputState extends State<MessageInput>
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(label,
-                    style:
-                        TextStyle(color: Colors.white54, fontSize: 10.sp)),
+                    style: TextStyle(color: Colors.white54, fontSize: 10.sp)),
                 SizedBox(height: 3.h),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4.r),
@@ -409,10 +405,9 @@ class _MessageInputState extends State<MessageInput>
           ),
           SizedBox(width: 10.w),
           GestureDetector(
-            onTap: () =>
-                context.read<UploadBloc>().add(CancelUploadEvent()),
-            child: Icon(Icons.close_rounded,
-                color: Colors.white38, size: 16.sp),
+            onTap: () => context.read<UploadBloc>().add(CancelUploadEvent()),
+            child:
+                Icon(Icons.close_rounded, color: Colors.white38, size: 16.sp),
           ),
         ],
       ),
@@ -449,8 +444,7 @@ class _MessageInputState extends State<MessageInput>
           ],
         ),
         child: Padding(
-          padding:
-              EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -516,7 +510,7 @@ class _MessageInputState extends State<MessageInput>
                     SizeTransition(
                       sizeFactor: _expandAnim,
                       axis: Axis.horizontal,
-                      axisAlignment: -1,
+                      alignment: const Alignment(-1.0, -1.0),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -541,8 +535,7 @@ class _MessageInputState extends State<MessageInput>
                       child: CustomChatTextField(
                         controller: _controller,
                         focusNode: _focusNode,
-                        hintText:
-                            isEditing ? 'Edit message...' : 'Message...',
+                        hintText: isEditing ? 'Edit message...' : 'Message...',
                         minLines: 1,
                         maxLines: 5,
                         keyboardType: TextInputType.multiline,
@@ -610,9 +603,7 @@ class _MessageInputState extends State<MessageInput>
             ),
             child: Center(
               child: Image.asset(
-                isEditing
-                    ? Assets.icons.check.path
-                    : Assets.icons.send.path,
+                isEditing ? Assets.icons.check.path : Assets.icons.send.path,
                 color: Colors.white,
                 height: 22.h,
               ),
