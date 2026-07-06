@@ -35,7 +35,6 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     await PushNotificationService.showRemoteMessage(message);
   }
 
-  // ✅ timeout দাও
   await PushNotificationService.updateWidgetFromMessageData(message.data)
       .timeout(
     const Duration(seconds: 5),
@@ -44,6 +43,71 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       name: 'PushNotificationService',
     ),
   );
+}
+
+@pragma('vm:entry-point')
+void notificationBackgroundHandler(NotificationResponse response) {
+  if (response.actionId == 'reply_action') {
+    final replyText = response.input?.trim() ?? '';
+    if (replyText.isEmpty) return;
+
+    try {
+      final payload = response.payload;
+      if (payload == null || payload.isEmpty) return;
+      final data = Map<String, dynamic>.from(jsonDecode(payload) as Map);
+      final conversationId = data['conversationId']?.toString() ?? '';
+      final partnerUid = data['partnerUid']?.toString() ?? '';
+      if (conversationId.isEmpty || partnerUid.isEmpty) return;
+
+      _sendQuickReply(
+        conversationId: conversationId,
+        partnerUid: partnerUid,
+        text: replyText,
+      );
+    } catch (_) {}
+  }
+}
+
+Future<void> _sendQuickReply({
+  required String conversationId,
+  required String partnerUid,
+  required String text,
+}) async {
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final msgId = FirebaseFirestore.instance
+        .collection('conversations')
+        .doc(conversationId)
+        .collection('messages')
+        .doc()
+        .id;
+
+    await FirebaseFirestore.instance
+        .collection('conversations')
+        .doc(conversationId)
+        .collection('messages')
+        .doc(msgId)
+        .set({
+      'id': msgId,
+      'senderId': user.uid,
+      'content': text,
+      'type': 'text',
+      'timestamp': FieldValue.serverTimestamp(),
+      'status': 'sent',
+      'isDeleted': false,
+      'deletedFor': [],
+      'reactions': {},
+    });
+
+    await PushNotificationService.clearConversationNotifications(
+        conversationId);
+  } catch (_) {}
 }
 
 class PushNotificationService {
@@ -60,11 +124,16 @@ class PushNotificationService {
   static final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
 
+  static final Map<String, List<String>> _unreadMessages = {};
+
   static bool _localNotificationsInitialized = false;
   static bool _listenersInitialized = false;
   static bool _requestingPermission = false;
   static StreamSubscription<User?>? _authSubscription;
   static StreamSubscription<String>? _tokenSubscription;
+
+  static String? _cachedAccessToken;
+  static DateTime? _tokenExpiresAt;
 
   static void registerBackgroundHandler() {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
@@ -169,9 +238,14 @@ class PushNotificationService {
         requestSoundPermission: false,
       ),
     );
+
     await _localNotifications.initialize(
       settings: initializationSettings,
       onDidReceiveNotificationResponse: (response) {
+        if (response.actionId == 'reply_action') {
+          notificationBackgroundHandler(response);
+          return;
+        }
         final payload = response.payload;
         if (payload == null || payload.isEmpty) return;
         try {
@@ -182,6 +256,7 @@ class PushNotificationService {
           _openNotification({'route': payload});
         }
       },
+      onDidReceiveBackgroundNotificationResponse: notificationBackgroundHandler,
     );
 
     final androidPlugin =
@@ -363,8 +438,8 @@ class PushNotificationService {
     for (int i = 1; i <= 50; i++) {
       await _localNotifications.cancel(id: notificationId + i);
     }
-    final key = 'unread_msgs_$conversationId';
-    await GetStorage().remove(key);
+    await GetStorage().remove('unread_msgs_$conversationId');
+    _unreadMessages.remove(conversationId);
   }
 
   static Future<void> showRemoteMessage(RemoteMessage message) async {
@@ -372,7 +447,6 @@ class PushNotificationService {
     final notification = message.notification;
     final title = notification?.title ?? message.data['title']?.toString();
     final body = notification?.body ?? message.data['body']?.toString();
-
     final type = message.data['type']?.toString();
 
     if (type == 'chat') {
@@ -395,14 +469,11 @@ class PushNotificationService {
           }
         }
 
-        final key = 'unread_msgs_$conversationId';
-        final storage = GetStorage();
-        final List<dynamic> rawList = storage.read<List<dynamic>>(key) ?? [];
-        final List<String> list = rawList.map((e) => e.toString()).toList();
-        if (messageText.isNotEmpty) list.add(messageText);
-        if (list.isNotEmpty) {
-          await storage.write(key, list);
+        _unreadMessages[conversationId] ??= [];
+        if (messageText.isNotEmpty) {
+          _unreadMessages[conversationId]!.add(messageText);
         }
+        final list = List<String>.from(_unreadMessages[conversationId]!);
 
         final notificationId = conversationId.isNotEmpty
             ? conversationId.hashCode.abs()
@@ -422,7 +493,7 @@ class PushNotificationService {
           summaryText: summaryText,
         );
 
-        final androidSummary = AndroidNotificationDetails(
+        final androidDetails = AndroidNotificationDetails(
           chatChannelId,
           'Chat Messages',
           channelDescription: 'Real-time chat messages from your partner',
@@ -432,6 +503,19 @@ class PushNotificationService {
           groupKey: conversationId.isNotEmpty ? conversationId : 'chat',
           setAsGroupSummary: true,
           autoCancel: true,
+          actions: const <AndroidNotificationAction>[
+            AndroidNotificationAction(
+              'reply_action',
+              'Reply',
+              inputs: <AndroidNotificationActionInput>[
+                AndroidNotificationActionInput(
+                  label: 'Type a message...',
+                ),
+              ],
+              showsUserInterface: false,
+              cancelNotification: false,
+            ),
+          ],
         );
 
         await _localNotifications.show(
@@ -439,7 +523,7 @@ class PushNotificationService {
           title: senderName,
           body: list.length == 1 ? messageText : summaryText,
           notificationDetails: NotificationDetails(
-            android: androidSummary,
+            android: androidDetails,
             iOS: darwinDetails,
           ),
           payload: jsonEncode(message.data),
@@ -644,9 +728,6 @@ class PushNotificationService {
     } catch (_) {}
     return user.displayName ?? "Partner";
   }
-
-  static String? _cachedAccessToken;
-  static DateTime? _tokenExpiresAt;
 
   static Future<String?> _getAccessToken() async {
     if (_cachedAccessToken != null &&
