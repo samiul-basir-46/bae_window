@@ -86,6 +86,7 @@ class ChatRepository {
     int? fileSize,
     String? videoThumbnail,
     List<MediaItemModel>? mediaItems,
+    String? messageId,
   }) {
     return _messageService.sendMessage(
       conversationId: conversationId,
@@ -97,6 +98,7 @@ class ChatRepository {
       fileSize: fileSize,
       videoThumbnail: videoThumbnail,
       mediaItems: mediaItems,
+      messageId: messageId,
     );
   }
 

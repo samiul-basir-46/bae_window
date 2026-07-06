@@ -14,65 +14,42 @@ class BaeSwitch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => onChanged(!value),
-      child: SizedBox(
-        width: 46.w,
-        height: 26.h,
-        child: Stack(
-          children: [
-            // 1. Inactive State Background (and border)
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16.r),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.12),
-                  width: 1.5.w,
-                ),
-                color: Colors.white.withValues(alpha: 0.03),
-              ),
-            ),
-            
-            // 2. Active State Background (Gradient + Shadow Glow)
-            AnimatedOpacity(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeInOut,
-              opacity: value ? 1.0 : 0.0,
-              child: Container(
+    return RepaintBoundary(
+      child: GestureDetector(
+        onTap: () => onChanged(!value),
+        child: SizedBox(
+          width: 46.w,
+          height: 26.h,
+          child: Stack(
+            children: [
+              // 1. Inactive State Background (and border)
+              Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16.r),
-                  gradient: const LinearGradient(
-                    colors: [AppColors.primaryPink, AppColors.primaryPurple],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    width: 1.5.w,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primaryPink.withValues(alpha: 0.25),
-                      blurRadius: 8.r,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  color: Colors.white.withValues(alpha: 0.03),
                 ),
               ),
-            ),
-
-            // 3. Sliding Thumb
-            AnimatedAlign(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeOutBack,
-              alignment: value ? Alignment.centerRight : Alignment.centerLeft,
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4.w),
+              
+              // 2. Active State Background (Gradient + Shadow Glow)
+              AnimatedOpacity(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeInOut,
+                opacity: value ? 1.0 : 0.0,
                 child: Container(
-                  width: 18.w,
-                  height: 18.h,
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16.r),
+                    gradient: const LinearGradient(
+                      colors: [AppColors.primaryPink, AppColors.primaryPurple],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
+                        color: AppColors.primaryPink.withValues(alpha: 0.25),
                         blurRadius: 4.r,
                         offset: const Offset(0, 1),
                       ),
@@ -80,8 +57,35 @@ class BaeSwitch extends StatelessWidget {
                   ),
                 ),
               ),
-            ),
-          ],
+
+              // 3. Sliding Thumb
+              AnimatedAlign(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.fastOutSlowIn,
+                alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4.w),
+                  child: RepaintBoundary(
+                    child: Container(
+                      width: 18.w,
+                      height: 18.h,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 3.r,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
