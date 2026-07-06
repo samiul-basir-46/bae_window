@@ -5,22 +5,24 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
 
-import '../bloc/space_bloc.dart';
-import '../bloc/space_event.dart';
-import '../bloc/space_state.dart';
+import '../../bloc/space_screen_bloc.dart';
+import '../../bloc/space_screen_event.dart';
+import '../../bloc/space_screen_state.dart';
 import '../widgets/live_status_indicator.dart';
 import '../widgets/love_connection_card.dart';
 import '../widgets/quick_action_grid.dart';
 import '../widgets/activity_feed.dart';
+import 'package:bea_window_app/common_widgets/custom_date_picker.dart';
 import 'package:bea_window_app/common_widgets/bae_loader.dart';
+import 'package:bea_window_app/common_widgets/app_toast.dart';
 
 class SpaceScreen extends StatelessWidget {
   const SpaceScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<SpaceBloc>(
-      create: (context) => SpaceBloc()..add(const LoadSpaceEvent()),
+    return BlocProvider<SpaceScreenBloc>(
+      create: (context) => SpaceScreenBloc()..add(const LoadSpaceScreenDataEvent()),
       child: const SpaceScreenView(),
     );
   }
@@ -28,6 +30,20 @@ class SpaceScreen extends StatelessWidget {
 
 class SpaceScreenView extends StatelessWidget {
   const SpaceScreenView({super.key});
+
+  Future<void> _selectAnniversary(BuildContext context, DateTime? currentDate) async {
+    final now = DateTime.now();
+    final pickedDate = await CustomDatePicker.show(
+      context,
+      initialDate: currentDate ?? now,
+      firstDate: DateTime(1900),
+      lastDate: DateTime(now.year + 50),
+    );
+
+    if (pickedDate != null && context.mounted) {
+      context.read<SpaceScreenBloc>().add(UpdateAnniversaryEvent(pickedDate));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -73,13 +89,13 @@ class SpaceScreenView extends StatelessWidget {
 
           // Main Layout
           SafeArea(
-            child: BlocBuilder<SpaceBloc, SpaceState>(
+            child: BlocBuilder<SpaceScreenBloc, SpaceScreenState>(
               builder: (context, state) {
-                if (state is SpaceLoading || state is SpaceInitial) {
+                if (state is SpaceScreenLoading || state is SpaceScreenInitial) {
                   return const Center(
                     child: BaeLoader(),
                   );
-                } else if (state is SpaceLoaded) {
+                } else if (state is SpaceScreenLoaded) {
                   return SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
                     padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
@@ -90,10 +106,10 @@ class SpaceScreenView extends StatelessWidget {
                         _buildHeader(state),
                         UIHelper.verticalSpace(24.h),
 
-                        // Connection Center Card (with animations)
+                        // Connection Center Card (with anniversary count down)
                         LoveConnectionCard(
-                          daysTogether: state.daysTogether,
-                          mood: state.currentMood,
+                          anniversaryDate: state.anniversaryDate,
+                          onTapSelectAnniversary: () => _selectAnniversary(context, state.anniversaryDate),
                         ),
                         UIHelper.verticalSpace(28.h),
 
@@ -108,11 +124,18 @@ class SpaceScreenView extends StatelessWidget {
                           ),
                         ),
                         UIHelper.verticalSpace(12.h),
-                        QuickActionGrid(
+                         QuickActionGrid(
                           taskProgress: state.taskProgress,
                           nextTaskTitle: state.nextTaskTitle,
+                          partnerNickname: state.partnerNickname,
                           onSendLoveNote: (note) {
-                            context.read<SpaceBloc>().add(SendLoveNoteEvent(note));
+                            context.read<SpaceScreenBloc>().add(SendSpaceLoveNoteEvent(note));
+                            AppToast.show(
+                              context,
+                              title: "Love Note Sent 💌",
+                              message: "Sent successfully to ${state.partnerNickname}!",
+                              type: ToastType.success,
+                            );
                           },
                         ),
                         UIHelper.verticalSpace(28.h),
@@ -139,7 +162,7 @@ class SpaceScreenView extends StatelessWidget {
                       ],
                     ),
                   );
-                } else if (state is SpaceError) {
+                } else if (state is SpaceScreenError) {
                   return Center(
                     child: Text(
                       state.message,
@@ -156,7 +179,7 @@ class SpaceScreenView extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(SpaceLoaded state) {
+  Widget _buildHeader(SpaceScreenLoaded state) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -173,7 +196,7 @@ class SpaceScreenView extends StatelessWidget {
             ),
             UIHelper.verticalSpace(2.h),
             Text(
-              "Good Morning, ${state.partnerName}",
+              "Good Morning, ${state.partnerNickname}",
               style: GoogleFonts.dmSans(
                 color: Colors.white38,
                 fontSize: 12.sp,
@@ -184,7 +207,7 @@ class SpaceScreenView extends StatelessWidget {
         // Pulsing Live status indicator widget
         LiveStatusIndicator(
           isOnline: state.isPartnerOnline,
-          partnerName: state.partnerName,
+          partnerName: state.partnerNickname,
         ),
       ],
     );

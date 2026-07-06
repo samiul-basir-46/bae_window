@@ -8,7 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
 import 'package:bea_window_app/features/space_screen/services/realtime_sync_service.dart';
-import '../bloc/task_notification_cubit.dart';
+import '../../bloc/task_notification_cubit.dart';
 import 'package:bea_window_app/common_widgets/app_toast.dart';
 import 'package:bea_window_app/common_widgets/bae_loader.dart';
 import 'package:bea_window_app/helpers/notification_service.dart';

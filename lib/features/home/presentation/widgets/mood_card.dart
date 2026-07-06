@@ -158,110 +158,108 @@ class MoodCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24.r),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-        child: GestureDetector(
-          onTap: () => _showMoodSelector(context),
-          child: Container(
-            padding: EdgeInsets.symmetric(vertical: 20.h, horizontal: 16.w),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.04),
-              borderRadius: BorderRadius.circular(24.r),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.08),
-                width: 1.w,
+    return GestureDetector(
+      onTap: () => _showMoodSelector(context),
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 20.h, horizontal: 16.w),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(24.r),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.08),
+            width: 1.w,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 50.w,
+              height: 50.h,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.primaryPink.withValues(alpha: 0.15),
+                    AppColors.primaryPurple.withValues(alpha: 0.1),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Center(
+                child: RepaintBoundary(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    transitionBuilder: (Widget child, Animation<double> animation) {
+                      return ScaleTransition(scale: animation, child: child);
+                    },
+                    child: Text(
+                      moodEmoji,
+                      key: ValueKey<String>(moodEmoji),
+                      style: TextStyle(fontSize: 26.sp),
+                    ),
+                  ),
+                ),
               ),
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 50.w,
-                  height: 50.h,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColors.primaryPink.withValues(alpha: 0.15),
-                        AppColors.primaryPurple.withValues(alpha: 0.1),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+            UIHelper.horizontalSpace(16.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "My Mood",
+                    style: GoogleFonts.dmSans(
+                      color: Colors.white.withValues(alpha: 0.4),
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  child: Center(
+                  UIHelper.verticalSpace(4.h),
+                  RepaintBoundary(
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 300),
+                      layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+                        return Stack(
+                          alignment: Alignment.centerLeft,
+                          children: <Widget>[
+                            ...previousChildren,
+                            if (currentChild != null) currentChild,
+                          ],
+                        );
+                      },
                       transitionBuilder: (Widget child, Animation<double> animation) {
-                        return ScaleTransition(scale: animation, child: child);
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0.0, 0.2),
+                              end: Offset.zero,
+                            ).animate(animation),
+                            child: child,
+                          ),
+                        );
                       },
                       child: Text(
-                        moodEmoji,
-                        key: ValueKey<String>(moodEmoji),
-                        style: TextStyle(fontSize: 26.sp),
+                        moodText,
+                        key: ValueKey<String>(moodText),
+                        style: GoogleFonts.dmSans(
+                          color: Colors.white,
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                UIHelper.horizontalSpace(16.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "My Mood",
-                        style: GoogleFonts.dmSans(
-                          color: Colors.white.withValues(alpha: 0.4),
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      UIHelper.verticalSpace(4.h),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
-                          return Stack(
-                            alignment: Alignment.centerLeft,
-                            children: <Widget>[
-                              ...previousChildren,
-                              if (currentChild != null) currentChild,
-                            ],
-                          );
-                        },
-                        transitionBuilder: (Widget child, Animation<double> animation) {
-                          return FadeTransition(
-                            opacity: animation,
-                            child: SlideTransition(
-                              position: Tween<Offset>(
-                                begin: const Offset(0.0, 0.2),
-                                end: Offset.zero,
-                              ).animate(animation),
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: Text(
-                          moodText,
-                          key: ValueKey<String>(moodText),
-                          style: GoogleFonts.dmSans(
-                            color: Colors.white,
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  color: Colors.white.withValues(alpha: 0.3),
-                  size: 24.sp,
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: Colors.white.withValues(alpha: 0.3),
+              size: 24.sp,
+            ),
+          ],
         ),
       ),
     );

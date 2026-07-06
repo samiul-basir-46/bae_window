@@ -445,103 +445,101 @@ class HomeScreenView extends StatelessWidget {
     required String emoji,
     required String text,
   }) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24.r),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-        child: Container(
-          padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 16.w),
-          decoration: BoxDecoration(
-            color: AppColors.primaryPink.withValues(alpha: 0.04),
-            borderRadius: BorderRadius.circular(24.r),
-            border: Border.all(
-              color: AppColors.primaryPink.withValues(alpha: 0.1),
-              width: 1.w,
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 16.w),
+      decoration: BoxDecoration(
+        color: AppColors.primaryPink.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(24.r),
+        border: Border.all(
+          color: AppColors.primaryPink.withValues(alpha: 0.12),
+          width: 1.w,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42.w,
+            height: 42.h,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.primaryPink.withValues(alpha: 0.15),
+                  AppColors.primaryPurple.withValues(alpha: 0.1),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Center(
+              child: RepaintBoundary(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (Widget child, Animation<double> animation) {
+                    return ScaleTransition(scale: animation, child: child);
+                  },
+                  child: Text(
+                    emoji,
+                    key: ValueKey<String>(emoji),
+                    style: TextStyle(fontSize: 22.sp),
+                  ),
+                ),
+              ),
             ),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 42.w,
-                height: 42.h,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.primaryPink.withValues(alpha: 0.15),
-                      AppColors.primaryPurple.withValues(alpha: 0.1),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+          UIHelper.horizontalSpace(14.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "$partnerName's Mood",
+                  style: GoogleFonts.dmSans(
+                    color: Colors.white.withValues(alpha: 0.4),
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-                child: Center(
+                UIHelper.verticalSpace(2.h),
+                RepaintBoundary(
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 300),
+                    layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+                      return Stack(
+                        alignment: Alignment.centerLeft,
+                        children: <Widget>[
+                          ...previousChildren,
+                          if (currentChild != null) currentChild,
+                        ],
+                      );
+                    },
                     transitionBuilder: (Widget child, Animation<double> animation) {
-                      return ScaleTransition(scale: animation, child: child);
+                      return FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(
+                          position: Tween<Offset>(
+                            begin: const Offset(0.0, 0.2),
+                            end: Offset.zero,
+                          ).animate(animation),
+                          child: child,
+                        ),
+                      );
                     },
                     child: Text(
-                      emoji,
-                      key: ValueKey<String>(emoji),
-                      style: TextStyle(fontSize: 22.sp),
+                      text,
+                      key: ValueKey<String>(text),
+                      style: GoogleFonts.dmSans(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              UIHelper.horizontalSpace(14.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "$partnerName's Mood",
-                      style: GoogleFonts.dmSans(
-                        color: Colors.white.withValues(alpha: 0.4),
-                        fontSize: 11.sp,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    UIHelper.verticalSpace(2.h),
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
-                        return Stack(
-                          alignment: Alignment.centerLeft,
-                          children: <Widget>[
-                            ...previousChildren,
-                            if (currentChild != null) currentChild,
-                          ],
-                        );
-                      },
-                      transitionBuilder: (Widget child, Animation<double> animation) {
-                        return FadeTransition(
-                          opacity: animation,
-                          child: SlideTransition(
-                            position: Tween<Offset>(
-                              begin: const Offset(0.0, 0.2),
-                              end: Offset.zero,
-                            ).animate(animation),
-                            child: child,
-                          ),
-                        );
-                      },
-                      child: Text(
-                        text,
-                        key: ValueKey<String>(text),
-                        style: GoogleFonts.dmSans(
-                          color: Colors.white.withValues(alpha: 0.8),
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -551,122 +549,116 @@ class HomeScreenView extends StatelessWidget {
         onTap: () {
           Navigator.pushNamed(context, Routes.pairingScreen);
         },
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24.r),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-            child: Container(
-              padding: EdgeInsets.all(24.w),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.primaryPink.withValues(alpha: 0.06),
-                    AppColors.primaryPurple.withValues(alpha: 0.06),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(24.r),
-                border: Border.all(
-                  color: AppColors.primaryPink.withValues(alpha: 0.12),
-                  width: 1.w,
-                ),
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(16.w),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.primaryPink.withValues(alpha: 0.1),
-                          AppColors.primaryPurple.withValues(alpha: 0.1),
-                        ],
-                      ),
-                    ),
-                    child: Icon(
-                      Icons.favorite_rounded,
-                      color: AppColors.primaryPink,
-                      size: 32.sp,
-                    ),
-                  ),
-                  UIHelper.verticalSpace(16.h),
-                  Text(
-                    "Connect with your Partner",
-                    style: GoogleFonts.dmSans(
-                      color: Colors.white,
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  UIHelper.verticalSpace(6.h),
-                  Text(
-                    "Share your invite code or enter your partner's code from Settings → Account & Pairing",
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.dmSans(
-                      color: Colors.white.withValues(alpha: 0.4),
-                      fontSize: 12.sp,
-                      height: 1.5,
-                    ),
-                  ),
-                  if (inviteCode != null && inviteCode.isNotEmpty) ...[
-                    UIHelper.verticalSpace(20.h),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: 20.w, vertical: 10.h),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.03),
-                        borderRadius: BorderRadius.circular(16.r),
-                        border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.08)),
-                      ),
-                      child: Text(
-                        inviteCode,
-                        style: GoogleFonts.dmSans(
-                          color: AppColors.primaryPink,
-                          fontSize: 24.sp,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 4,
-                        ),
-                      ),
-                    ),
-                    UIHelper.verticalSpace(12.h),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildSmallAction(
-                          icon: Icons.copy_rounded,
-                          label: "Copy",
-                          onTap: () {
-                            Clipboard.setData(ClipboardData(text: inviteCode));
-                            AppToast.show(
-                              context,
-                              title: "Copied",
-                              message: "Code copied to clipboard!",
-                              type: ToastType.success,
-                            );
-                          },
-                        ),
-                        SizedBox(width: 20.w),
-                        _buildSmallAction(
-                          icon: Icons.share_rounded,
-                          label: "Share",
-                          onTap: () {
-                            SharePlus.instance.share(
-                              ShareParams(
-                                text:
-                                    "Hey! Pair with me on Bae Window: $inviteCode ✦",
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
+        child: Container(
+          padding: EdgeInsets.all(24.w),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.primaryPink.withValues(alpha: 0.08),
+                AppColors.primaryPurple.withValues(alpha: 0.08),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
+            borderRadius: BorderRadius.circular(24.r),
+            border: Border.all(
+              color: AppColors.primaryPink.withValues(alpha: 0.15),
+              width: 1.w,
+            ),
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: EdgeInsets.all(16.w),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primaryPink.withValues(alpha: 0.1),
+                      AppColors.primaryPurple.withValues(alpha: 0.1),
+                    ],
+                  ),
+                ),
+                child: Icon(
+                  Icons.favorite_rounded,
+                  color: AppColors.primaryPink,
+                  size: 32.sp,
+                ),
+              ),
+              UIHelper.verticalSpace(16.h),
+              Text(
+                "Connect with your Partner",
+                style: GoogleFonts.dmSans(
+                  color: Colors.white,
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              UIHelper.verticalSpace(6.h),
+              Text(
+                "Share your invite code or enter your partner's code from Settings → Account & Pairing",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.dmSans(
+                  color: Colors.white.withValues(alpha: 0.4),
+                  fontSize: 12.sp,
+                  height: 1.5,
+                ),
+              ),
+              if (inviteCode != null && inviteCode.isNotEmpty) ...[
+                UIHelper.verticalSpace(20.h),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                      horizontal: 20.w, vertical: 10.h),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(16.r),
+                    border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.08)),
+                  ),
+                  child: Text(
+                    inviteCode,
+                    style: GoogleFonts.dmSans(
+                      color: AppColors.primaryPink,
+                      fontSize: 24.sp,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 4,
+                    ),
+                  ),
+                ),
+                UIHelper.verticalSpace(12.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildSmallAction(
+                      icon: Icons.copy_rounded,
+                      label: "Copy",
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: inviteCode));
+                        AppToast.show(
+                          context,
+                          title: "Copied",
+                          message: "Code copied to clipboard!",
+                          type: ToastType.success,
+                        );
+                      },
+                    ),
+                    SizedBox(width: 20.w),
+                    _buildSmallAction(
+                      icon: Icons.share_rounded,
+                      label: "Share",
+                      onTap: () {
+                        SharePlus.instance.share(
+                          ShareParams(
+                            text:
+                                "Hey! Pair with me on Bae Window: $inviteCode ✦",
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ],
           ),
         ));
   }

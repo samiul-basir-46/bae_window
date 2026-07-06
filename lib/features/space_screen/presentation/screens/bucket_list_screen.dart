@@ -8,10 +8,10 @@ import 'package:bea_window_app/common_widgets/custom_date_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:bea_window_app/common_widgets/bae_loader.dart';
 
-import '../bloc/space_screen_bloc.dart';
-import '../bloc/space_screen_event.dart';
-import '../bloc/space_screen_state.dart';
-import '../models/bucket_list_model.dart';
+import '../../bloc/space_screen_bloc.dart';
+import '../../bloc/space_screen_event.dart';
+import '../../bloc/space_screen_state.dart';
+import '../../models/bucket_list_model.dart';
 
 class BucketListScreen extends StatelessWidget {
   const BucketListScreen({super.key});
