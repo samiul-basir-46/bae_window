@@ -33,9 +33,11 @@ class QuickActionGrid extends StatelessWidget {
                     Navigator.pushNamed(context, Routes.bucketListScreen);
                   },
                   child: _buildGridItem(
+                    context: context,
                     iconWidget: Hero(
                       tag: "hero-bucket-list-icon",
-                      child: Icon(Icons.favorite_border_rounded, color: AppColors.primaryPink, size: 16.sp),
+                      child: Icon(Icons.favorite_border_rounded,
+                          color: AppColors.primaryPink, size: 16.sp),
                     ),
                     iconColor: AppColors.primaryPink,
                     title: "Bucket List",
@@ -54,9 +56,11 @@ class QuickActionGrid extends StatelessWidget {
                     Navigator.pushNamed(context, Routes.tasksScreen);
                   },
                   child: _buildGridItem(
+                    context: context,
                     iconWidget: Hero(
                       tag: "hero-tasks-icon",
-                      child: Icon(Icons.checklist_rounded, color: Colors.blueAccent, size: 16.sp),
+                      child: Icon(Icons.checklist_rounded,
+                          color: Colors.blueAccent, size: 16.sp),
                     ),
                     iconColor: Colors.blueAccent,
                     title: "Tasks",
@@ -68,17 +72,13 @@ class QuickActionGrid extends StatelessWidget {
               SizedBox(width: 14.w),
               Expanded(
                 child: SpringyCard(
-                  onTap: () {
-                    Navigator.pushNamed(
-                      context,
-                      Routes.loveNoteScreen,
-                      arguments: (note) => onSendLoveNote(note),
-                    );
-                  },
+                  onTap: () => _showLoveNoteDialog(context),
                   child: _buildGridItem(
+                    context: context,
                     iconWidget: Hero(
                       tag: "hero-love-note-icon",
-                      child: Icon(Icons.edit_note_rounded, color: Colors.tealAccent, size: 16.sp),
+                      child: Icon(Icons.edit_note_rounded,
+                          color: Colors.tealAccent, size: 16.sp),
                     ),
                     iconColor: Colors.tealAccent,
                     title: "Love Note",
@@ -93,7 +93,55 @@ class QuickActionGrid extends StatelessWidget {
     );
   }
 
+  void _showLoveNoteDialog(BuildContext context) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: AppColors.navBgColor,
+          title: Text(
+            "Send Love Note 💌",
+            style: GoogleFonts.dmSans(
+                color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          content: TextField(
+            controller: controller,
+            cursorColor: AppColors.primaryPink,
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              hintText: "Write something sweet...",
+              hintStyle: TextStyle(color: Colors.white30),
+              focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: AppColors.primaryPink),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child:
+                  const Text("Cancel", style: TextStyle(color: Colors.white70)),
+            ),
+            TextButton( 
+              onPressed: () {
+                final text = controller.text.trim();
+                if (text.isNotEmpty) {
+                  onSendLoveNote(text);
+                }
+                Navigator.pop(context);
+              },
+              child: const Text("Send",
+                  style: TextStyle(color: AppColors.primaryPink)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildGridItem({
+    required BuildContext context,
     required Widget iconWidget,
     required Color iconColor,
     required String title,

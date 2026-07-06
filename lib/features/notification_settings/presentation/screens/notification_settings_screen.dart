@@ -8,6 +8,7 @@ import 'package:bea_window_app/helpers/ui_helpers.dart';
 import '../bloc/notification_settings_bloc.dart';
 import '../bloc/notification_settings_event.dart';
 import '../bloc/notification_settings_state.dart';
+import 'package:bea_window_app/common_widgets/bae_switch.dart';
 
 class NotificationSettingsScreen extends StatelessWidget {
   const NotificationSettingsScreen({super.key});
@@ -148,15 +149,13 @@ class _NotificationSettingsView extends StatelessWidget {
                                       ),
                                     ),
                                   ),
-                                  Switch(
+                                  BaeSwitch(
                                     value: state.quietHoursEnabled,
                                     onChanged: (val) {
                                       context.read<NotificationSettingsBloc>().add(
                                             ToggleSettingEvent("quietHoursEnabled", val),
                                           );
                                     },
-                                    activeThumbColor: AppColors.primaryPink,
-                                    activeTrackColor: AppColors.primaryPink.withValues(alpha: 0.3),
                                   ),
                                 ],
                               ),
@@ -309,15 +308,13 @@ class _NotificationSettingsView extends StatelessWidget {
               ],
             ),
           ),
-          Switch(
+          BaeSwitch(
             value: value,
             onChanged: (val) {
               context.read<NotificationSettingsBloc>().add(
                     ToggleSettingEvent(storageKey, val),
                   );
             },
-            activeThumbColor: AppColors.primaryPink,
-            activeTrackColor: AppColors.primaryPink.withValues(alpha: 0.3),
           ),
         ],
       ),

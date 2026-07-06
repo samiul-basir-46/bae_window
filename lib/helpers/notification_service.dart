@@ -12,6 +12,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter/material.dart';
 
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:googleapis_auth/auth_io.dart' as auth;
@@ -436,7 +437,27 @@ class PushNotificationService {
 
     if (title == null && body == null) return;
 
-    final isQuiet = message.data['quiet'] == 'true';
+    // Check if notifications of this type are disabled by the user
+    if (type != null && type != 'chat') {
+      if (!_isNotificationTypeEnabled(type)) {
+        dev.log('Notification type "$type" is disabled in settings.', name: 'PushNotificationService');
+        return; // Suppress notification completely
+      }
+    }
+
+    // Check if quiet hours are active
+    final storage = GetStorage();
+    var isQuietTime = false;
+    final quietHoursEnabled = storage.read<bool>('quietHoursEnabled') ?? true;
+    if (quietHoursEnabled && type != 'thinkingPulse' && type != 'chat') {
+      final startStr = storage.read<String>('quietHoursStart') ?? "11:00 PM";
+      final endStr = storage.read<String>('quietHoursEnd') ?? "07:00 AM";
+      if (_isInQuietHours(startStr, endStr)) {
+        isQuietTime = true;
+      }
+    }
+
+    final isQuiet = message.data['quiet'] == 'true' || isQuietTime;
     final isPulse = message.data['type'] == 'thinkingPulse';
     final channelId = isPulse
         ? pulseChannelId
@@ -946,6 +967,57 @@ class PushNotificationService {
       }
     } catch (_) {}
     return "Partner";
+  }
+
+  static bool _isNotificationTypeEnabled(String type) {
+    final storage = GetStorage();
+    final isEnabled = storage.read<bool>(type) ?? true;
+    return isEnabled;
+  }
+
+  static bool _isInQuietHours(String startStr, String endStr) {
+    try {
+      final now = DateTime.now();
+      final startTime = _parseTimeString(startStr);
+      final endTime = _parseTimeString(endStr);
+      
+      if (startTime == null || endTime == null) return false;
+      
+      final start = DateTime(now.year, now.month, now.day, startTime.hour, startTime.minute);
+      var end = DateTime(now.year, now.month, now.day, endTime.hour, endTime.minute);
+      
+      if (end.isBefore(start)) {
+        // Quiet hours cross midnight
+        if (now.isAfter(start) || now.isBefore(end)) {
+          return true;
+        }
+      } else {
+        if (now.isAfter(start) && now.isBefore(end)) {
+          return true;
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  static TimeOfDay? _parseTimeString(String timeStr) {
+    try {
+      final clean = timeStr.trim().toUpperCase();
+      final parts = clean.split(' ');
+      final hm = parts[0].split(':');
+      var hour = int.parse(hm[0]);
+      final minute = int.parse(hm[1]);
+      if (parts.length > 1) {
+        if (parts[1] == 'PM' && hour < 12) {
+          hour += 12;
+        } else if (parts[1] == 'AM' && hour == 12) {
+          hour = 0;
+        }
+      }
+      return TimeOfDay(hour: hour, minute: minute);
+    } catch (_) {
+      return null;
+    }
   }
 
   static Future<void> dispose() async {

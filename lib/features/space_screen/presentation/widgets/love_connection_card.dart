@@ -19,15 +19,16 @@ class LoveConnectionCard extends StatefulWidget {
   State<LoveConnectionCard> createState() => _LoveConnectionCardState();
 }
 
-class _LoveConnectionCardState extends State<LoveConnectionCard> with TickerProviderStateMixin {
-  late final AnimationController _floatController;
-  late final Animation<double> _floatAnimation;
+class _LoveConnectionCardState extends State<LoveConnectionCard>
+    with TickerProviderStateMixin {
+  late AnimationController _floatController;
+  late Animation<double> _floatAnimation;
 
-  late final AnimationController _heartController;
-  late final Animation<double> _heartScale;
+  late AnimationController _heartController;
+  late Animation<double> _heartScale;
 
-  late final AnimationController _pulseController;
-  late final Animation<double> _pulseGlow;
+  late AnimationController _pulseController;
+  late Animation<double> _pulseGlow;
 
   @override
   void initState() {
@@ -72,10 +73,10 @@ class _LoveConnectionCardState extends State<LoveConnectionCard> with TickerProv
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
+    )..repeat();
 
-    _pulseGlow = Tween<double>(begin: 6.r, end: 16.r).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    _pulseGlow = Tween<double>(begin: 1.0, end: 1.8).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeOut),
     );
   }
 
@@ -91,11 +92,12 @@ class _LoveConnectionCardState extends State<LoveConnectionCard> with TickerProv
     if (widget.anniversaryDate == null) return 0;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    var target = DateTime(today.year, widget.anniversaryDate!.month, widget.anniversaryDate!.day);
-    if (target.isBefore(today)) {
-      target = DateTime(today.year + 1, widget.anniversaryDate!.month, widget.anniversaryDate!.day);
+    var nextAnniv = DateTime(today.year, widget.anniversaryDate!.month, widget.anniversaryDate!.day);
+    
+    if (nextAnniv.isBefore(today)) {
+      nextAnniv = DateTime(today.year + 1, widget.anniversaryDate!.month, widget.anniversaryDate!.day);
     }
-    return target.difference(today).inDays;
+    return nextAnniv.difference(today).inDays;
   }
 
   @override
@@ -115,7 +117,7 @@ class _LoveConnectionCardState extends State<LoveConnectionCard> with TickerProv
                   color: Colors.white.withValues(alpha: 0.03),
                   borderRadius: BorderRadius.circular(28.r),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.06),
+                    color: Colors.white.withValues(alpha: 0.05),
                     width: 1.w,
                   ),
                 ),
@@ -128,45 +130,68 @@ class _LoveConnectionCardState extends State<LoveConnectionCard> with TickerProv
                         AnimatedBuilder(
                           animation: _pulseGlow,
                           builder: (context, child) {
-                            return Container(
-                              width: 84.w,
-                              height: 84.h,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: AppColors.primaryPink.withValues(alpha: 0.25),
-                                  width: 3.w,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
+                            return Opacity(
+                              opacity: (1.0 - (_pulseController.value * 1.3)).clamp(0.0, 1.0),
+                              child: Transform.scale(
+                                scale: _pulseGlow.value,
+                                child: Container(
+                                  width: 60.w,
+                                  height: 60.w,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
                                     color: AppColors.primaryPink.withValues(alpha: 0.15),
-                                    blurRadius: _pulseGlow.value,
-                                    spreadRadius: 2.r,
-                                  )
-                                ],
+                                    border: Border.all(
+                                      color: AppColors.primaryPink.withValues(alpha: 0.2),
+                                      width: 1.w,
+                                    ),
+                                  ),
+                                ),
                               ),
                             );
                           },
                         ),
-                        ScaleTransition(
-                          scale: _heartScale,
-                          child: Icon(
-                            Icons.favorite_rounded,
-                            color: AppColors.primaryPink,
-                            size: 38.sp,
-                          ),
+                        AnimatedBuilder(
+                          animation: _heartScale,
+                          builder: (context, child) {
+                            return Transform.scale(
+                              scale: _heartScale.value,
+                              child: Container(
+                                width: 52.w,
+                                height: 52.w,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      AppColors.primaryPink,
+                                      AppColors.primaryPink.withValues(alpha: 0.8),
+                                    ],
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.primaryPink.withValues(alpha: 0.3),
+                                      blurRadius: 12,
+                                      spreadRadius: 1,
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  Icons.favorite_rounded,
+                                  color: Colors.white,
+                                  size: 22.sp,
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
-                    SizedBox(width: 24.w),
-
-                    // Anniversary info
+                    UIHelper.horizontalSpace(20.w),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "ANNIVERSARY COUNTDOWN",
+                            "NEXT ANNIVERSARY",
                             style: GoogleFonts.dmSans(
                               color: AppColors.primaryPink,
                               fontSize: 10.sp,
@@ -179,7 +204,7 @@ class _LoveConnectionCardState extends State<LoveConnectionCard> with TickerProv
                             Text(
                               "Set Anniversary Date",
                               style: GoogleFonts.dmSans(
-                                color: Colors.white70,
+                                color: Colors.white,
                                 fontSize: 16.sp,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -188,7 +213,7 @@ class _LoveConnectionCardState extends State<LoveConnectionCard> with TickerProv
                             Text(
                               "Tap to choose date 📅",
                               style: GoogleFonts.dmSans(
-                                color: Colors.white30,
+                                color: Colors.white38,
                                 fontSize: 11.sp,
                               ),
                             ),
@@ -205,7 +230,7 @@ class _LoveConnectionCardState extends State<LoveConnectionCard> with TickerProv
                             Text(
                               DateFormat('MMMM d, yyyy').format(widget.anniversaryDate!),
                               style: GoogleFonts.dmSans(
-                                color: Colors.white30,
+                                color: Colors.white70,
                                 fontSize: 12.sp,
                               ),
                             ),

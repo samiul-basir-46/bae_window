@@ -12,7 +12,6 @@ import '../bloc/nest_bloc.dart';
 import '../bloc/nest_event.dart';
 import '../bloc/nest_state.dart';
 import '../widgets/connection_card.dart';
-import '../widgets/theme_selector.dart';
 import '../widgets/settings_group.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
 import 'package:bea_window_app/features/space_screen/services/presence_service.dart';
@@ -159,16 +158,6 @@ class NestScreen extends StatelessWidget {
                                 },
                               ),
                             ],
-                          ),
-                          UIHelper.verticalSpace(24.h),
-
-                          // Display theme selector
-                          _buildSectionHeader("DISPLAY"),
-                          ThemeSelector(
-                            selectedTheme: state.selectedTheme,
-                            onThemeChanged: (theme) => context
-                                .read<NestBloc>()
-                                .add(ChangeThemeEvent(theme)),
                           ),
                           UIHelper.verticalSpace(24.h),
 

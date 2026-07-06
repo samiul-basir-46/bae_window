@@ -28,7 +28,7 @@ class QuickReactionPickerDialog extends StatelessWidget {
       "🎉",
       "💖",
       "✨",
-      "💯"
+      "💯",
     ];
 
     return AlertDialog(

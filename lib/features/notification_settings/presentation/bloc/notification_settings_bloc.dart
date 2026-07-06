@@ -26,6 +26,7 @@ class NotificationSettingsBloc
       taskCompleted: _storage.read('taskCompleted') ?? true,
       moodCheckIn: _storage.read('moodCheckIn') ?? false,
       milestoneReminders: _storage.read('milestoneReminders') ?? true,
+      vaultActivity: _storage.read('vaultActivity') ?? true,
       quietHoursEnabled: _storage.read('quietHoursEnabled') ?? true,
       quietHoursStart: _storage.read('quietHoursStart') ?? "11:00 PM",
       quietHoursEnd: _storage.read('quietHoursEnd') ?? "07:00 AM",
@@ -75,6 +76,9 @@ class NotificationSettingsBloc
         break;
       case 'milestoneReminders':
         nextState = state.copyWith(milestoneReminders: event.value);
+        break;
+      case 'vaultActivity':
+        nextState = state.copyWith(vaultActivity: event.value);
         break;
       case 'quietHoursEnabled':
         nextState = state.copyWith(quietHoursEnabled: event.value);
