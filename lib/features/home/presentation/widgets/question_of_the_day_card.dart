@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -41,116 +40,110 @@ class QuestionOfTheDayCard extends StatelessWidget {
             ),
           ),
         ),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(24.r),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-            child: Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(20.w),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.04),
-                borderRadius: BorderRadius.circular(24.r),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.06),
-                  width: 1.w,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(20.w),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(24.r),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.06),
+              width: 1.w,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(8.w),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.06),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.chat_bubble_outline_rounded,
-                          color: Colors.white70,
-                          size: 18.sp,
-                        ),
-                      ),
-                      SizedBox(width: 12.w),
-                      Text(
-                        "DAILY TRIVIA",
-                        style: GoogleFonts.dmSans(
-                          color: AppColors.primaryPink,
-                          fontSize: 10.sp,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
-                    ],
-                  ),
-                  UIHelper.verticalSpace(16.h),
-                  Text(
-                    question.questionText,
-                    style: GoogleFonts.dmSans(
-                      color: Colors.white,
-                      fontSize: 15.sp,
-                      fontWeight: FontWeight.w500,
-                      height: 1.4,
+                  Container(
+                    padding: EdgeInsets.all(8.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.06),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.chat_bubble_outline_rounded,
+                      color: Colors.white70,
+                      size: 18.sp,
                     ),
                   ),
-                  _buildAnswersView(context),
-                  UIHelper.verticalSpace(20.h),
-                  SizedBox(
-                    width: double.infinity,
-                    child: TextButton(
-                      style: TextButton.styleFrom(
-                        backgroundColor: AppColors.primaryPurple.withValues(alpha: 0.15),
-                        padding: EdgeInsets.symmetric(vertical: 12.h),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16.r),
-                          side: BorderSide(
-                            color: AppColors.primaryPurple.withValues(alpha: 0.3),
-                            width: 1.w,
-                          ),
-                        ),
-                      ),
-                       onPressed: () {
-                        final hasUserAnswered = question.isAnswered;
-                        final hasPartnerAnswered = question.hasPartnerAnswered;
-                        final triggerInvite = !hasUserAnswered && !hasPartnerAnswered;
-
-                        if (triggerInvite) {
-                          context.read<HomeBloc>().add(
-                            AnswerQuestionTogetherEvent(question.questionText),
-                          );
-                          final displayPartnerName = partnerName != null && partnerName!.isNotEmpty ? partnerName : 'partner';
-                          AppToast.show(
-                            context,
-                            title: "Invitation Sent",
-                            message: "Trivia invitation sent to $displayPartnerName!",
-                            type: ToastType.success,
-                          );
-                        }
-
-                        Navigator.pushNamed(
-                          context,
-                          Routes.triviaScreen,
-                          arguments: {
-                            'coupleId': coupleId,
-                            'questionText': question.questionText,
-                          },
-                        );
-                      },
-                      child: Text(
-                        _getButtonText(),
-                        style: GoogleFonts.dmSans(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                  SizedBox(width: 12.w),
+                  Text(
+                    "DAILY TRIVIA",
+                    style: GoogleFonts.dmSans(
+                      color: AppColors.primaryPink,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.0,
                     ),
                   ),
                 ],
               ),
-            ),
+              UIHelper.verticalSpace(16.h),
+              Text(
+                question.questionText,
+                style: GoogleFonts.dmSans(
+                  color: Colors.white,
+                  fontSize: 15.sp,
+                  fontWeight: FontWeight.w500,
+                  height: 1.4,
+                ),
+              ),
+              _buildAnswersView(context),
+              UIHelper.verticalSpace(20.h),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  style: TextButton.styleFrom(
+                    backgroundColor: AppColors.primaryPurple.withValues(alpha: 0.15),
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16.r),
+                      side: BorderSide(
+                        color: AppColors.primaryPurple.withValues(alpha: 0.3),
+                        width: 1.w,
+                      ),
+                    ),
+                  ),
+                   onPressed: () {
+                    final hasUserAnswered = question.isAnswered;
+                    final hasPartnerAnswered = question.hasPartnerAnswered;
+                    final triggerInvite = !hasUserAnswered && !hasPartnerAnswered;
+
+                    if (triggerInvite) {
+                      context.read<HomeBloc>().add(
+                        AnswerQuestionTogetherEvent(question.questionText),
+                      );
+                      final displayPartnerName = partnerName != null && partnerName!.isNotEmpty ? partnerName : 'partner';
+                      AppToast.show(
+                        context,
+                        title: "Invitation Sent",
+                        message: "Trivia invitation sent to $displayPartnerName!",
+                        type: ToastType.success,
+                      );
+                    }
+
+                    Navigator.pushNamed(
+                      context,
+                      Routes.triviaScreen,
+                      arguments: {
+                        'coupleId': coupleId,
+                        'questionText': question.questionText,
+                      },
+                    );
+                  },
+                  child: Text(
+                    _getButtonText(),
+                    style: GoogleFonts.dmSans(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],

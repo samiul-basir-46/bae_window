@@ -16,7 +16,7 @@ class ActivityFeed extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.02),
+        color: Colors.white.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(24.r),
         border: Border.all(
           color: Colors.white.withValues(alpha: 0.05),
@@ -81,7 +81,7 @@ class ActivityFeed extends StatelessWidget {
               trailing: Text(
                 moment.time,
                 style: GoogleFonts.dmSans(
-                  color: Colors.white24,
+                  color: Colors.white38,
                   fontSize: 10.sp,
                 ),
               ),

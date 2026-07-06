@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -53,18 +52,13 @@ class _LoveNoteScreenState extends State<LoveNoteScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Heavy glass blur background
           GestureDetector(
             onTap: () => Navigator.pop(context),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-              child: Container(
-                color: Colors.transparent,
-              ),
+            child: Container(
+              color: Colors.black.withValues(alpha: 0.75),
             ),
           ),
 
-          // Central modal card
           Center(
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 24.w),

@@ -14,9 +14,9 @@ import 'package:bea_window_app/navigation_screen.dart';
 
 // Space Feature Screens
 import 'package:bea_window_app/features/vault/presentation/vault_screen.dart';
-import 'package:bea_window_app/features/space_screen/presentation/bucket_list_screen.dart';
-import 'package:bea_window_app/features/space/presentation/screens/tasks_screen.dart';
-import 'package:bea_window_app/features/space/presentation/screens/love_note_screen.dart';
+import 'package:bea_window_app/features/space_screen/presentation/screens/bucket_list_screen.dart';
+import 'package:bea_window_app/features/space_screen/presentation/screens/tasks_screen.dart';
+import 'package:bea_window_app/features/space_screen/presentation/screens/love_note_screen.dart';
 import 'package:bea_window_app/features/trivia/presentation/trivia_screen.dart';
 import 'package:bea_window_app/features/special_day/presentation/special_day_screen.dart';
 
@@ -25,7 +25,6 @@ import 'package:bea_window_app/features/nest/presentation/screens/my_profile_scr
 import 'package:bea_window_app/features/nest/presentation/screens/export_memories_screen.dart';
 import 'package:bea_window_app/features/nest/presentation/screens/account_pairing_screen.dart';
 import 'package:bea_window_app/features/change_password/presentation/screens/change_password_screen.dart';
-import 'package:bea_window_app/features/change_vault_passcode/presentation/screens/change_vault_passcode_screen.dart';
 import 'package:bea_window_app/features/notification_settings/presentation/screens/notification_settings_screen.dart';
 import 'package:bea_window_app/features/chat/presentation/screens/inbox_screen.dart';
 import 'package:bea_window_app/features/chat/presentation/screens/chat_screen.dart';
@@ -63,7 +62,6 @@ final class Routes {
   static const String exportMemoriesScreen = '/exportMemories';
   static const String accountPairingScreen = '/accountPairing';
   static const String changePasswordScreen = '/changePassword';
-  static const String changeVaultPasscodeScreen = '/changeVaultPasscode';
   static const String notificationSettingsScreen = '/notificationSettings';
 
   // Chat Routes
@@ -218,13 +216,6 @@ final class RouteGenerator {
                 builder: (context) => const ChangePasswordScreen())
             : _FadedTransitionRoute(
                 widget: const ChangePasswordScreen(), settings: settings);
-
-      case Routes.changeVaultPasscodeScreen:
-        return defaultTargetPlatform == TargetPlatform.iOS
-            ? CupertinoPageRoute(
-                builder: (context) => const ChangeVaultPasscodeScreen())
-            : _FadedTransitionRoute(
-                widget: const ChangeVaultPasscodeScreen(), settings: settings);
 
       case Routes.notificationSettingsScreen:
         return defaultTargetPlatform == TargetPlatform.iOS

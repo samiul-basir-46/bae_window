@@ -37,7 +37,7 @@ class _LivePeekCardState extends State<LivePeekCard> {
 
   String get _partnerName {
     final name = widget.partnerName.trim();
-    return name.isEmpty ? 'Bae' : name;
+    return name.isEmpty ? 'Partner' : name;
   }
 
   int _pageForType(String? type) {
@@ -251,7 +251,6 @@ class _LivePeekCardState extends State<LivePeekCard> {
             ),
           ),
 
-          // 4. Middle Details Overlay (Description / Indicator)
           Positioned(
             bottom: 110.h,
             left: 20.w,

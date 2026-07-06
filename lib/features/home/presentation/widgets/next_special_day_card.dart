@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -70,75 +69,71 @@ class _NextSpecialDayCardState extends State<NextSpecialDayCard> {
             ),
           ),
         ),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(24.r),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-            child: Container(
-              padding: EdgeInsets.all(20.w),
-              decoration: BoxDecoration(
-                color: AppColors.primaryPink.withValues(alpha: 0.03),
-                borderRadius: BorderRadius.circular(24.r),
-                border: Border.all(
-                  color: AppColors.primaryPink.withValues(alpha: 0.15),
-                  width: 1.w,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        Container(
+          padding: EdgeInsets.all(20.w),
+          decoration: BoxDecoration(
+            color: AppColors.primaryPink.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(24.r),
+            border: Border.all(
+              color: AppColors.primaryPink.withValues(alpha: 0.15),
+              width: 1.w,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(10.w),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryPink.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          "🎉",
-                          style: TextStyle(fontSize: 18.sp),
-                        ),
-                      ),
-                      SizedBox(width: 14.w),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.specialDay.title,
-                              style: GoogleFonts.dmSans(
-                                color: Colors.white,
-                                fontSize: 15.sp,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            UIHelper.verticalSpace(2.h),
-                            Text(
-                              dateStr,
-                              style: GoogleFonts.dmSans(
-                                color: Colors.white38,
-                                fontSize: 11.sp,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                  Container(
+                    padding: EdgeInsets.all(10.w),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryPink.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      "🎉",
+                      style: TextStyle(fontSize: 18.sp),
+                    ),
                   ),
-                  UIHelper.verticalSpace(20.h),
-                  Row(
-                    children: [
-                      _buildCountdownBox(days.toString(), "Days"),
-                      SizedBox(width: 12.w),
-                      _buildCountdownBox(hours.toString().padLeft(2, '0'), "Hours"),
-                      SizedBox(width: 12.w),
-                      _buildCountdownBox(minutes.toString().padLeft(2, '0'), "Mins"),
-                    ],
+                  SizedBox(width: 14.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.specialDay.title,
+                          style: GoogleFonts.dmSans(
+                            color: Colors.white,
+                            fontSize: 15.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        UIHelper.verticalSpace(2.h),
+                        Text(
+                          dateStr,
+                          style: GoogleFonts.dmSans(
+                            color: Colors.white38,
+                            fontSize: 11.sp,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
-            ),
+              UIHelper.verticalSpace(20.h),
+              RepaintBoundary(
+                child: Row(
+                  children: [
+                    _buildCountdownBox(days.toString(), "Days"),
+                    SizedBox(width: 12.w),
+                    _buildCountdownBox(hours.toString().padLeft(2, '0'), "Hours"),
+                    SizedBox(width: 12.w),
+                    _buildCountdownBox(minutes.toString().padLeft(2, '0'), "Mins"),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ],

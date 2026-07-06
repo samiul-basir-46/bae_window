@@ -12,6 +12,7 @@ class NotificationSettingsState {
   final bool taskCompleted;
   final bool moodCheckIn;
   final bool milestoneReminders;
+  final bool vaultActivity;
 
   // Quiet Hours
   final bool quietHoursEnabled;
@@ -26,6 +27,7 @@ class NotificationSettingsState {
     this.taskCompleted = true,
     this.moodCheckIn = false,
     this.milestoneReminders = true,
+    this.vaultActivity = true,
     this.quietHoursEnabled = true,
     this.quietHoursStart = "11:00 PM",
     this.quietHoursEnd = "07:00 AM",
@@ -40,6 +42,7 @@ class NotificationSettingsState {
       taskCompleted: map['taskCompleted'] as bool? ?? true,
       moodCheckIn: map['moodCheckIn'] as bool? ?? false,
       milestoneReminders: map['milestoneReminders'] as bool? ?? true,
+      vaultActivity: map['vaultActivity'] as bool? ?? true,
       quietHoursEnabled: map['quietHoursEnabled'] as bool? ?? true,
       quietHoursStart: map['quietHoursStart'] as String? ?? '11:00 PM',
       quietHoursEnd: map['quietHoursEnd'] as String? ?? '07:00 AM',
@@ -54,6 +57,7 @@ class NotificationSettingsState {
         'taskCompleted': taskCompleted,
         'moodCheckIn': moodCheckIn,
         'milestoneReminders': milestoneReminders,
+        'vaultActivity': vaultActivity,
         'quietHoursEnabled': quietHoursEnabled,
         'quietHoursStart': quietHoursStart,
         'quietHoursEnd': quietHoursEnd,
@@ -67,6 +71,7 @@ class NotificationSettingsState {
     bool? taskCompleted,
     bool? moodCheckIn,
     bool? milestoneReminders,
+    bool? vaultActivity,
     bool? quietHoursEnabled,
     String? quietHoursStart,
     String? quietHoursEnd,
@@ -79,6 +84,7 @@ class NotificationSettingsState {
       taskCompleted: taskCompleted ?? this.taskCompleted,
       moodCheckIn: moodCheckIn ?? this.moodCheckIn,
       milestoneReminders: milestoneReminders ?? this.milestoneReminders,
+      vaultActivity: vaultActivity ?? this.vaultActivity,
       quietHoursEnabled: quietHoursEnabled ?? this.quietHoursEnabled,
       quietHoursStart: quietHoursStart ?? this.quietHoursStart,
       quietHoursEnd: quietHoursEnd ?? this.quietHoursEnd,

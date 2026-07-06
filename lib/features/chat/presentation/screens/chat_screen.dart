@@ -88,6 +88,9 @@ class _ChatViewState extends State<ChatView> {
   bool _showScrollToBottomButton = false;
   String? _pendingMediaCaption;
 
+  List<ChatListItem>? _cachedListItems;
+  List<MessageModel>? _lastMessages;
+
   @override
   void initState() {
     super.initState();
@@ -138,6 +141,33 @@ class _ChatViewState extends State<ChatView> {
         });
       }
     });
+  }
+
+  List<ChatListItem> _buildChatListItems(List<MessageModel> messages) {
+    final List<ChatListItem> list = [];
+    for (int i = 0; i < messages.length; i++) {
+      final msg = messages[i];
+      final showAvatar = i == 0 || messages[i - 1].senderId != msg.senderId;
+      list.add(
+        MessageItem(
+          message: msg,
+          showAvatar: showAvatar,
+          isLastMessage: i == 0,
+        ),
+      );
+
+      if (i < messages.length - 1) {
+        final nextMsg = messages[i + 1];
+        if (msg.timestamp.day != nextMsg.timestamp.day ||
+            msg.timestamp.month != nextMsg.timestamp.month ||
+            msg.timestamp.year != nextMsg.timestamp.year) {
+          list.add(DateSeparatorItem(date: msg.timestamp));
+        }
+      } else {
+        list.add(DateSeparatorItem(date: msg.timestamp));
+      }
+    }
+    return list;
   }
 
   void _showLongPressMenu(
@@ -222,7 +252,7 @@ class _ChatViewState extends State<ChatView> {
                             .add(ReplyToMessageEvent(message));
                       },
                     ),
-                     _buildMenuActionTile(
+                    _buildMenuActionTile(
                       icon: Icons.copy_all_rounded,
                       title: 'Copy Text',
                       onTap: () {
@@ -337,7 +367,7 @@ class _ChatViewState extends State<ChatView> {
 
         return Scaffold(
           extendBodyBehindAppBar: true,
-          resizeToAvoidBottomInset: false,
+          resizeToAvoidBottomInset: true,
           backgroundColor: AppColors.softBlack,
           appBar: _partnerUser != null
               ? ChatAppBar(
@@ -357,7 +387,11 @@ class _ChatViewState extends State<ChatView> {
             child: Stack(
               children: [
                 if (themeWallpaper != null && themeWallpaper.isNotEmpty)
-                  Positioned.fill(
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    width: MediaQuery.of(context).size.width,
+                    height: MediaQuery.of(context).size.height,
                     child: Opacity(
                       opacity: themeOpacity,
                       child: themeWallpaper.startsWith('http')
@@ -395,7 +429,9 @@ class _ChatViewState extends State<ChatView> {
                                   videoThumbnail: state.thumbnailUrl,
                                 ));
                           } else if (state is UploadMultipleSuccess) {
-                            context.read<ChatBloc>().add(SendMultipleMediaMessageEvent(
+                            context
+                                .read<ChatBloc>()
+                                .add(SendMultipleMediaMessageEvent(
                                   mediaItems: state.mediaItems,
                                   textContent: _pendingMediaCaption,
                                 ));
@@ -434,11 +470,7 @@ class _ChatViewState extends State<ChatView> {
                         },
                       ),
                     ],
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        bottom: MediaQuery.of(context).viewInsets.bottom,
-                      ),
-                      child: Column(
+                    child: Column(
                         children: [
                           // Message Feed list
                           Expanded(
@@ -457,59 +489,11 @@ class _ChatViewState extends State<ChatView> {
                                   );
                                 }
 
-                                // Construct visual list containing date separators
-                                final List<Widget> listItems = [];
-                                for (int i = 0; i < messages.length; i++) {
-                                  final msg = messages[i];
-                                  final showAvatar = i == 0 ||
-                                      messages[i - 1].senderId != msg.senderId;
-                                  listItems.add(
-                                    MessageBubble(
-                                      focusNode: _inputFocusNode,
-                                      message: msg,
-                                      isMe: msg.senderId == currentUserId,
-                                      showAvatar: showAvatar,
-                                      senderName: partnerDisplayName,
-                                      senderAvatarUrl:
-                                          _partnerUser?.profilePicture,
-                                      partnerAvatarUrl:
-                                          _partnerUser?.profilePicture,
-                                      isLastMessage: i == 0,
-                                      isRepliedMessageDeleted:
-                                          msg.repliedTo != null &&
-                                              state.deletedMessageIds.contains(
-                                                  msg.repliedTo!.messageId),
-                                      onSwipeToReply: (messageToReply) {
-                                        context.read<ChatBloc>().add(
-                                            ReplyToMessageEvent(
-                                                messageToReply));
-                                      },
-                                      onLongPressMessage:
-                                          (messageToReact, position) {
-                                        _showLongPressMenu(
-                                            context, messageToReact, position);
-                                      },
-                                    ),
-                                  );
-
-                                  // Add date separators dynamically
-                                  if (i < messages.length - 1) {
-                                    final nextMsg = messages[i + 1];
-                                    if (msg.timestamp.day !=
-                                            nextMsg.timestamp.day ||
-                                        msg.timestamp.month !=
-                                            nextMsg.timestamp.month ||
-                                        msg.timestamp.year !=
-                                            nextMsg.timestamp.year) {
-                                      listItems.add(
-                                          DateSeparator(date: msg.timestamp));
-                                    }
-                                  } else {
-                                    // Last message
-                                    listItems.add(
-                                        DateSeparator(date: msg.timestamp));
-                                  }
+                                if (_lastMessages != messages || _cachedListItems == null) {
+                                  _lastMessages = messages;
+                                  _cachedListItems = _buildChatListItems(messages);
                                 }
+                                final listItems = _cachedListItems!;
 
                                 return ListView.builder(
                                   controller: _scrollController,
@@ -523,8 +507,47 @@ class _ChatViewState extends State<ChatView> {
                                   ),
                                   physics: const BouncingScrollPhysics(),
                                   itemCount: listItems.length,
-                                  itemBuilder: (context, index) =>
-                                      listItems[index],
+                                  itemBuilder: (context, index) {
+                                    final item = listItems[index];
+                                    if (item is MessageItem) {
+                                      return MessageBubble(
+                                        key: ValueKey(item.message.id),
+                                        focusNode: _inputFocusNode,
+                                        message: item.message,
+                                        isMe: item.message.senderId ==
+                                            currentUserId,
+                                        showAvatar: item.showAvatar,
+                                        senderName: partnerDisplayName,
+                                        senderAvatarUrl:
+                                            _partnerUser?.profilePicture,
+                                        partnerAvatarUrl:
+                                            _partnerUser?.profilePicture,
+                                        isLastMessage: item.isLastMessage,
+                                        isRepliedMessageDeleted:
+                                            item.message.repliedTo != null &&
+                                                state.deletedMessageIds
+                                                    .contains(item.message
+                                                        .repliedTo!.messageId),
+                                        onSwipeToReply: (messageToReply) {
+                                          context.read<ChatBloc>().add(
+                                              ReplyToMessageEvent(
+                                                  messageToReply));
+                                        },
+                                        onLongPressMessage:
+                                            (messageToReact, position) {
+                                          _showLongPressMenu(context,
+                                              messageToReact, position);
+                                        },
+                                      );
+                                    } else if (item is DateSeparatorItem) {
+                                      return DateSeparator(
+                                        key: ValueKey(
+                                            'date_${item.date.millisecondsSinceEpoch}'),
+                                        date: item.date,
+                                      );
+                                    }
+                                    return const SizedBox.shrink();
+                                  },
                                 );
                               },
                             ),
@@ -626,10 +649,9 @@ class _ChatViewState extends State<ChatView> {
                       ),
                     ),
                   ),
-                ),
                 Positioned(
                   right: 16.w,
-                  bottom: MediaQuery.of(context).viewInsets.bottom + 88.h,
+                  bottom: 100.h,
                   child: AnimatedScale(
                     scale: _showScrollToBottomButton ? 1.0 : 0.0,
                     duration: const Duration(milliseconds: 200),
@@ -677,4 +699,22 @@ class _ChatViewState extends State<ChatView> {
       },
     );
   }
+}
+
+abstract class ChatListItem {}
+
+class MessageItem extends ChatListItem {
+  final MessageModel message;
+  final bool showAvatar;
+  final bool isLastMessage;
+  MessageItem({
+    required this.message,
+    required this.showAvatar,
+    required this.isLastMessage,
+  });
+}
+
+class DateSeparatorItem extends ChatListItem {
+  final DateTime date;
+  DateSeparatorItem({required this.date});
 }

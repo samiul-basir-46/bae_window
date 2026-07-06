@@ -26,16 +26,24 @@ class TriviaService {
     String uid,
     String answer,
   ) async {
-    await _firestore
+    final docRef = _firestore
         .collection('couples')
         .doc(coupleId)
         .collection('trivia')
-        .doc(dateYmd)
-        .set({
-      'question': questionText,
-      'answers': {
-        uid: answer,
-      }
-    }, SetOptions(merge: true));
+        .doc(dateYmd);
+
+    final docSnap = await docRef.get();
+    if (docSnap.exists) {
+      await docRef.update({
+        'answers.$uid': answer,
+      });
+    } else {
+      await docRef.set({
+        'question': questionText,
+        'answers': {
+          uid: answer,
+        }
+      });
+    }
   }
 }

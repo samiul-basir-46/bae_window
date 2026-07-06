@@ -10,6 +10,7 @@ import 'home_event.dart';
 import 'home_state.dart';
 import 'package:bea_window_app/helpers/widget_helper.dart';
 import 'package:bea_window_app/helpers/notification_service.dart';
+import 'package:get_storage/get_storage.dart';
 
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
   static const MethodChannel _pulseChannel = MethodChannel('bea_window/pulse');
@@ -465,6 +466,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       partnerName = partnerData['nickname'] as String? ??
           partnerData['name'] as String? ??
           'Partner';
+      GetStorage().write('partner_nickname', partnerName);
 
       final partnerMood = partnerData['mood'] as Map<String, dynamic>?;
       partnerMoodEmoji = partnerMood?['emoji'] as String?;

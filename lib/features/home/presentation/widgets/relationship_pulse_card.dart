@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -40,94 +39,88 @@ class RelationshipPulseCard extends StatelessWidget {
             ),
           ),
         ),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(24.r),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-            child: Container(
-              padding: EdgeInsets.all(20.w),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.04),
-                borderRadius: BorderRadius.circular(24.r),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.06),
-                  width: 1.w,
+        Container(
+          padding: EdgeInsets.all(20.w),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(24.r),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.06),
+              width: 1.w,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "This Week",
+                style: GoogleFonts.dmSans(
+                  color: Colors.white,
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "This Week",
-                    style: GoogleFonts.dmSans(
-                      color: Colors.white,
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  UIHelper.verticalSpace(4.h),
-                  Text(
-                    "Snaps, drawings, voice, mood & pulse",
-                    style: GoogleFonts.dmSans(
-                      color: Colors.white38,
-                      fontSize: 11.sp,
-                    ),
-                  ),
-                  UIHelper.verticalSpace(24.h),
-                  // Chart Bars
-                  SizedBox(
-                    height: 100.h,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: data.map((item) {
-                        return Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Expanded(
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    _buildBar(item.userCount, maxCount,
-                                        AppColors.primaryPurple),
-                                    SizedBox(width: 4.w),
-                                    _buildBar(item.partnerCount, maxCount,
-                                        AppColors.primaryPink),
-                                  ],
-                                ),
-                              ),
-                              UIHelper.verticalSpace(8.h),
-                              Text(
-                                item.day,
-                                style: GoogleFonts.dmSans(
-                                  color: Colors.white38,
-                                  fontSize: 10.sp,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
+              UIHelper.verticalSpace(4.h),
+              Text(
+                "Snaps, drawings, voice, mood & pulse",
+                style: GoogleFonts.dmSans(
+                  color: Colors.white38,
+                  fontSize: 11.sp,
+                ),
+              ),
+              UIHelper.verticalSpace(24.h),
+              // Chart Bars
+              SizedBox(
+                height: 100.h,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: data.map((item) {
+                    return Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                _buildBar(item.userCount, maxCount,
+                                    AppColors.primaryPurple),
+                                SizedBox(width: 4.w),
+                                _buildBar(item.partnerCount, maxCount,
+                                    AppColors.primaryPink),
+                              ],
+                            ),
                           ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  UIHelper.verticalSpace(16.h),
-                  // Legend
-                  Row(
-                    children: [
-                      _buildLegendItem("You", AppColors.primaryPurple),
-                      SizedBox(width: 16.w),
-                      _buildLegendItem(
-                        partnerName.trim().isEmpty ? "Bae" : partnerName,
-                        AppColors.primaryPink,
+                          UIHelper.verticalSpace(8.h),
+                          Text(
+                            item.day,
+                            style: GoogleFonts.dmSans(
+                              color: Colors.white38,
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    );
+                  }).toList(),
+                ),
+              ),
+              UIHelper.verticalSpace(16.h),
+              // Legend
+              Row(
+                children: [
+                  _buildLegendItem("You", AppColors.primaryPurple),
+                  SizedBox(width: 16.w),
+                  _buildLegendItem(
+                    partnerName.trim().isEmpty ? "Partner" : partnerName,
+                    AppColors.primaryPink,
                   ),
                 ],
               ),
-            ),
+            ],
           ),
         ),
       ],

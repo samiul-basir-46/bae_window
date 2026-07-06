@@ -13,6 +13,7 @@ import '../bloc/trivia_state.dart';
 import '../models/trivia_model.dart';
 import 'package:bea_window_app/common_widgets/app_toast.dart';
 import 'package:bea_window_app/common_widgets/bae_loader.dart';
+import 'package:bea_window_app/features/auth/services/firebase_auth_service.dart';
 
 class TriviaScreen extends StatefulWidget {
   final String coupleId;
@@ -33,6 +34,35 @@ class _TriviaScreenState extends State<TriviaScreen> {
   final _formKey = GlobalKey<FormState>();
   final String _dateYmd = DateFormat('yyyy-MM-dd').format(DateTime.now());
   final String? _currentUserUid = FirebaseAuth.instance.currentUser?.uid;
+  String _partnerNickname = 'Bae';
+  TriviaModel? _cachedTrivia;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPartnerNickname();
+  }
+
+  Future<void> _loadPartnerNickname() async {
+    try {
+      final authService = FirebaseAuthService();
+      final partnerUid = await authService.getPartnerUid(widget.coupleId);
+      if (partnerUid != null) {
+        final partnerProfile = await authService.getUserProfile(partnerUid);
+        if (partnerProfile != null) {
+          final nickname = partnerProfile['nickname'] as String? ??
+              partnerProfile['name'] as String?;
+          if (nickname != null && nickname.isNotEmpty) {
+            setState(() {
+              _partnerNickname = nickname;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Error loading partner nickname: $e");
+    }
+  }
 
   @override
   void dispose() {
@@ -57,7 +87,8 @@ class _TriviaScreenState extends State<TriviaScreen> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                color: Colors.white),
             onPressed: () => Navigator.pop(context),
           ),
           title: Text(
@@ -127,77 +158,81 @@ class _TriviaScreenState extends State<TriviaScreen> {
               SafeArea(
                 child: BlocBuilder<TriviaBloc, TriviaState>(
                   builder: (context, state) {
-                    if (state is TriviaLoading || state is TriviaInitial) {
+                    if (state is TriviaLoaded) {
+                      _cachedTrivia = state.trivia;
+                    }
+
+                    if ((state is TriviaLoading || state is TriviaInitial) &&
+                        _cachedTrivia == null) {
                       return const Center(
                         child: BaeLoader(),
                       );
                     }
 
-                    if (state is TriviaLoaded || state is TriviaSubmitting || state is TriviaSuccess || state is TriviaFailure) {
-                      TriviaModel? trivia;
-                      if (state is TriviaLoaded) {
-                        trivia = state.trivia;
-                      }
+                    final trivia = _cachedTrivia;
+                    final userAnswer = trivia?.answers[_currentUserUid];
+                    final hasUserAnswered =
+                        userAnswer != null && userAnswer.isNotEmpty;
 
-                      final userAnswer = trivia?.answers[_currentUserUid];
-                      final hasUserAnswered = userAnswer != null && userAnswer.isNotEmpty;
-
-                      // Find partner answer
-                      String? partnerAnswer;
-                      if (trivia != null) {
-                        for (final entry in trivia.answers.entries) {
-                          if (entry.key != _currentUserUid) {
-                            partnerAnswer = entry.value;
-                            break;
-                          }
+                    // Find partner answer
+                    String? partnerAnswer;
+                    if (trivia != null) {
+                      for (final entry in trivia.answers.entries) {
+                        if (entry.key != _currentUserUid) {
+                          partnerAnswer = entry.value;
+                          break;
                         }
                       }
-                      final hasPartnerAnswered = partnerAnswer != null && partnerAnswer.isNotEmpty;
+                    }
+                    final hasPartnerAnswered =
+                        partnerAnswer != null && partnerAnswer.isNotEmpty;
 
-                      return SingleChildScrollView(
-                        physics: const BouncingScrollPhysics(),
-                        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildQuestionCard(),
-                            UIHelper.verticalSpace(28.h),
-                            if (!hasUserAnswered) ...[
-                              _buildAnswerInputForm(context),
-                            ] else ...[
-                              _buildYourAnswerCard(userAnswer),
-                            ],
-                            UIHelper.verticalSpace(24.h),
-                            _buildPartnerAnswerCard(hasUserAnswered, hasPartnerAnswered, partnerAnswer),
-                            UIHelper.verticalSpace(40.h),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white.withValues(alpha: 0.05),
-                                  padding: EdgeInsets.symmetric(vertical: 14.h),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16.r),
-                                    side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
-                                  ),
+                    return SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 24.w, vertical: 16.h),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildQuestionCard(),
+                          UIHelper.verticalSpace(28.h),
+                          if (!hasUserAnswered) ...[
+                            _buildAnswerInputForm(context),
+                          ] else ...[
+                            _buildYourAnswerCard(userAnswer),
+                          ],
+                          UIHelper.verticalSpace(24.h),
+                          _buildPartnerAnswerCard(hasUserAnswered,
+                              hasPartnerAnswered, partnerAnswer),
+                          UIHelper.verticalSpace(40.h),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    Colors.white.withValues(alpha: 0.05),
+                                padding: EdgeInsets.symmetric(vertical: 14.h),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16.r),
+                                  side: BorderSide(
+                                      color:
+                                          Colors.white.withValues(alpha: 0.1)),
                                 ),
-                                onPressed: () => Navigator.pop(context),
-                                child: Text(
-                                  "Back to Home",
-                                  style: GoogleFonts.dmSans(
-                                    color: Colors.white70,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14.sp,
-                                  ),
+                              ),
+                              onPressed: () => Navigator.pop(context),
+                              child: Text(
+                                "Back to Home",
+                                style: GoogleFonts.dmSans(
+                                  color: Colors.white70,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14.sp,
                                 ),
                               ),
                             ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    return const SizedBox.shrink();
+                          ),
+                        ],
+                      ),
+                    );
                   },
                 ),
               ),
@@ -226,7 +261,8 @@ class _TriviaScreenState extends State<TriviaScreen> {
             children: [
               Row(
                 children: [
-                  Icon(Icons.format_quote_rounded, color: AppColors.primaryPink, size: 28.sp),
+                  Icon(Icons.format_quote_rounded,
+                      color: AppColors.primaryPink, size: 28.sp),
                   SizedBox(width: 8.w),
                   Text(
                     "TODAY'S QUESTION",
@@ -279,12 +315,14 @@ class _TriviaScreenState extends State<TriviaScreen> {
             style: GoogleFonts.dmSans(color: Colors.white, fontSize: 14.sp),
             decoration: InputDecoration(
               hintText: "Type your answer here...",
-              hintStyle: GoogleFonts.dmSans(color: Colors.white24, fontSize: 13.sp),
+              hintStyle:
+                  GoogleFonts.dmSans(color: Colors.white24, fontSize: 13.sp),
               filled: true,
               fillColor: Colors.white.withValues(alpha: 0.02),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(20.r),
-                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+                borderSide:
+                    BorderSide(color: Colors.white.withValues(alpha: 0.08)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(20.r),
@@ -360,7 +398,8 @@ class _TriviaScreenState extends State<TriviaScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.check_circle_outline_rounded, color: Colors.tealAccent, size: 18.sp),
+              Icon(Icons.check_circle_outline_rounded,
+                  color: Colors.tealAccent, size: 18.sp),
               SizedBox(width: 8.w),
               Text(
                 "YOUR ANSWER SUBMITTED",
@@ -387,7 +426,8 @@ class _TriviaScreenState extends State<TriviaScreen> {
     );
   }
 
-  Widget _buildPartnerAnswerCard(bool hasUserAnswered, bool hasPartnerAnswered, String? partnerAnswer) {
+  Widget _buildPartnerAnswerCard(
+      bool hasUserAnswered, bool hasPartnerAnswered, String? partnerAnswer) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -416,7 +456,8 @@ class _TriviaScreenState extends State<TriviaScreen> {
                 borderRadius: BorderRadius.circular(24.r),
                 border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
               ),
-              child: _buildPartnerStatusBody(hasUserAnswered, hasPartnerAnswered, partnerAnswer),
+              child: _buildPartnerStatusBody(
+                  hasUserAnswered, hasPartnerAnswered, partnerAnswer),
             ),
           ),
         ),
@@ -424,7 +465,8 @@ class _TriviaScreenState extends State<TriviaScreen> {
     );
   }
 
-  Widget _buildPartnerStatusBody(bool hasUserAnswered, bool hasPartnerAnswered, String? partnerAnswer) {
+  Widget _buildPartnerStatusBody(
+      bool hasUserAnswered, bool hasPartnerAnswered, String? partnerAnswer) {
     if (!hasPartnerAnswered) {
       return Row(
         children: [
@@ -434,7 +476,7 @@ class _TriviaScreenState extends State<TriviaScreen> {
           ),
           SizedBox(width: 12.w),
           Text(
-            "Bae is still thinking... 💭",
+            "$_partnerNickname is still thinking... 💭",
             style: GoogleFonts.dmSans(
               color: Colors.white38,
               fontSize: 13.sp,
@@ -452,7 +494,7 @@ class _TriviaScreenState extends State<TriviaScreen> {
           SizedBox(width: 10.w),
           Expanded(
             child: Text(
-              "Bae answered! Reveal by answering above 🔒",
+              "$_partnerNickname answered! Reveal by answering above 🔒",
               style: GoogleFonts.dmSans(
                 color: AppColors.primaryPink,
                 fontSize: 13.sp,
@@ -469,10 +511,11 @@ class _TriviaScreenState extends State<TriviaScreen> {
       children: [
         Row(
           children: [
-            Icon(Icons.favorite_rounded, color: AppColors.primaryPink, size: 18.sp),
+            Icon(Icons.favorite_rounded,
+                color: AppColors.primaryPink, size: 18.sp),
             SizedBox(width: 8.w),
             Text(
-              "BAE'S ANSWER REVEALED",
+              "${_partnerNickname.toUpperCase()}'S ANSWER REVEALED",
               style: GoogleFonts.dmSans(
                 color: AppColors.primaryPink,
                 fontSize: 11.sp,

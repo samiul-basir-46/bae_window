@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum ChatMessageType { text, image, video, file }
 
-enum MessageStatus { sending, sent, delivered, seen }
+enum MessageStatus { sending, sent, delivered, seen, failed }
 
 class RepliedMessageModel {
   final String messageId;

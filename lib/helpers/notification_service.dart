@@ -12,6 +12,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter/material.dart';
 
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:googleapis_auth/auth_io.dart' as auth;
@@ -34,8 +35,6 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     await PushNotificationService.showRemoteMessage(message);
   }
 
-  // Always try to update the home screen widget from the FCM data payload,
-  // even when the app is fully killed.
   await PushNotificationService.updateWidgetFromMessageData(message.data);
 }
 
@@ -73,9 +72,11 @@ class PushNotificationService {
 
       tz.initializeTimeZones();
 
-      const androidPlatformChannelSpecifics = AndroidNotificationDetails(
+      final partnerName = await getPartnerNickname();
+
+      final androidPlatformChannelSpecifics = AndroidNotificationDetails(
         activityChannelId,
-        'Bae activity',
+        '$partnerName activity',
         channelDescription: 'Snaps, drawings, voice, pulse, mood and task updates',
         importance: Importance.high,
         priority: Priority.high,
@@ -87,7 +88,7 @@ class PushNotificationService {
         presentSound: true,
       );
 
-      const platformChannelSpecifics = NotificationDetails(
+      final platformChannelSpecifics = NotificationDetails(
         android: androidPlatformChannelSpecifics,
         iOS: iosPlatformChannelSpecifics,
       );
@@ -149,7 +150,7 @@ class PushNotificationService {
     if (_localNotificationsInitialized) return;
 
     const initializationSettings = InitializationSettings(
-      android: AndroidInitializationSettings('ic_notification'),
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       iOS: DarwinInitializationSettings(
         requestAlertPermission: false,
         requestBadgePermission: false,
@@ -178,7 +179,7 @@ class PushNotificationService {
       AndroidNotificationChannel(
         pulseChannelId,
         'Love pulse',
-        description: 'Priority love pulses from your Bae',
+        description: 'Priority love pulses from your partner',
         importance: Importance.max,
         playSound: true,
         enableVibration: true,
@@ -188,7 +189,7 @@ class PushNotificationService {
     await androidPlugin?.createNotificationChannel(
       const AndroidNotificationChannel(
         activityChannelId,
-        'Bae activity',
+        'Partner activity',
         description: 'Snaps, drawings, voice, pulse, mood and task updates',
         importance: Importance.high,
         playSound: true,
@@ -199,7 +200,7 @@ class PushNotificationService {
       const AndroidNotificationChannel(
         quietChannelId,
         'Quiet hours',
-        description: 'Silent Bae Window notifications during quiet hours',
+        description: 'Silent notifications during quiet hours',
         importance: Importance.low,
         playSound: false,
         enableVibration: false,
@@ -436,13 +437,36 @@ class PushNotificationService {
 
     if (title == null && body == null) return;
 
-    final isQuiet = message.data['quiet'] == 'true';
+    // Check if notifications of this type are disabled by the user
+    if (type != null && type != 'chat') {
+      if (!_isNotificationTypeEnabled(type)) {
+        dev.log('Notification type "$type" is disabled in settings.', name: 'PushNotificationService');
+        return; // Suppress notification completely
+      }
+    }
+
+    // Check if quiet hours are active
+    final storage = GetStorage();
+    var isQuietTime = false;
+    final quietHoursEnabled = storage.read<bool>('quietHoursEnabled') ?? true;
+    if (quietHoursEnabled && type != 'thinkingPulse' && type != 'chat') {
+      final startStr = storage.read<String>('quietHoursStart') ?? "11:00 PM";
+      final endStr = storage.read<String>('quietHoursEnd') ?? "07:00 AM";
+      if (_isInQuietHours(startStr, endStr)) {
+        isQuietTime = true;
+      }
+    }
+
+    final isQuiet = message.data['quiet'] == 'true' || isQuietTime;
     final isPulse = message.data['type'] == 'thinkingPulse';
     final channelId = isPulse
         ? pulseChannelId
         : isQuiet
             ? quietChannelId
             : activityChannelId;
+
+    final partnerName = await getPartnerNickname();
+
     await _localNotifications.show(
       id: message.messageId?.hashCode ??
           DateTime.now().millisecondsSinceEpoch.remainder(1 << 31),
@@ -455,12 +479,12 @@ class PushNotificationService {
               ? 'Love pulse'
               : isQuiet
                   ? 'Quiet hours'
-                  : 'Bae activity',
+                  : '$partnerName activity',
           channelDescription: isPulse
-              ? 'Priority love pulses from your Bae'
+              ? 'Priority love pulses from your $partnerName'
               : isQuiet
                   ? 'Silent notifications during quiet hours'
-                  : 'Bae Window partner activity',
+                  : '$partnerName activity',
           importance: isPulse
               ? Importance.max
               : isQuiet
@@ -904,6 +928,95 @@ class PushNotificationService {
         name: 'PushNotificationService',
         error: e,
       );
+    }
+  }
+
+  static Future<String> getPartnerNickname() async {
+    final storage = GetStorage();
+    final cached = storage.read<String>('partner_nickname');
+    if (cached != null && cached.isNotEmpty) {
+      return cached;
+    }
+
+    final user = _auth.currentUser;
+    if (user == null) return "Partner";
+    try {
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      if (userDoc.exists && userDoc.data() != null) {
+        final coupleId = userDoc.data()!['coupleId'] as String?;
+        if (coupleId != null && coupleId.isNotEmpty) {
+          final coupleDoc = await _firestore.collection('couples').doc(coupleId).get();
+          if (coupleDoc.exists && coupleDoc.data() != null) {
+            final data = coupleDoc.data()!;
+            final user1 = data['user1Uid'] as String?;
+            final user2 = data['user2Uid'] as String?;
+            final partnerUid = (user1 == user.uid) ? user2 : user1;
+            if (partnerUid != null && partnerUid.isNotEmpty) {
+              final partnerDoc = await _firestore.collection('users').doc(partnerUid).get();
+              if (partnerDoc.exists && partnerDoc.data() != null) {
+                final pData = partnerDoc.data()!;
+                final nickname = pData['nickname'] as String? ?? pData['name'] as String?;
+                if (nickname != null && nickname.isNotEmpty) {
+                  await storage.write('partner_nickname', nickname);
+                  return nickname;
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (_) {}
+    return "Partner";
+  }
+
+  static bool _isNotificationTypeEnabled(String type) {
+    final storage = GetStorage();
+    final isEnabled = storage.read<bool>(type) ?? true;
+    return isEnabled;
+  }
+
+  static bool _isInQuietHours(String startStr, String endStr) {
+    try {
+      final now = DateTime.now();
+      final startTime = _parseTimeString(startStr);
+      final endTime = _parseTimeString(endStr);
+      
+      if (startTime == null || endTime == null) return false;
+      
+      final start = DateTime(now.year, now.month, now.day, startTime.hour, startTime.minute);
+      var end = DateTime(now.year, now.month, now.day, endTime.hour, endTime.minute);
+      
+      if (end.isBefore(start)) {
+        // Quiet hours cross midnight
+        if (now.isAfter(start) || now.isBefore(end)) {
+          return true;
+        }
+      } else {
+        if (now.isAfter(start) && now.isBefore(end)) {
+          return true;
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  static TimeOfDay? _parseTimeString(String timeStr) {
+    try {
+      final clean = timeStr.trim().toUpperCase();
+      final parts = clean.split(' ');
+      final hm = parts[0].split(':');
+      var hour = int.parse(hm[0]);
+      final minute = int.parse(hm[1]);
+      if (parts.length > 1) {
+        if (parts[1] == 'PM' && hour < 12) {
+          hour += 12;
+        } else if (parts[1] == 'AM' && hour == 12) {
+          hour = 0;
+        }
+      }
+      return TimeOfDay(hour: hour, minute: minute);
+    } catch (_) {
+      return null;
     }
   }
 

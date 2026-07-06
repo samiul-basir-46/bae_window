@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:bea_window_app/features/chat/models/message_model.dart';
 import 'package:bea_window_app/helpers/notification_service.dart';
@@ -48,6 +49,7 @@ class MessageService {
     int? fileSize,
     String? videoThumbnail,
     List<MediaItemModel>? mediaItems,
+    String? messageId,
   }) async {
     final convRef = _firestore.collection('conversations').doc(conversationId);
     
@@ -63,7 +65,9 @@ class MessageService {
       }
     }
 
-    final messageRef = convRef.collection('messages').doc();
+    final messageRef = messageId != null
+        ? convRef.collection('messages').doc(messageId)
+        : convRef.collection('messages').doc();
 
     final message = MessageModel(
       id: messageRef.id,
@@ -82,8 +86,8 @@ class MessageService {
     // Save message document
     await messageRef.set(message.toMap());
 
-    // Safely update conversation metadata and increment unread counts using a transaction
-    await _firestore.runTransaction((transaction) async {
+    // Safely update conversation metadata and increment unread counts using a transaction in background
+    unawaited(_firestore.runTransaction((transaction) async {
       final freshConvDoc = await transaction.get(convRef);
       if (!freshConvDoc.exists) return;
 
@@ -101,40 +105,44 @@ class MessageService {
       }
 
       transaction.update(convRef, updates);
-    });
+    }).catchError((e) {
+      dev.log('Transaction failed: $e', name: 'MessageService');
+    }));
 
-    // Send FCM notification to partner
-    try {
-      final senderName = await PushNotificationService.getSenderName();
-      String bodySnippet = '';
-      switch (type) {
-        case ChatMessageType.image:
-          bodySnippet = '📷 Photo';
-          break;
-        case ChatMessageType.video:
-          bodySnippet = '🎥 Video';
-          break;
-        case ChatMessageType.file:
-          bodySnippet = '📁 File';
-          break;
-        default:
-          bodySnippet = content;
+    // Send FCM notification to partner in background
+    unawaited(() async {
+      try {
+        final senderName = await PushNotificationService.getSenderName();
+        String bodySnippet = '';
+        switch (type) {
+          case ChatMessageType.image:
+            bodySnippet = '📷 Photo';
+            break;
+          case ChatMessageType.video:
+            bodySnippet = '🎥 Video';
+            break;
+          case ChatMessageType.file:
+            bodySnippet = '📁 File';
+            break;
+          default:
+            bodySnippet = content;
+        }
+
+        await PushNotificationService.sendNotificationToPartner(
+          title: senderName,
+          body: bodySnippet,
+          type: 'chat',
+          route: 'chat',
+          extraData: {
+            'conversationId': conversationId,
+            'partnerUid': senderId,
+            'senderName': senderName,
+          },
+        );
+      } catch (e) {
+        dev.log('Failed to send message notification: $e', name: 'MessageService');
       }
-
-      await PushNotificationService.sendNotificationToPartner(
-        title: senderName,
-        body: bodySnippet,
-        type: 'chat',
-        route: 'chat',
-        extraData: {
-          'conversationId': conversationId,
-          'partnerUid': senderId,
-          'senderName': senderName,
-        },
-      );
-    } catch (e) {
-      dev.log('Failed to send message notification: $e', name: 'MessageService');
-    }
+    }());
   }
 
   Stream<List<MessageModel>> getMessagesStream(

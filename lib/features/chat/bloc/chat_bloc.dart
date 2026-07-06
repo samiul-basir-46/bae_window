@@ -15,6 +15,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _convSub;
   String? _currentUserId;
   String? _partnerUserId;
+  final List<MessageModel> _pendingMessages = [];
+  List<MessageModel> _remoteMessages = [];
 
   ChatBloc() : super(const ChatInitial()) {
     on<LoadMessagesEvent>(_onLoadMessages);
@@ -31,6 +33,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<RemoveReactionEvent>(_onRemoveReaction);
     on<MarkAsSeenEvent>(_onMarkAsSeen);
     on<DeleteMessageEvent>(_onDeleteMessage);
+    on<RetrySendMessageEvent>(_onRetrySendMessage);
+    on<_UpdatePendingMessageStatusEvent>(_onUpdatePendingMessageStatus);
   }
 
   Future<void> _onLoadMessages(
@@ -133,9 +137,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       replyToMsg = null;
     }
 
+    _remoteMessages = filteredMessages;
+
     emit(ChatLoaded(
       conversationId: conversationId,
-      messages: filteredMessages,
+      messages: _getMergedMessages(),
       limit: currentLimit,
       hasMore: hasMore,
       isRecipientTyping: isTyping,
@@ -163,21 +169,33 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         );
       }
 
-      emit(currentState.copyWith(replyingTo: () => null));
+      final String msgId = FirebaseFirestore.instance
+          .collection('conversations')
+          .doc(currentState.conversationId)
+          .collection('messages')
+          .doc()
+          .id;
 
-      try {
-        await _chatRepository.sendMessage(
-          conversationId: currentState.conversationId,
-          senderId: _currentUserId!,
-          content: event.content,
-          type: ChatMessageType.text,
-          repliedTo: repliedToModel,
-        );
-      } catch (err) {
-        if (!isClosed) {
-          emit(currentState.copyWith(error: () => err.toString()));
-        }
-      }
+      final pendingMsg = MessageModel(
+        id: msgId,
+        senderId: _currentUserId!,
+        content: event.content,
+        type: ChatMessageType.text,
+        timestamp: DateTime.now(),
+        status: MessageStatus.sending,
+        repliedTo: repliedToModel,
+      );
+
+      _pendingMessages.add(pendingMsg);
+      emit(currentState.copyWith(
+        messages: _getMergedMessages(),
+        replyingTo: () => null,
+      ));
+
+      _uploadMessageInBackground(
+        conversationId: currentState.conversationId,
+        message: pendingMsg,
+      );
     }
   }
 
@@ -198,24 +216,36 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         );
       }
 
-      emit(currentState.copyWith(replyingTo: () => null));
+      final String msgId = FirebaseFirestore.instance
+          .collection('conversations')
+          .doc(currentState.conversationId)
+          .collection('messages')
+          .doc()
+          .id;
 
-      try {
-        await _chatRepository.sendMessage(
-          conversationId: currentState.conversationId,
-          senderId: _currentUserId!,
-          content: event.content,
-          type: event.type,
-          repliedTo: repliedToModel,
-          fileName: event.fileName,
-          fileSize: event.fileSize,
-          videoThumbnail: event.videoThumbnail,
-        );
-      } catch (err) {
-        if (!isClosed) {
-          emit(currentState.copyWith(error: () => err.toString()));
-        }
-      }
+      final pendingMsg = MessageModel(
+        id: msgId,
+        senderId: _currentUserId!,
+        content: event.content,
+        type: event.type,
+        timestamp: DateTime.now(),
+        status: MessageStatus.sending,
+        repliedTo: repliedToModel,
+        fileName: event.fileName,
+        fileSize: event.fileSize,
+        videoThumbnail: event.videoThumbnail,
+      );
+
+      _pendingMessages.add(pendingMsg);
+      emit(currentState.copyWith(
+        messages: _getMergedMessages(),
+        replyingTo: () => null,
+      ));
+
+      _uploadMessageInBackground(
+        conversationId: currentState.conversationId,
+        message: pendingMsg,
+      );
     }
   }
 
@@ -236,22 +266,34 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         );
       }
 
-      emit(currentState.copyWith(replyingTo: () => null));
+      final String msgId = FirebaseFirestore.instance
+          .collection('conversations')
+          .doc(currentState.conversationId)
+          .collection('messages')
+          .doc()
+          .id;
 
-      try {
-        await _chatRepository.sendMessage(
-          conversationId: currentState.conversationId,
-          senderId: _currentUserId!,
-          content: event.textContent ?? '',
-          type: ChatMessageType.image,
-          repliedTo: repliedToModel,
-          mediaItems: event.mediaItems,
-        );
-      } catch (err) {
-        if (!isClosed) {
-          emit(currentState.copyWith(error: () => err.toString()));
-        }
-      }
+      final pendingMsg = MessageModel(
+        id: msgId,
+        senderId: _currentUserId!,
+        content: event.textContent ?? '',
+        type: ChatMessageType.image,
+        timestamp: DateTime.now(),
+        status: MessageStatus.sending,
+        repliedTo: repliedToModel,
+        mediaItems: event.mediaItems,
+      );
+
+      _pendingMessages.add(pendingMsg);
+      emit(currentState.copyWith(
+        messages: _getMergedMessages(),
+        replyingTo: () => null,
+      ));
+
+      _uploadMessageInBackground(
+        conversationId: currentState.conversationId,
+        message: pendingMsg,
+      );
     }
   }
 
@@ -413,4 +455,90 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
     return super.close();
   }
+
+  List<MessageModel> _getMergedMessages() {
+    final remoteIds = _remoteMessages.map((m) => m.id).toSet();
+    final uniquePending = _pendingMessages.where((pm) => !remoteIds.contains(pm.id)).toList();
+    final merged = [...uniquePending, ..._remoteMessages];
+    merged.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    return merged;
+  }
+
+  void _uploadMessageInBackground({
+    required String conversationId,
+    required MessageModel message,
+  }) {
+    unawaited(() async {
+      try {
+        await _chatRepository.sendMessage(
+          conversationId: conversationId,
+          senderId: message.senderId,
+          content: message.content,
+          type: message.type,
+          repliedTo: message.repliedTo,
+          fileName: message.fileName,
+          fileSize: message.fileSize,
+          videoThumbnail: message.videoThumbnail,
+          mediaItems: message.mediaItems,
+          messageId: message.id,
+        );
+        add(_UpdatePendingMessageStatusEvent(
+          messageId: message.id,
+          status: MessageStatus.sent,
+          remove: true,
+        ));
+      } catch (err) {
+        add(_UpdatePendingMessageStatusEvent(
+          messageId: message.id,
+          status: MessageStatus.failed,
+          remove: false,
+        ));
+      }
+    }());
+  }
+
+  void _onRetrySendMessage(
+    RetrySendMessageEvent event,
+    Emitter<ChatState> emit,
+  ) {
+    final index = _pendingMessages.indexWhere((m) => m.id == event.messageId);
+    if (index != -1) {
+      _pendingMessages[index] = _pendingMessages[index].copyWith(status: MessageStatus.sending);
+      if (state is ChatLoaded) {
+        emit((state as ChatLoaded).copyWith(messages: _getMergedMessages()));
+        _uploadMessageInBackground(
+          conversationId: state.conversationId,
+          message: _pendingMessages[index],
+        );
+      }
+    }
+  }
+
+  void _onUpdatePendingMessageStatus(
+    _UpdatePendingMessageStatusEvent event,
+    Emitter<ChatState> emit,
+  ) {
+    if (event.remove) {
+      _pendingMessages.removeWhere((m) => m.id == event.messageId);
+    } else {
+      final index = _pendingMessages.indexWhere((m) => m.id == event.messageId);
+      if (index != -1) {
+        _pendingMessages[index] = _pendingMessages[index].copyWith(status: event.status);
+      }
+    }
+    if (state is ChatLoaded) {
+      emit((state as ChatLoaded).copyWith(messages: _getMergedMessages()));
+    }
+  }
+}
+
+class _UpdatePendingMessageStatusEvent extends ChatEvent {
+  final String messageId;
+  final MessageStatus status;
+  final bool remove;
+  const _UpdatePendingMessageStatusEvent({
+    required this.messageId,
+    required this.status,
+    required this.remove,
+  });
 }

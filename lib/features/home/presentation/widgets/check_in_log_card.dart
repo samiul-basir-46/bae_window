@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -27,20 +26,16 @@ class CheckInLogCard extends StatelessWidget {
             ),
           ),
         ),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(24.r),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-            child: Container(
-              padding: EdgeInsets.all(20.w),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.04),
-                borderRadius: BorderRadius.circular(24.r),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.06),
-                  width: 1.w,
-                ),
-              ),
+        Container(
+          padding: EdgeInsets.all(20.w),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(24.r),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.06),
+              width: 1.w,
+            ),
+          ),
               child: Column(
                 children: List.generate(logs.length, (index) {
                   final log = logs[index];
@@ -111,8 +106,6 @@ class CheckInLogCard extends StatelessWidget {
                 }),
               ),
             ),
-          ),
-        ),
       ],
     );
   }

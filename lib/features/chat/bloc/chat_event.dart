@@ -85,3 +85,8 @@ class DeleteMessageEvent extends ChatEvent {
   final MessageModel message;
   const DeleteMessageEvent(this.message);
 }
+
+class RetrySendMessageEvent extends ChatEvent {
+  final String messageId;
+  const RetrySendMessageEvent(this.messageId);
+}

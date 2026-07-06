@@ -6,7 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/features/home/presentation/screens/home_screens.dart';
 import 'package:bea_window_app/features/story/presentation/screens/story_screen.dart';
-import 'package:bea_window_app/features/space_screen/presentation/space_screen.dart';
+import 'package:bea_window_app/features/space_screen/presentation/screens/space_screen.dart';
 import 'package:bea_window_app/features/nest/presentation/screens/nest_screen.dart';
 import 'helpers/helper_methods.dart';
 import 'helpers/deep_link_helper.dart';

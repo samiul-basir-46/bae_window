@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:bea_window_app/gen/colors.gen.dart';
 
 class LiveStatusIndicator extends StatefulWidget {
   final bool isOnline;
@@ -42,7 +43,7 @@ class _LiveStatusIndicatorState extends State<LiveStatusIndicator> with SingleTi
   @override
   Widget build(BuildContext context) {
     final statusText = widget.isOnline ? "${widget.partnerName} Online" : "${widget.partnerName} Offline";
-    final dotColor = widget.isOnline ? Colors.greenAccent : Colors.grey;
+    final dotColor = widget.isOnline ? AppColors.c4CAF50 : Colors.white24;
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
@@ -69,11 +70,11 @@ class _LiveStatusIndicatorState extends State<LiveStatusIndicator> with SingleTi
                   boxShadow: widget.isOnline
                       ? [
                           BoxShadow(
-                            color: Colors.greenAccent.withValues(alpha: 0.6),
+                            color: AppColors.c4CAF50.withValues(alpha: 0.6),
                             blurRadius: _pulseGlow.value,
                             spreadRadius: 1,
                           )
-                        ]
+                      ]
                       : [],
                 ),
               );

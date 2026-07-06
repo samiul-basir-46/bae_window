@@ -93,46 +93,40 @@ class QuickActionDock extends StatelessWidget {
         child: AnimatedOpacity(
           opacity: state is HomeActionLoading ? 0.55 : 1,
           duration: const Duration(milliseconds: 180),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20.r),
-            child: BackdropFilter(
-              filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-              child: Container(
-                padding: EdgeInsets.symmetric(vertical: 6.h, horizontal: 8.w),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(20.r),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    width: 1.w,
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildDockItem(
-                      icon: Icons.camera_alt_rounded,
-                      label: "Snap It",
-                      onTap: () => _handleCamera(context),
-                    ),
-                    _buildDockItem(
-                      icon: Icons.brush_rounded,
-                      label: "Draw",
-                      onTap: () => _showDrawingCanvas(context),
-                    ),
-                    _buildDockItem(
-                      icon: Icons.vibration_rounded,
-                      label: "Pulse",
-                      onTap: () => _handlePulse(context),
-                    ),
-                    _buildDockItem(
-                      icon: Icons.mic_rounded,
-                      label: "Voice",
-                      onTap: () => _showVoiceRecorder(context),
-                    ),
-                  ],
-                ),
+          child: Container(
+            padding: EdgeInsets.symmetric(vertical: 6.h, horizontal: 8.w),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.55),
+              borderRadius: BorderRadius.circular(20.r),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.1),
+                width: 1.w,
               ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildDockItem(
+                  icon: Icons.camera_alt_rounded,
+                  label: "Snap It",
+                  onTap: () => _handleCamera(context),
+                ),
+                _buildDockItem(
+                  icon: Icons.brush_rounded,
+                  label: "Draw",
+                  onTap: () => _showDrawingCanvas(context),
+                ),
+                _buildDockItem(
+                  icon: Icons.vibration_rounded,
+                  label: "Pulse",
+                  onTap: () => _handlePulse(context),
+                ),
+                _buildDockItem(
+                  icon: Icons.mic_rounded,
+                  label: "Voice",
+                  onTap: () => _showVoiceRecorder(context),
+                ),
+              ],
             ),
           ),
         ),

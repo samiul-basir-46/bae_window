@@ -61,8 +61,11 @@ class _MessageBubbleState extends State<MessageBubble> {
   }
 
   Widget _buildMessageContent() {
+    final isSending = widget.message.status == MessageStatus.sending;
+    Widget contentWidget;
+
     if (widget.message.isDeleted) {
-      return Container(
+      contentWidget = Container(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18.r),
@@ -82,10 +85,8 @@ class _MessageBubbleState extends State<MessageBubble> {
           ),
         ),
       );
-    }
-
-    if (widget.message.mediaItems != null && widget.message.mediaItems!.isNotEmpty) {
-      return MediaGrid(
+    } else if (widget.message.mediaItems != null && widget.message.mediaItems!.isNotEmpty) {
+      contentWidget = MediaGrid(
         mediaItems: widget.message.mediaItems!,
         onMediaTap: (initialIndex) {
           Navigator.push(
@@ -99,41 +100,53 @@ class _MessageBubbleState extends State<MessageBubble> {
           );
         },
       );
+    } else {
+      switch (widget.message.type) {
+        case ChatMessageType.image:
+          contentWidget = ImageMessage(imageUrl: widget.message.content);
+          break;
+        case ChatMessageType.video:
+          contentWidget = VideoMessage(
+            videoUrl: widget.message.content,
+            thumbnailUrl: widget.message.videoThumbnail,
+          );
+          break;
+        case ChatMessageType.file:
+          contentWidget = FileMessage(
+            fileUrl: widget.message.content,
+            fileName: widget.message.fileName,
+            fileSize: widget.message.fileSize,
+          );
+          break;
+        case ChatMessageType.text:
+          contentWidget = Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18.r),
+              gradient: widget.isMe
+                  ? const LinearGradient(
+                      colors: [AppColors.primaryPink, AppColors.primaryPurple],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                  : null,
+              color: widget.isMe ? null : Colors.white.withValues(alpha: 0.05),
+            ),
+            child: Text.rich(
+              _buildLinkifiedText(widget.message.content),
+            ),
+          );
+          break;
+      }
     }
 
-    switch (widget.message.type) {
-      case ChatMessageType.image:
-        return ImageMessage(imageUrl: widget.message.content);
-      case ChatMessageType.video:
-        return VideoMessage(
-          videoUrl: widget.message.content,
-          thumbnailUrl: widget.message.videoThumbnail,
-        );
-      case ChatMessageType.file:
-        return FileMessage(
-          fileUrl: widget.message.content,
-          fileName: widget.message.fileName,
-          fileSize: widget.message.fileSize,
-        );
-      default:
-        return Container(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18.r),
-            gradient: widget.isMe
-                ? const LinearGradient(
-                    colors: [AppColors.primaryPink, AppColors.primaryPurple],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  )
-                : null,
-            color: widget.isMe ? null : Colors.white.withValues(alpha: 0.05),
-          ),
-          child: Text.rich(
-            _buildLinkifiedText(widget.message.content),
-          ),
-        );
+    if (isSending) {
+      return Opacity(
+        opacity: 0.65,
+        child: contentWidget,
+      );
     }
+    return contentWidget;
   }
 
   static final _urlRegex = RegExp(
@@ -396,7 +409,15 @@ class _MessageBubbleState extends State<MessageBubble> {
   }
 
   Widget _buildStatusIndicator() {
-    if (!widget.isMe || !widget.isLastMessage) return const SizedBox.shrink();
+    if (!widget.isMe) return const SizedBox.shrink();
+
+    final isFailed = widget.message.status == MessageStatus.failed;
+    final isSending = widget.message.status == MessageStatus.sending;
+
+    // Only show status indicator on non-last messages if they are sending or failed
+    if (!widget.isLastMessage && !isFailed && !isSending) {
+      return const SizedBox.shrink();
+    }
 
     String statusText = '';
     Color statusColor = AppColors.c8E8E9F.withValues(alpha: 0.7);
@@ -414,6 +435,10 @@ class _MessageBubbleState extends State<MessageBubble> {
         break;
       case MessageStatus.sending:
         statusText = 'Sending...';
+        break;
+      case MessageStatus.failed:
+        statusText = 'Failed. Tap red icon to retry';
+        statusColor = Colors.redAccent;
         break;
     }
 
@@ -580,6 +605,21 @@ class _MessageBubbleState extends State<MessageBubble> {
                     isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
+                  if (isMe && widget.message.status == MessageStatus.failed) ...[
+                    GestureDetector(
+                      onTap: () {
+                        context.read<ChatBloc>().add(RetrySendMessageEvent(widget.message.id));
+                      },
+                      child: Padding(
+                        padding: EdgeInsets.only(right: 8.w, bottom: 8.h),
+                        child: Icon(
+                          Icons.error_outline_rounded,
+                          color: Colors.redAccent,
+                          size: 20.sp,
+                        ),
+                      ),
+                    ),
+                  ],
                   if (!isMe && widget.showAvatar) ...[
                     Container(
                       width: 28.r,

@@ -92,33 +92,33 @@ class SpaceScreenBloc extends Bloc<SpaceScreenEvent, SpaceScreenState> {
 
       // Listen to Firestore Bucket List stream
       _bucketSub = _syncService.watchBucketList(coupleId).listen((items) {
-        add(BucketListUpdatedEvent(items));
+        if (!isClosed) add(BucketListUpdatedEvent(items));
       });
 
       // Listen to Firestore Anniversary stream
       _anniversarySub = _syncService.watchAnniversary(user.uid).listen((date) {
-        add(AnniversaryUpdatedEvent(date));
+        if (!isClosed) add(AnniversaryUpdatedEvent(date));
       });
 
       // Listen to Firestore Tasks stream
       _tasksSub = _syncService.watchTasks(coupleId).listen((tasks) {
-        add(TasksUpdatedEvent(tasks));
+        if (!isClosed) add(TasksUpdatedEvent(tasks));
       });
 
       // Listen to Firestore Moments stream
       _momentsSub = _syncService.watchMoments(coupleId).listen((moments) {
-        add(MomentsUpdatedEvent(moments));
+        if (!isClosed) add(MomentsUpdatedEvent(moments));
       });
 
       if (_partnerUid != null) {
         // Listen to Partner Nickname stream
         _nicknameSub = _syncService.watchPartnerNickname(_partnerUid!).listen((nickname) {
-          add(PartnerNicknameUpdatedEvent(nickname));
+          if (!isClosed) add(PartnerNicknameUpdatedEvent(nickname));
         });
 
         // Listen to Partner Presence stream
         _presenceSub = _presenceService.watchPartnerPresence(_partnerUid!).listen((isOnline) {
-          add(PartnerPresenceUpdatedEvent(isOnline));
+          if (!isClosed) add(PartnerPresenceUpdatedEvent(isOnline));
         });
       }
 
