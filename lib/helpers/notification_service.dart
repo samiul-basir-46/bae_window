@@ -44,6 +44,7 @@ class PushNotificationService {
   static const String activityChannelId = 'bae_activity';
   static const String pulseChannelId = 'bae_pulse';
   static const String quietChannelId = 'bae_quiet';
+  static const String chatChannelId = 'chat_messages';
 
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -77,7 +78,8 @@ class PushNotificationService {
       final androidPlatformChannelSpecifics = AndroidNotificationDetails(
         activityChannelId,
         '$partnerName activity',
-        channelDescription: 'Snaps, drawings, voice, pulse, mood and task updates',
+        channelDescription:
+            'Snaps, drawings, voice, pulse, mood and task updates',
         importance: Importance.high,
         priority: Priority.high,
       );
@@ -102,9 +104,11 @@ class PushNotificationService {
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       );
 
-      dev.log('Scheduled notification: "$title" at $scheduledDate', name: 'PushNotificationService');
+      dev.log('Scheduled notification: "$title" at $scheduledDate',
+          name: 'PushNotificationService');
     } catch (e) {
-      dev.log('Failed to schedule notification: $e', name: 'PushNotificationService');
+      dev.log('Failed to schedule notification: $e',
+          name: 'PushNotificationService');
     }
   }
 
@@ -173,8 +177,9 @@ class PushNotificationService {
     );
 
     final androidPlugin =
-        _localNotifications.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+        _localNotifications.resolvePlatformSpecificImplementation
+            as AndroidFlutterLocalNotificationsPlugin?;
+
     await androidPlugin?.createNotificationChannel(
       AndroidNotificationChannel(
         pulseChannelId,
@@ -206,6 +211,17 @@ class PushNotificationService {
         enableVibration: false,
       ),
     );
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        chatChannelId,
+        'Chat Messages',
+        description: 'Real-time chat messages from your partner',
+        importance: Importance.max,
+        playSound: true,
+        enableVibration: true,
+      ),
+    );
+
     _localNotificationsInitialized = true;
   }
 
@@ -332,10 +348,10 @@ class PushNotificationService {
     ));
   }
 
-  static Future<void> clearConversationNotifications(String conversationId) async {
-    final notificationId = conversationId.hashCode;
+  static Future<void> clearConversationNotifications(
+      String conversationId) async {
+    final notificationId = conversationId.hashCode.abs();
     await _localNotifications.cancel(id: notificationId);
-    // Cancel all potential bundled message notifications in the range
     for (int i = 1; i <= 50; i++) {
       await _localNotifications.cancel(id: notificationId + i);
     }
@@ -348,42 +364,38 @@ class PushNotificationService {
     final notification = message.notification;
     final title = notification?.title ?? message.data['title']?.toString();
     final body = notification?.body ?? message.data['body']?.toString();
-    
+
     final type = message.data['type']?.toString();
+
     if (type == 'chat') {
       final conversationId = message.data['conversationId']?.toString() ?? '';
+
       if (conversationId.isNotEmpty) {
         final activeId = GetStorage().read<String>('active_conversation_id');
-        if (activeId == conversationId) {
-          // User is currently viewing this conversation, do not show notification
-          return;
-        }
+        if (activeId == conversationId) return;
 
-        final muteExpiry = GetStorage().read<int>('mute_until_$conversationId') ?? 0;
-        if (muteExpiry == -1 || (muteExpiry > 0 && DateTime.now().millisecondsSinceEpoch < muteExpiry)) {
-          // Conversation is muted
+        final muteExpiry =
+            GetStorage().read<int>('mute_until_$conversationId') ?? 0;
+        if (muteExpiry == -1 ||
+            (muteExpiry > 0 &&
+                DateTime.now().millisecondsSinceEpoch < muteExpiry)) {
           return;
         }
       }
 
-      final senderName = message.data['senderName']?.toString() ?? title ?? 'Partner';
+      final senderName =
+          message.data['senderName']?.toString() ?? title ?? 'Partner';
       final messageText = body ?? message.data['body']?.toString() ?? '';
-      
+
       final key = 'unread_msgs_$conversationId';
       final storage = GetStorage();
       final List<dynamic> rawList = storage.read<List<dynamic>>(key) ?? [];
       final List<String> list = rawList.map((e) => e.toString()).toList();
       list.add(messageText);
-      storage.write(key, list);
+      await storage.write(key, list);
 
-      final notificationId = conversationId.hashCode;
+      final notificationId = conversationId.hashCode.abs();
       final summaryText = '${list.length} new messages';
-
-      final inboxStyle = InboxStyleInformation(
-        list,
-        contentTitle: senderName,
-        summaryText: summaryText,
-      );
 
       final darwinDetails = DarwinNotificationDetails(
         presentAlert: true,
@@ -392,60 +404,74 @@ class PushNotificationService {
         threadIdentifier: conversationId,
       );
 
-      // 1. Show individual message notification with a unique ID inside the group
-      final int messageNotificationId = notificationId + (list.length % 50 + 1);
-      final androidMessageDetails = AndroidNotificationDetails(
-        'chat_messages',
+      final int childId = notificationId + (list.length % 49 + 1);
+
+      final androidChild = AndroidNotificationDetails(
+        chatChannelId,
         'Chat Messages',
         channelDescription: 'Real-time chat messages from your partner',
         importance: Importance.max,
         priority: Priority.high,
         groupKey: conversationId,
         setAsGroupSummary: false,
+        autoCancel: false,
       );
 
       await _localNotifications.show(
-        id: messageNotificationId,
+        id: childId,
         title: senderName,
         body: messageText,
-        notificationDetails: NotificationDetails(android: androidMessageDetails, iOS: darwinDetails),
+        notificationDetails: NotificationDetails(
+          android: androidChild,
+          iOS: darwinDetails,
+        ),
         payload: jsonEncode(message.data),
       );
 
-      // 2. Show/Update the group summary notification
-      final androidSummaryDetails = AndroidNotificationDetails(
-        'chat_messages',
-        'Chat Messages',
-        channelDescription: 'Real-time chat messages from your partner',
-        importance: Importance.max,
-        priority: Priority.high,
-        styleInformation: inboxStyle,
-        groupKey: conversationId,
-        setAsGroupSummary: true,
-      );
+      if (list.length >= 2) {
+        final inboxStyle = InboxStyleInformation(
+          list,
+          contentTitle: senderName,
+          summaryText: summaryText,
+        );
 
-      await _localNotifications.show(
-        id: notificationId,
-        title: senderName,
-        body: summaryText,
-        notificationDetails: NotificationDetails(android: androidSummaryDetails, iOS: darwinDetails),
-        payload: jsonEncode(message.data),
-      );
+        final androidSummary = AndroidNotificationDetails(
+          chatChannelId,
+          'Chat Messages',
+          channelDescription: 'Real-time chat messages from your partner',
+          importance: Importance.max,
+          priority: Priority.high,
+          styleInformation: inboxStyle,
+          groupKey: conversationId,
+          setAsGroupSummary: true,
+          autoCancel: true,
+        );
+
+        await _localNotifications.show(
+          id: notificationId,
+          title: senderName,
+          body: summaryText,
+          notificationDetails: NotificationDetails(
+            android: androidSummary,
+            iOS: darwinDetails,
+          ),
+          payload: jsonEncode(message.data),
+        );
+      }
 
       return;
     }
 
     if (title == null && body == null) return;
 
-    // Check if notifications of this type are disabled by the user
     if (type != null && type != 'chat') {
       if (!_isNotificationTypeEnabled(type)) {
-        dev.log('Notification type "$type" is disabled in settings.', name: 'PushNotificationService');
-        return; // Suppress notification completely
+        dev.log('Notification type "$type" is disabled in settings.',
+            name: 'PushNotificationService');
+        return;
       }
     }
 
-    // Check if quiet hours are active
     final storage = GetStorage();
     var isQuietTime = false;
     final quietHoursEnabled = storage.read<bool>('quietHoursEnabled') ?? true;
@@ -509,13 +535,11 @@ class PushNotificationService {
       payload: jsonEncode(message.data),
     );
 
-    // Update Home Screen Widget
     await updateWidgetFromMessageData(message.data);
   }
 
-  /// Updates the home screen widget from FCM data payload.
-  /// Called from both foreground (showRemoteMessage) and background handler.
-  static Future<void> updateWidgetFromMessageData(Map<String, dynamic> data) async {
+  static Future<void> updateWidgetFromMessageData(
+      Map<String, dynamic> data) async {
     try {
       final snapUrl = data['latestSnapUrl']?.toString();
       final snapType = data['latestSnapType']?.toString();
@@ -531,7 +555,8 @@ class PushNotificationService {
           daysTogether: null,
           latestSnapUrl: snapUrl,
           latestSnapType: snapType,
-          latestImageUrl: (snapType != 'draw' && snapType != 'voice') ? snapUrl : null,
+          latestImageUrl:
+              (snapType != 'draw' && snapType != 'voice') ? snapUrl : null,
           latestDrawingUrl: snapType == 'draw' ? snapUrl : null,
           latestVoiceUrl: snapType == 'voice' ? snapUrl : null,
           partnerMoodEmoji: moodEmoji,
@@ -554,7 +579,6 @@ class PushNotificationService {
       final conversationId = data['conversationId']?.toString() ?? '';
       final partnerUid = data['partnerUid']?.toString() ?? '';
 
-      // Clear notifications for this conversation
       unawaited(clearConversationNotifications(conversationId));
 
       void navigate() {
@@ -634,20 +658,20 @@ class PushNotificationService {
   static DateTime? _tokenExpiresAt;
 
   static Future<String?> _getAccessToken() async {
-    // Return cached token if it's still valid (with 60s buffer)
     if (_cachedAccessToken != null &&
         _tokenExpiresAt != null &&
-        DateTime.now().isBefore(_tokenExpiresAt!.subtract(const Duration(seconds: 60)))) {
+        DateTime.now()
+            .isBefore(_tokenExpiresAt!.subtract(const Duration(seconds: 60)))) {
       return _cachedAccessToken;
     }
 
     try {
-      final serviceAccountJson = await rootBundle.loadString(
-        'assets/service-account.json',
-      );
-      final credentials = auth.ServiceAccountCredentials.fromJson(serviceAccountJson);
+      final serviceAccountJson =
+          await rootBundle.loadString('assets/service-account.json');
+      final credentials =
+          auth.ServiceAccountCredentials.fromJson(serviceAccountJson);
       final scopes = ['https://www.googleapis.com/auth/firebase.messaging'];
-      
+
       final client = await auth.clientViaServiceAccount(credentials, scopes);
       _cachedAccessToken = client.credentials.accessToken.data;
       _tokenExpiresAt = client.credentials.accessToken.expiry;
@@ -674,13 +698,15 @@ class PushNotificationService {
     final user = _auth.currentUser;
     if (user == null) return null;
     try {
-      final userSnapshot = await _firestore.collection('users').doc(user.uid).get();
+      final userSnapshot =
+          await _firestore.collection('users').doc(user.uid).get();
       if (!userSnapshot.exists) return null;
       final userData = userSnapshot.data();
       if (userData == null || userData['pairStatus'] != 'paired') return null;
       final pairId = userData['pairId'] as String?;
       if (pairId == null || pairId.isEmpty) return null;
-      final coupleSnapshot = await _firestore.collection('couples').doc(pairId).get();
+      final coupleSnapshot =
+          await _firestore.collection('couples').doc(pairId).get();
       if (!coupleSnapshot.exists) return null;
       final coupleData = coupleSnapshot.data();
       if (coupleData == null) return null;
@@ -697,16 +723,18 @@ class PushNotificationService {
     if (user == null) return [];
 
     try {
-      final userSnapshot = await _firestore.collection('users').doc(user.uid).get();
+      final userSnapshot =
+          await _firestore.collection('users').doc(user.uid).get();
       if (!userSnapshot.exists) return [];
-      
+
       final userData = userSnapshot.data();
       if (userData == null || userData['pairStatus'] != 'paired') return [];
-      
+
       final pairId = userData['pairId'] as String?;
       if (pairId == null || pairId.isEmpty) return [];
 
-      final coupleSnapshot = await _firestore.collection('couples').doc(pairId).get();
+      final coupleSnapshot =
+          await _firestore.collection('couples').doc(pairId).get();
       if (!coupleSnapshot.exists) return [];
 
       final coupleData = coupleSnapshot.data();
@@ -717,7 +745,8 @@ class PushNotificationService {
       final partnerUid = (user1Uid == user.uid) ? user2Uid : user1Uid;
       if (partnerUid == null || partnerUid.isEmpty) return [];
 
-      final partnerSnapshot = await _firestore.collection('users').doc(partnerUid).get();
+      final partnerSnapshot =
+          await _firestore.collection('users').doc(partnerUid).get();
       if (!partnerSnapshot.exists) return [];
 
       final partnerData = partnerSnapshot.data();
@@ -732,10 +761,12 @@ class PushNotificationService {
         }
       }
       final singleToken = partnerData['fcmToken'] as String?;
-      if (singleToken != null && singleToken.isNotEmpty && !tokens.contains(singleToken)) {
+      if (singleToken != null &&
+          singleToken.isNotEmpty &&
+          !tokens.contains(singleToken)) {
         tokens.add(singleToken);
       }
-      
+
       return tokens;
     } catch (e) {
       dev.log(
@@ -757,18 +788,21 @@ class PushNotificationService {
     try {
       final tokens = await _getPartnerFcmTokens();
       if (tokens.isEmpty) {
-        dev.log('No partner FCM tokens found to send notification.', name: 'PushNotificationService');
+        dev.log('No partner FCM tokens found to send notification.',
+            name: 'PushNotificationService');
         return;
       }
 
       final accessToken = await _getAccessToken();
       if (accessToken == null) {
-        dev.log('Could not obtain FCM access token.', name: 'PushNotificationService');
+        dev.log('Could not obtain FCM access token.',
+            name: 'PushNotificationService');
         return;
       }
 
       final projectId = DefaultFirebaseOptions.currentPlatform.projectId;
-      final url = Uri.parse('https://fcm.googleapis.com/v1/projects/$projectId/messages:send');
+      final url = Uri.parse(
+          'https://fcm.googleapis.com/v1/projects/$projectId/messages:send');
 
       for (final token in tokens) {
         final response = await http.post(
@@ -797,7 +831,9 @@ class PushNotificationService {
                 'priority': 'high',
                 if (type != 'chat')
                   'notification': {
-                    'channel_id': type == 'thinkingPulse' ? pulseChannelId : activityChannelId,
+                    'channel_id': type == 'thinkingPulse'
+                        ? pulseChannelId
+                        : activityChannelId,
                     'sound': 'default',
                   }
               },
@@ -824,13 +860,13 @@ class PushNotificationService {
         );
 
         if (response.statusCode == 200) {
-          dev.log('FCM v1 notification sent to token: $token', name: 'PushNotificationService');
+          dev.log('FCM v1 notification sent to token: $token',
+              name: 'PushNotificationService');
         } else {
           dev.log(
             'FCM v1 failed to send notification: ${response.statusCode} - ${response.body}',
             name: 'PushNotificationService',
           );
-          // If the token is unregistered/invalid (404), remove it from the partner's list in Firestore
           if (response.statusCode == 404) {
             try {
               final bodyJson = jsonDecode(response.body);
@@ -841,7 +877,9 @@ class PushNotificationService {
                   await _firestore.collection('users').doc(partnerUid).update({
                     'fcmTokens': FieldValue.arrayRemove([token]),
                   });
-                  dev.log('Removed unregistered FCM token from partner profile.', name: 'PushNotificationService');
+                  dev.log(
+                      'Removed unregistered FCM token from partner profile.',
+                      name: 'PushNotificationService');
                 }
               }
             } catch (_) {}
@@ -864,18 +902,21 @@ class PushNotificationService {
     try {
       final token = await _messaging.getToken();
       if (token == null || token.isEmpty) {
-        dev.log('No FCM token found for current user.', name: 'PushNotificationService');
+        dev.log('No FCM token found for current user.',
+            name: 'PushNotificationService');
         return;
       }
 
       final accessToken = await _getAccessToken();
       if (accessToken == null) {
-        dev.log('Could not obtain FCM access token.', name: 'PushNotificationService');
+        dev.log('Could not obtain FCM access token.',
+            name: 'PushNotificationService');
         return;
       }
 
       final projectId = DefaultFirebaseOptions.currentPlatform.projectId;
-      final url = Uri.parse('https://fcm.googleapis.com/v1/projects/$projectId/messages:send');
+      final url = Uri.parse(
+          'https://fcm.googleapis.com/v1/projects/$projectId/messages:send');
 
       final response = await http.post(
         url,
@@ -915,7 +956,8 @@ class PushNotificationService {
       );
 
       if (response.statusCode == 200) {
-        dev.log('FCM v1 test notification sent successfully to self!', name: 'PushNotificationService');
+        dev.log('FCM v1 test notification sent successfully to self!',
+            name: 'PushNotificationService');
       } else {
         dev.log(
           'FCM v1 failed to send self notification: ${response.statusCode} - ${response.body}',
@@ -945,17 +987,20 @@ class PushNotificationService {
       if (userDoc.exists && userDoc.data() != null) {
         final coupleId = userDoc.data()!['coupleId'] as String?;
         if (coupleId != null && coupleId.isNotEmpty) {
-          final coupleDoc = await _firestore.collection('couples').doc(coupleId).get();
+          final coupleDoc =
+              await _firestore.collection('couples').doc(coupleId).get();
           if (coupleDoc.exists && coupleDoc.data() != null) {
             final data = coupleDoc.data()!;
             final user1 = data['user1Uid'] as String?;
             final user2 = data['user2Uid'] as String?;
             final partnerUid = (user1 == user.uid) ? user2 : user1;
             if (partnerUid != null && partnerUid.isNotEmpty) {
-              final partnerDoc = await _firestore.collection('users').doc(partnerUid).get();
+              final partnerDoc =
+                  await _firestore.collection('users').doc(partnerUid).get();
               if (partnerDoc.exists && partnerDoc.data() != null) {
                 final pData = partnerDoc.data()!;
-                final nickname = pData['nickname'] as String? ?? pData['name'] as String?;
+                final nickname =
+                    pData['nickname'] as String? ?? pData['name'] as String?;
                 if (nickname != null && nickname.isNotEmpty) {
                   await storage.write('partner_nickname', nickname);
                   return nickname;
@@ -980,14 +1025,15 @@ class PushNotificationService {
       final now = DateTime.now();
       final startTime = _parseTimeString(startStr);
       final endTime = _parseTimeString(endStr);
-      
+
       if (startTime == null || endTime == null) return false;
-      
-      final start = DateTime(now.year, now.month, now.day, startTime.hour, startTime.minute);
-      var end = DateTime(now.year, now.month, now.day, endTime.hour, endTime.minute);
-      
+
+      final start = DateTime(
+          now.year, now.month, now.day, startTime.hour, startTime.minute);
+      var end =
+          DateTime(now.year, now.month, now.day, endTime.hour, endTime.minute);
+
       if (end.isBefore(start)) {
-        // Quiet hours cross midnight
         if (now.isAfter(start) || now.isBefore(end)) {
           return true;
         }
