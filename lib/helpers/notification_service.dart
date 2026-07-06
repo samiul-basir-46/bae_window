@@ -35,7 +35,15 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     await PushNotificationService.showRemoteMessage(message);
   }
 
-  await PushNotificationService.updateWidgetFromMessageData(message.data);
+  // ✅ timeout দাও
+  await PushNotificationService.updateWidgetFromMessageData(message.data)
+      .timeout(
+    const Duration(seconds: 5),
+    onTimeout: () => dev.log(
+      'Widget update timed out in background',
+      name: 'PushNotificationService',
+    ),
+  );
 }
 
 class PushNotificationService {
@@ -177,8 +185,8 @@ class PushNotificationService {
     );
 
     final androidPlugin =
-        _localNotifications.resolvePlatformSpecificImplementation
-            as AndroidFlutterLocalNotificationsPlugin?;
+        _localNotifications.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
 
     await androidPlugin?.createNotificationChannel(
       AndroidNotificationChannel(
@@ -368,67 +376,46 @@ class PushNotificationService {
     final type = message.data['type']?.toString();
 
     if (type == 'chat') {
-      final conversationId = message.data['conversationId']?.toString() ?? '';
+      try {
+        final conversationId = message.data['conversationId']?.toString() ?? '';
+        final senderName =
+            message.data['senderName']?.toString() ?? title ?? 'Partner';
+        final messageText = message.data['body']?.toString() ?? body ?? '';
 
-      if (conversationId.isNotEmpty) {
-        final activeId = GetStorage().read<String>('active_conversation_id');
-        if (activeId == conversationId) return;
+        if (conversationId.isNotEmpty) {
+          final activeId = GetStorage().read<String>('active_conversation_id');
+          if (activeId == conversationId) return;
 
-        final muteExpiry =
-            GetStorage().read<int>('mute_until_$conversationId') ?? 0;
-        if (muteExpiry == -1 ||
-            (muteExpiry > 0 &&
-                DateTime.now().millisecondsSinceEpoch < muteExpiry)) {
-          return;
+          final muteExpiry =
+              GetStorage().read<int>('mute_until_$conversationId') ?? 0;
+          if (muteExpiry == -1 ||
+              (muteExpiry > 0 &&
+                  DateTime.now().millisecondsSinceEpoch < muteExpiry)) {
+            return;
+          }
         }
-      }
 
-      final senderName =
-          message.data['senderName']?.toString() ?? title ?? 'Partner';
-      final messageText = body ?? message.data['body']?.toString() ?? '';
+        final key = 'unread_msgs_$conversationId';
+        final storage = GetStorage();
+        final List<dynamic> rawList = storage.read<List<dynamic>>(key) ?? [];
+        final List<String> list = rawList.map((e) => e.toString()).toList();
+        if (messageText.isNotEmpty) list.add(messageText);
+        if (list.isNotEmpty) {
+          await storage.write(key, list);
+        }
 
-      final key = 'unread_msgs_$conversationId';
-      final storage = GetStorage();
-      final List<dynamic> rawList = storage.read<List<dynamic>>(key) ?? [];
-      final List<String> list = rawList.map((e) => e.toString()).toList();
-      list.add(messageText);
-      await storage.write(key, list);
+        final notificationId = conversationId.isNotEmpty
+            ? conversationId.hashCode.abs()
+            : DateTime.now().millisecondsSinceEpoch.remainder(1 << 31);
+        final summaryText = '${list.length} new messages';
 
-      final notificationId = conversationId.hashCode.abs();
-      final summaryText = '${list.length} new messages';
+        final darwinDetails = DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+          threadIdentifier: conversationId.isNotEmpty ? conversationId : 'chat',
+        );
 
-      final darwinDetails = DarwinNotificationDetails(
-        presentAlert: true,
-        presentBadge: true,
-        presentSound: true,
-        threadIdentifier: conversationId,
-      );
-
-      final int childId = notificationId + (list.length % 49 + 1);
-
-      final androidChild = AndroidNotificationDetails(
-        chatChannelId,
-        'Chat Messages',
-        channelDescription: 'Real-time chat messages from your partner',
-        importance: Importance.max,
-        priority: Priority.high,
-        groupKey: conversationId,
-        setAsGroupSummary: false,
-        autoCancel: false,
-      );
-
-      await _localNotifications.show(
-        id: childId,
-        title: senderName,
-        body: messageText,
-        notificationDetails: NotificationDetails(
-          android: androidChild,
-          iOS: darwinDetails,
-        ),
-        payload: jsonEncode(message.data),
-      );
-
-      if (list.length >= 2) {
         final inboxStyle = InboxStyleInformation(
           list,
           contentTitle: senderName,
@@ -442,7 +429,7 @@ class PushNotificationService {
           importance: Importance.max,
           priority: Priority.high,
           styleInformation: inboxStyle,
-          groupKey: conversationId,
+          groupKey: conversationId.isNotEmpty ? conversationId : 'chat',
           setAsGroupSummary: true,
           autoCancel: true,
         );
@@ -450,15 +437,19 @@ class PushNotificationService {
         await _localNotifications.show(
           id: notificationId,
           title: senderName,
-          body: summaryText,
+          body: list.length == 1 ? messageText : summaryText,
           notificationDetails: NotificationDetails(
             android: androidSummary,
             iOS: darwinDetails,
           ),
           payload: jsonEncode(message.data),
         );
+      } catch (e) {
+        dev.log(
+          'Error handling chat notification: $e',
+          name: 'PushNotificationService',
+        );
       }
-
       return;
     }
 

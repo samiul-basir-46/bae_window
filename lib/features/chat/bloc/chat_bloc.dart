@@ -464,38 +464,59 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     return merged;
   }
 
-  void _uploadMessageInBackground({
-    required String conversationId,
-    required MessageModel message,
-  }) {
-    unawaited(() async {
-      try {
-        await _chatRepository.sendMessage(
-          conversationId: conversationId,
-          senderId: message.senderId,
-          content: message.content,
-          type: message.type,
-          repliedTo: message.repliedTo,
-          fileName: message.fileName,
-          fileSize: message.fileSize,
-          videoThumbnail: message.videoThumbnail,
-          mediaItems: message.mediaItems,
-          messageId: message.id,
-        );
-        add(_UpdatePendingMessageStatusEvent(
-          messageId: message.id,
-          status: MessageStatus.sent,
-          remove: true,
-        ));
-      } catch (err) {
-        add(_UpdatePendingMessageStatusEvent(
-          messageId: message.id,
-          status: MessageStatus.failed,
-          remove: false,
-        ));
-      }
-    }());
-  }
+void _uploadMessageInBackground({
+  required String conversationId,
+  required MessageModel message,
+}) {
+  unawaited(() async {
+    try {
+      await _chatRepository.sendMessage(
+        conversationId: conversationId,
+        senderId: message.senderId,
+        content: message.content,
+        type: message.type,
+        repliedTo: message.repliedTo,
+        fileName: message.fileName,
+        fileSize: message.fileSize,
+        videoThumbnail: message.videoThumbnail,
+        mediaItems: message.mediaItems,
+        messageId: message.id,
+      );
+
+      final senderName = await PushNotificationService.getSenderName();
+      final notifBody = switch (message.type) {
+        ChatMessageType.image => '📷 Photo',
+        ChatMessageType.video => '🎥 Video',
+        ChatMessageType.file  => '📎 File',
+        _ => message.content.isEmpty ? '💬 Message' : message.content,
+      };
+
+      unawaited(PushNotificationService.sendNotificationToPartner(
+        title: senderName,
+        body: notifBody,
+        type: 'chat',
+        route: 'chat',
+        extraData: {
+          'conversationId': conversationId,
+          'partnerUid': _partnerUserId ?? '',
+          'senderName': senderName,
+        },
+      ));
+
+      add(_UpdatePendingMessageStatusEvent(
+        messageId: message.id,
+        status: MessageStatus.sent,
+        remove: true,
+      ));
+    } catch (err) {
+      add(_UpdatePendingMessageStatusEvent(
+        messageId: message.id,
+        status: MessageStatus.failed,
+        remove: false,
+      ));
+    }
+  }());
+}
 
   void _onRetrySendMessage(
     RetrySendMessageEvent event,
