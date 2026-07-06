@@ -841,7 +841,6 @@ class ReactionPicker extends StatelessWidget {
   }
 }
 
-// ── Full Emoji Sheet ──────────────────────────────────────────────────────────
 
 class _FullEmojiSheet extends StatefulWidget {
   final List<Map<String, dynamic>> categories;
@@ -961,9 +960,8 @@ class _FullEmojiSheetState extends State<_FullEmojiSheet> {
             ),
           ),
 
-          Divider(color: Colors.white12, height: 1, thickness: 1),
+          const Divider(color: Colors.white12, height: 1, thickness: 1),
 
-          // ── Emoji Grid with PageView ──
           Expanded(
             child: PageView.builder(
               controller: _pageController,
@@ -996,7 +994,6 @@ class _FullEmojiSheetState extends State<_FullEmojiSheet> {
   }
 }
 
-// ── Emoji Tile ────────────────────────────────────────────────────────────────
 
 class _EmojiTile extends StatefulWidget {
   final String emoji;
