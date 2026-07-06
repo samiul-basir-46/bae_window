@@ -12,11 +12,20 @@ import 'package:flutter/widgets.dart';
 class $AssetsIconsGen {
   const $AssetsIconsGen();
 
+  /// File path: assets/icons/back.png
+  AssetGenImage get back => const AssetGenImage('assets/icons/back.png');
+
   /// File path: assets/icons/brush.png
   AssetGenImage get brush => const AssetGenImage('assets/icons/brush.png');
 
   /// File path: assets/icons/camera.png
   AssetGenImage get camera => const AssetGenImage('assets/icons/camera.png');
+
+  /// File path: assets/icons/check.png
+  AssetGenImage get check => const AssetGenImage('assets/icons/check.png');
+
+  /// File path: assets/icons/gallery.png
+  AssetGenImage get gallery => const AssetGenImage('assets/icons/gallery.png');
 
   /// File path: assets/icons/google.png
   AssetGenImage get google => const AssetGenImage('assets/icons/google.png');
@@ -28,20 +37,31 @@ class $AssetsIconsGen {
   AssetGenImage get notificationIcon =>
       const AssetGenImage('assets/icons/notification_icon.png');
 
+  /// File path: assets/icons/plus.png
+  AssetGenImage get plus => const AssetGenImage('assets/icons/plus.png');
+
   /// File path: assets/icons/pulse.png
   AssetGenImage get pulse => const AssetGenImage('assets/icons/pulse.png');
+
+  /// File path: assets/icons/send.png
+  AssetGenImage get send => const AssetGenImage('assets/icons/send.png');
 
   /// File path: assets/icons/voice.png
   AssetGenImage get voice => const AssetGenImage('assets/icons/voice.png');
 
   /// List of all assets
   List<AssetGenImage> get values => [
+    back,
     brush,
     camera,
+    check,
+    gallery,
     google,
     message,
     notificationIcon,
+    plus,
     pulse,
+    send,
     voice,
   ];
 }
@@ -55,6 +75,9 @@ class $AssetsImagesGen {
   /// File path: assets/images/error_image.png
   AssetGenImage get errorImage =>
       const AssetGenImage('assets/images/error_image.png');
+
+  /// File path: assets/images/logo.png
+  AssetGenImage get logo => const AssetGenImage('assets/images/logo.png');
 
   /// File path: assets/images/placeholder_image.jpeg
   AssetGenImage get placeholderImage =>
@@ -79,6 +102,7 @@ class $AssetsImagesGen {
   List<AssetGenImage> get values => [
     a,
     errorImage,
+    logo,
     placeholderImage,
     theme1,
     theme2,
