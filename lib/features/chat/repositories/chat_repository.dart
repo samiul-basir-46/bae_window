@@ -7,6 +7,7 @@ import 'package:bea_window_app/features/chat/services/chat_cache_service.dart';
 import 'package:bea_window_app/features/chat/services/media_upload_service.dart';
 import 'package:bea_window_app/features/chat/services/message_service.dart';
 import 'package:bea_window_app/features/chat/services/reaction_service.dart';
+import 'package:bea_window_app/helpers/firestore_cache_service.dart';
 
 class ChatRepository {
   final MessageService _messageService = MessageService();
@@ -14,53 +15,67 @@ class ChatRepository {
   final MediaUploadService _mediaUploadService = MediaUploadService();
   final ChatCacheService _chatCacheService = ChatCacheService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirestoreCacheService _cache = FirestoreCacheService.instance;
 
   /// Watch conversation rooms for a user
   Stream<List<ConversationModel>> getConversationsStream(String userId) {
     return _firestore
         .collection('conversations')
         .where('participants', arrayContains: userId)
+        .limit(30)
         .snapshots()
         .map((snapshot) {
-          final list = snapshot.docs
-              .map((doc) => ConversationModel.fromMap(doc.id, doc.data()))
-              .toList();
-          // Sort in memory because firestore compound queries with array-contains require index creation for sorting
-          list.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-          return list;
-        });
+      final list = snapshot.docs
+          .map((doc) => ConversationModel.fromMap(doc.id, doc.data()))
+          .toList();
+      // Sort in memory because firestore compound queries with array-contains require index creation for sorting
+      list.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+      return list;
+    });
   }
 
   /// Watch a specific user's presence/profile
   Stream<UserModel> watchUserProfile(String uid) {
-    return _firestore
-        .collection('users')
-        .doc(uid)
-        .snapshots()
-        .map((doc) => UserModel.fromMap(doc.id, doc.data() ?? {}));
+    final docRef = _firestore.collection('users').doc(uid);
+    return _cache
+        .watchDocumentCacheFirst(
+          ref: docRef,
+          cacheKey: 'users/$uid',
+          ttl: const Duration(minutes: 5),
+        )
+        .map((data) => UserModel.fromMap(uid, data ?? {}));
   }
 
   /// Fetch user profile once
   Future<UserModel?> getUserProfile(String uid) async {
-    final doc = await _firestore.collection('users').doc(uid).get();
-    if (doc.exists && doc.data() != null) {
-      return UserModel.fromMap(doc.id, doc.data()!);
+    final data = await _cache.getDocument(
+      ref: _firestore.collection('users').doc(uid),
+      cacheKey: 'users/$uid',
+      ttl: const Duration(minutes: 5),
+    );
+    if (data != null) {
+      return UserModel.fromMap(uid, data);
     }
     return null;
   }
 
   /// Watch all registered users (for starting new chats)
   Stream<List<UserModel>> getAllUsersStream(String currentUserId) {
-    return _firestore.collection('users').snapshots().map((snapshot) {
-      return snapshot.docs
-          .where((doc) => doc.id != currentUserId)
-          .map((doc) => UserModel.fromMap(doc.id, doc.data()))
-          .toList();
-    });
+    return _cache
+        .watchCollectionCacheFirst(
+          query: _firestore.collection('users').limit(50),
+          cacheKey: 'users/searchable_limit_50',
+          ttl: const Duration(minutes: 30),
+        )
+        .map((docs) => docs
+            .where((data) => data['id'] != currentUserId)
+            .map((data) => UserModel.fromMap(data['id'] as String? ?? '', data))
+            .toList());
   }
 
   /// Get messages stream for a conversation
-  Stream<List<MessageModel>> getMessagesStream(String conversationId, int limit) {
+  Stream<List<MessageModel>> getMessagesStream(
+      String conversationId, int limit) {
     return _messageService.getMessagesStream(conversationId, limit);
   }
 
@@ -177,12 +192,16 @@ class ChatRepository {
       _chatCacheService.clearMessageDraft(conversationId);
 
   /// Media uploads
-  Future<String> uploadImage(File file, {required String conversationId, Function(double)? onProgress}) {
-    return _mediaUploadService.uploadImage(file, conversationId: conversationId, onProgress: onProgress);
+  Future<String> uploadImage(File file,
+      {required String conversationId, Function(double)? onProgress}) {
+    return _mediaUploadService.uploadImage(file,
+        conversationId: conversationId, onProgress: onProgress);
   }
 
-  Future<String> uploadFile(File file, {required String conversationId, Function(double)? onProgress}) {
-    return _mediaUploadService.uploadFile(file, conversationId: conversationId, onProgress: onProgress);
+  Future<String> uploadFile(File file,
+      {required String conversationId, Function(double)? onProgress}) {
+    return _mediaUploadService.uploadFile(file,
+        conversationId: conversationId, onProgress: onProgress);
   }
 
   Future<Map<String, String?>> uploadVideo({

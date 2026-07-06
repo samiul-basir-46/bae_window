@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:bea_window_app/features/auth/services/firebase_auth_service.dart';
+import 'package:bea_window_app/helpers/firestore_cache_service.dart';
 import 'package:intl/intl.dart';
 import 'home_event.dart';
 import 'home_state.dart';
@@ -18,6 +19,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       MethodChannel('bea_window/device');
 
   final FirebaseAuthService _authService = FirebaseAuthService();
+  final FirestoreCacheService _cache = FirestoreCacheService.instance;
 
   StreamSubscription? _userSub;
   StreamSubscription? _partnerSub;
@@ -60,7 +62,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   ];
 
   static TriviaQuestion _getTriviaQuestionForToday() {
-    final dayOfYear = DateTime.now().difference(DateTime(DateTime.now().year, 1, 1)).inDays;
+    final dayOfYear =
+        DateTime.now().difference(DateTime(DateTime.now().year, 1, 1)).inDays;
     final index = dayOfYear % _englishQuestions.length;
     return TriviaQuestion(
       questionText: _englishQuestions[index],
@@ -99,7 +102,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         },
       );
     } catch (e) {
-      dev.log('Error sending trivia invitation notification: $e', name: 'HomeBloc');
+      dev.log('Error sending trivia invitation notification: $e',
+          name: 'HomeBloc');
     }
   }
 
@@ -156,7 +160,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
               .collection('couples')
               .doc(pairId)
               .collection('special_days')
-              .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfToday))
+              .where('date',
+                  isGreaterThanOrEqualTo: Timestamp.fromDate(startOfToday))
               .orderBy('date', descending: false)
               .limit(1)
               .get();
@@ -175,7 +180,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
                 title: title,
                 targetDate: targetDate,
               );
-              
+
               final morningOfSpecialDay = DateTime(
                 targetDate.year,
                 targetDate.month,
@@ -541,7 +546,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       livePeekVoiceUrl: latestVoiceUrl,
       latestSnapType: latestSnapType,
       relationshipPulse: relationshipPulse,
-      questionOfTheDay: _cachedTriviaQuestion ?? (_isPaired ? _getTriviaQuestionForToday() : null),
+      questionOfTheDay: _cachedTriviaQuestion ??
+          (_isPaired ? _getTriviaQuestionForToday() : null),
       checkInLogs: const [],
       nextSpecialDay: nextSpecialDay,
       coupleId: _pairId,
@@ -634,18 +640,24 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     _specialDaysSub?.cancel();
     final now = DateTime.now();
     final startOfToday = DateTime(now.year, now.month, now.day);
-    _specialDaysSub = FirebaseFirestore.instance
+    final query = FirebaseFirestore.instance
         .collection('couples')
         .doc(pairId)
         .collection('special_days')
         .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfToday))
         .orderBy('date', descending: false)
-        .limit(1)
-        .snapshots()
-        .listen((snapshot) {
+        .limit(1);
+
+    _specialDaysSub = _cache
+        .watchCollectionCacheFirst(
+      query: query,
+      cacheKey: 'couples/$pairId/next_special_day',
+      ttl: const Duration(minutes: 10),
+    )
+        .listen((docs) {
       SpecialDay? nextSpecialDay;
-      if (snapshot.docs.isNotEmpty) {
-        final docData = snapshot.docs.first.data();
+      if (docs.isNotEmpty) {
+        final docData = docs.first;
         final title = docData['title'] as String? ?? '';
         final dateVal = docData['date'];
         DateTime? targetDate;
@@ -698,22 +710,29 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   void _startTriviaListener(String pairId) {
     _triviaSub?.cancel();
     final dateYmd = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    _triviaSub = FirebaseFirestore.instance
+    final docRef = FirebaseFirestore.instance
         .collection('couples')
         .doc(pairId)
         .collection('trivia')
-        .doc(dateYmd)
-        .snapshots()
-        .listen((snapshot) {
+        .doc(dateYmd);
+
+    _triviaSub = _cache
+        .watchDocumentCacheFirst(
+      ref: docRef,
+      cacheKey: 'couples/$pairId/trivia/$dateYmd',
+      ttl: const Duration(minutes: 5),
+    )
+        .listen((data) {
       TriviaQuestion? question;
-      if (snapshot.exists && snapshot.data() != null) {
-        final data = snapshot.data()!;
+      if (data != null) {
         final questionText = data['question'] as String? ?? '';
         final answers = data['answers'] as Map<dynamic, dynamic>? ?? {};
         final currentUserUid = FirebaseAuth.instance.currentUser?.uid;
 
-        final hasUserAnswered = currentUserUid != null && answers.containsKey(currentUserUid);
-        final userAnswer = currentUserUid != null ? answers[currentUserUid]?.toString() : null;
+        final hasUserAnswered =
+            currentUserUid != null && answers.containsKey(currentUserUid);
+        final userAnswer =
+            currentUserUid != null ? answers[currentUserUid]?.toString() : null;
 
         String? partnerAnswer;
         for (final entry in answers.entries) {
@@ -722,7 +741,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
             break;
           }
         }
-        final hasPartnerAnswered = partnerAnswer != null && partnerAnswer.isNotEmpty;
+        final hasPartnerAnswered =
+            partnerAnswer != null && partnerAnswer.isNotEmpty;
 
         question = TriviaQuestion(
           questionText: questionText,

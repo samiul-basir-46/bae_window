@@ -10,7 +10,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:auto_animated/auto_animated.dart';
 import 'package:bea_window_app/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'firebase_options.dart';
 import 'constants/custome_theme.dart';
 import 'gen/colors.gen.dart';
@@ -26,6 +29,11 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+  );
+  await _configureFirebaseForDebug();
   await GetStorage.init();
   diSetup();
   PushNotificationService.registerBackgroundHandler();
@@ -34,6 +42,19 @@ void main() async {
   // await LocationService.instance.initialize();
   DioSingleton.instance.create();
   runApp(const MyApp());
+}
+
+Future<void> _configureFirebaseForDebug() async {
+  const useEmulator = bool.fromEnvironment('USE_FIREBASE_EMULATOR');
+  if (!kDebugMode || !useEmulator) return;
+
+  const host = String.fromEnvironment(
+    'FIREBASE_EMULATOR_HOST',
+    defaultValue: 'localhost',
+  );
+
+  FirebaseFirestore.instance.useFirestoreEmulator(host, 8080);
+  await FirebaseAuth.instance.useAuthEmulator(host, 9099);
 }
 
 class MyApp extends StatelessWidget {
@@ -89,7 +110,8 @@ class UtillScreenMobile extends StatelessWidget {
                 create: (_) => StoryBloc()..add(const LoadMemoriesEvent()),
               ),
               BlocProvider<SpaceScreenBloc>(
-                create: (_) => SpaceScreenBloc()..add(const LoadSpaceScreenDataEvent()),
+                create: (_) =>
+                    SpaceScreenBloc()..add(const LoadSpaceScreenDataEvent()),
               ),
             ],
             child: MaterialApp(
@@ -115,5 +137,3 @@ class UtillScreenMobile extends StatelessWidget {
     );
   }
 }
-
-

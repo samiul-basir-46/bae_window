@@ -3,12 +3,14 @@ import 'dart:developer' as dev;
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:bea_window_app/helpers/firestore_cache_service.dart';
 import 'package:intl/intl.dart';
 import '../../../helpers/notification_service.dart';
 
 class FirebaseAuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirestoreCacheService _cache = FirestoreCacheService.instance;
 
   User? get currentUser => _auth.currentUser;
 
@@ -82,6 +84,7 @@ class FirebaseAuthService {
       'profileComplete': false,
       'pairStatus': 'none',
     }, SetOptions(merge: true));
+    await _cache.remove(_userCacheKey(uid));
   }
 
   /// Complete profile setup (nickname + avatar URL)
@@ -99,6 +102,7 @@ class FirebaseAuthService {
       'profilePicture': avatarUrl,
       'profileComplete': true,
     }, SetOptions(merge: true));
+    await _cache.remove(_userCacheKey(user.uid));
 
     if (avatarUrl.isNotEmpty) {
       await user.updatePhotoURL(avatarUrl);
@@ -131,6 +135,7 @@ class FirebaseAuthService {
     await _firestore.collection('users').doc(user.uid).set({
       'inviteCode': code,
     }, SetOptions(merge: true));
+    await _cache.remove(_userCacheKey(user.uid));
 
     return code;
   }
@@ -177,6 +182,9 @@ class FirebaseAuthService {
       'pairId': coupleId,
       'pairStatus': 'paired',
     }, SetOptions(merge: true));
+    await _cache.remove(_userCacheKey(user.uid));
+    await _cache.remove(_userCacheKey(partnerUid));
+    await _cache.remove(_coupleCacheKey(coupleId));
   }
 
   /// Skip pairing step
@@ -187,11 +195,20 @@ class FirebaseAuthService {
     await _firestore.collection('users').doc(user.uid).set({
       'pairStatus': 'unpaired',
     }, SetOptions(merge: true));
+    await _cache.remove(_userCacheKey(user.uid));
   }
 
   /// Retrieve user profile details from Firestore
   Future<Map<String, dynamic>?> getUserProfile(String uid,
       {GetOptions? options}) async {
+    if (options == null) {
+      return _cache.getDocument(
+        ref: _firestore.collection('users').doc(uid),
+        cacheKey: _userCacheKey(uid),
+        ttl: const Duration(minutes: 5),
+      );
+    }
+
     final doc = await _firestore.collection('users').doc(uid).get(options);
     return doc.exists ? doc.data() : null;
   }
@@ -234,14 +251,14 @@ class FirebaseAuthService {
           .collection('users')
           .doc(uid)
           .set(updates, SetOptions(merge: true));
+      await _cache.remove(_userCacheKey(uid));
     }
   }
 
   /// Keep the relationship start date identical for both paired users.
   Future<void> updateRelationshipStartDate(String uid, String date) async {
     final userRef = _firestore.collection('users').doc(uid);
-    final userSnapshot = await userRef.get();
-    final userData = userSnapshot.data();
+    final userData = await getUserProfile(uid);
 
     final batch = _firestore.batch();
     batch.set(
@@ -252,11 +269,10 @@ class FirebaseAuthService {
 
     final isPaired = userData?['pairStatus'] == 'paired';
     final pairId = userData?['pairId'] as String?;
+    String? partnerUid;
 
     if (isPaired && pairId != null) {
-      final coupleSnapshot =
-          await _firestore.collection('couples').doc(pairId).get();
-      final coupleData = coupleSnapshot.data();
+      final coupleData = await getCoupleData(pairId);
 
       if (coupleData == null) {
         throw Exception('Paired relationship data was not found.');
@@ -264,7 +280,7 @@ class FirebaseAuthService {
 
       final user1Uid = coupleData['user1Uid'] as String?;
       final user2Uid = coupleData['user2Uid'] as String?;
-      final partnerUid = user1Uid == uid
+      partnerUid = user1Uid == uid
           ? user2Uid
           : user2Uid == uid
               ? user1Uid
@@ -282,6 +298,10 @@ class FirebaseAuthService {
     }
 
     await batch.commit();
+    await _cache.remove(_userCacheKey(uid));
+    if (partnerUid != null) {
+      await _cache.remove(_userCacheKey(partnerUid));
+    }
   }
 
   /// Returns a real-time stream of a user's Firestore document
@@ -290,8 +310,11 @@ class FirebaseAuthService {
   }
 
   Future<Map<String, dynamic>?> getCoupleData(String pairId) async {
-    final doc = await _firestore.collection('couples').doc(pairId).get();
-    return doc.exists ? doc.data() : null;
+    return _cache.getDocument(
+      ref: _firestore.collection('couples').doc(pairId),
+      cacheKey: _coupleCacheKey(pairId),
+      ttl: const Duration(minutes: 5),
+    );
   }
 
   Stream<DocumentSnapshot<Map<String, dynamic>>> coupleStream(String pairId) {
@@ -305,10 +328,8 @@ class FirebaseAuthService {
     if (user == null) return null;
 
     try {
-      final doc = await _firestore.collection('couples').doc(coupleId).get();
-      if (!doc.exists || doc.data() == null) return null;
-
-      final data = doc.data()!;
+      final data = await getCoupleData(coupleId);
+      if (data == null) return null;
       final user1 = data['user1Uid'] as String?;
       final user2 = data['user2Uid'] as String?;
 
@@ -338,6 +359,9 @@ class FirebaseAuthService {
         SetOptions(merge: true));
     _addCoupleEngagement(batch, userData, user.uid);
     await batch.commit();
+    await _cache.remove(_userCacheKey(user.uid));
+    final pairId = userData?['pairId'] as String?;
+    if (pairId != null) await _cache.remove(_coupleCacheKey(pairId));
 
     try {
       final senderName = await PushNotificationService.getSenderName();
@@ -364,6 +388,7 @@ class FirebaseAuthService {
       'batteryLevel': level,
       'batteryUpdatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+    await _cache.remove(_userCacheKey(user.uid));
   }
 
   /// Send a real-time pulse event through the current user's profile stream.
@@ -391,6 +416,9 @@ class FirebaseAuthService {
         SetOptions(merge: true));
     _addCoupleEngagement(batch, userData, user.uid);
     await batch.commit();
+    await _cache.remove(_userCacheKey(user.uid));
+    final pairId = userData?['pairId'] as String?;
+    if (pairId != null) await _cache.remove(_coupleCacheKey(pairId));
 
     try {
       final senderName = await PushNotificationService.getSenderName();
@@ -478,6 +506,9 @@ class FirebaseAuthService {
     batch.set(userRef, updates, SetOptions(merge: true));
     _addCoupleEngagement(batch, existingData, user.uid);
     await batch.commit();
+    await _cache.remove(_userCacheKey(user.uid));
+    final pairId = existingData?['pairId'] as String?;
+    if (pairId != null) await _cache.remove(_coupleCacheKey(pairId));
 
     try {
       final senderName = await PushNotificationService.getSenderName();
@@ -549,4 +580,8 @@ class FirebaseAuthService {
       SetOptions(merge: true),
     );
   }
+
+  String _userCacheKey(String uid) => 'users/$uid';
+
+  String _coupleCacheKey(String pairId) => 'couples/$pairId';
 }

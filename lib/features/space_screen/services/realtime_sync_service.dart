@@ -1,25 +1,33 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:bea_window_app/helpers/firestore_cache_service.dart';
 import 'package:intl/intl.dart';
 import 'package:bea_window_app/features/auth/services/firebase_auth_service.dart';
 import '../models/bucket_list_model.dart';
 
 class RealtimeSyncService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirestoreCacheService _cache = FirestoreCacheService.instance;
 
   // --- Bucket List Sync ---
 
   Stream<List<BucketListItem>> watchBucketList(String coupleId) {
-    return _firestore
+    final query = _firestore
         .collection('couples')
         .doc(coupleId)
         .collection('bucket_list')
         .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return BucketListItem.fromMap(doc.data(), doc.id);
-      }).toList();
-    });
+        .limit(50);
+
+    return _cache
+        .watchCollectionCacheFirst(
+          query: query,
+          cacheKey: _bucketCacheKey(coupleId),
+          ttl: const Duration(minutes: 10),
+        )
+        .map((docs) => docs.map((data) {
+              final docId = data['id'] as String? ?? '';
+              return BucketListItem.fromMap(data, docId);
+            }).toList());
   }
 
   Future<void> addBucketItem(String coupleId, BucketListItem item) async {
@@ -30,6 +38,7 @@ class RealtimeSyncService {
         .doc();
     final itemWithId = item.copyWith(id: docRef.id);
     await docRef.set(itemWithId.toMap());
+    await _cache.remove(_bucketCacheKey(coupleId));
   }
 
   Future<void> updateBucketItem(String coupleId, BucketListItem item) async {
@@ -39,6 +48,7 @@ class RealtimeSyncService {
         .collection('bucket_list')
         .doc(item.id)
         .set(item.toMap(), SetOptions(merge: true));
+    await _cache.remove(_bucketCacheKey(coupleId));
   }
 
   Future<void> deleteBucketItem(String coupleId, String itemId) async {
@@ -48,18 +58,22 @@ class RealtimeSyncService {
         .collection('bucket_list')
         .doc(itemId)
         .delete();
+    await _cache.remove(_bucketCacheKey(coupleId));
   }
 
   // --- Anniversary Sync ---
 
   Stream<DateTime?> watchAnniversary(String currentUid) {
-    return _firestore
-        .collection('users')
-        .doc(currentUid)
-        .snapshots()
-        .map((snapshot) {
-      if (!snapshot.exists || snapshot.data() == null) return null;
-      final data = snapshot.data()!;
+    final docRef = _firestore.collection('users').doc(currentUid);
+
+    return _cache
+        .watchDocumentCacheFirst(
+      ref: docRef,
+      cacheKey: 'users/$currentUid',
+      ttl: const Duration(minutes: 5),
+    )
+        .map((data) {
+      if (data == null) return null;
       final dateStr = data['relationshipStartDate'] as String?;
       if (dateStr == null || dateStr.isEmpty) return null;
       try {
@@ -81,32 +95,32 @@ class RealtimeSyncService {
   // --- Partner Nickname Sync ---
 
   Stream<String?> watchPartnerNickname(String partnerUid) {
-    return _firestore
-        .collection('users')
-        .doc(partnerUid)
-        .snapshots()
-        .map((snapshot) {
-      if (!snapshot.exists || snapshot.data() == null) return null;
-      return snapshot.data()!['nickname'] as String?;
-    });
+    final docRef = _firestore.collection('users').doc(partnerUid);
+
+    return _cache
+        .watchDocumentCacheFirst(
+          ref: docRef,
+          cacheKey: 'users/$partnerUid',
+          ttl: const Duration(minutes: 5),
+        )
+        .map((data) => data?['nickname'] as String?);
   }
 
   // --- Tasks Sync ---
 
   Stream<List<Map<String, dynamic>>> watchTasks(String coupleId) {
-    return _firestore
+    final query = _firestore
         .collection('couples')
         .doc(coupleId)
         .collection('tasks')
         .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = doc.id;
-        return data;
-      }).toList();
-    });
+        .limit(50);
+
+    return _cache.watchCollectionCacheFirst(
+      query: query,
+      cacheKey: _tasksCacheKey(coupleId),
+      ttl: const Duration(minutes: 5),
+    );
   }
 
   Future<void> addTask({
@@ -131,15 +145,18 @@ class RealtimeSyncService {
       'status': status,
       'createdAt': FieldValue.serverTimestamp(),
     });
+    await _cache.remove(_tasksCacheKey(coupleId));
   }
 
-  Future<void> updateTask(String coupleId, String taskId, Map<String, dynamic> data) async {
+  Future<void> updateTask(
+      String coupleId, String taskId, Map<String, dynamic> data) async {
     await _firestore
         .collection('couples')
         .doc(coupleId)
         .collection('tasks')
         .doc(taskId)
         .update(data);
+    await _cache.remove(_tasksCacheKey(coupleId));
   }
 
   Future<void> deleteTask(String coupleId, String taskId) async {
@@ -149,26 +166,30 @@ class RealtimeSyncService {
         .collection('tasks')
         .doc(taskId)
         .delete();
+    await _cache.remove(_tasksCacheKey(coupleId));
   }
 
   // --- Moments Sync ---
 
   Stream<List<Map<String, dynamic>>> watchMoments(String coupleId) {
-    return _firestore
+    final query = _firestore
         .collection('couples')
         .doc(coupleId)
         .collection('moments')
         .orderBy('createdAt', descending: true)
-        .limit(10)
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return doc.data();
-      }).toList();
-    });
+        .limit(10);
+
+    return _cache.watchCollectionCacheFirst(
+      query: query,
+      cacheKey: _momentsCacheKey(coupleId),
+      ttl: const Duration(minutes: 5),
+    );
   }
 
-  Future<void> addMoment(String coupleId, {required String user, required String action, required String type}) async {
+  Future<void> addMoment(String coupleId,
+      {required String user,
+      required String action,
+      required String type}) async {
     await _firestore
         .collection('couples')
         .doc(coupleId)
@@ -179,5 +200,12 @@ class RealtimeSyncService {
       'type': type,
       'createdAt': FieldValue.serverTimestamp(),
     });
+    await _cache.remove(_momentsCacheKey(coupleId));
   }
+
+  String _bucketCacheKey(String coupleId) => 'couples/$coupleId/bucket_list';
+
+  String _tasksCacheKey(String coupleId) => 'couples/$coupleId/tasks';
+
+  String _momentsCacheKey(String coupleId) => 'couples/$coupleId/moments';
 }

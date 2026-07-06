@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/common_widgets/bae_loader.dart';
+import 'package:bea_window_app/helpers/firestore_cache_service.dart';
 import 'package:bea_window_app/helpers/url_lunch.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
 import '../../../../helpers/ui_helpers.dart';
@@ -18,34 +19,44 @@ class SharedMediaScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cache = FirestoreCacheService.instance;
+
     return Scaffold(
       backgroundColor: AppColors.softBlack,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, size: 20.sp, color: Colors.white),
+          icon: Icon(Icons.arrow_back_ios_new_rounded,
+              size: 20.sp, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           "Shared Files & Media",
-          style: GoogleFonts.dmSans(color: Colors.white, fontSize: 16.sp, fontWeight: FontWeight.bold),
+          style: GoogleFonts.dmSans(
+              color: Colors.white,
+              fontSize: 16.sp,
+              fontWeight: FontWeight.bold),
         ),
       ),
-      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: FirebaseFirestore.instance
-            .collection('conversations')
-            .doc(conversationId)
-            .collection('messages')
-            .orderBy('timestamp', descending: true)
-            .snapshots(),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: cache.getCollection(
+          query: FirebaseFirestore.instance
+              .collection('conversations')
+              .doc(conversationId)
+              .collection('messages')
+              .orderBy('timestamp', descending: true)
+              .limit(100),
+          cacheKey: 'conversations/$conversationId/shared_media_100',
+          ttl: const Duration(minutes: 10),
+        ),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (!snapshot.hasData) {
             return const Center(child: BaeLoader());
           }
-          final allDocs = snapshot.data?.docs ?? [];
-          final docs = allDocs.where((doc) {
-            final type = doc.data()['type'] as String?;
+          final allDocs = snapshot.data ?? [];
+          final docs = allDocs.where((data) {
+            final type = data['type'] as String?;
             return type != null && type != 'text';
           }).toList();
 
@@ -53,7 +64,8 @@ class SharedMediaScreen extends StatelessWidget {
             return Center(
               child: Text(
                 "No shared files or media yet.",
-                style: GoogleFonts.dmSans(color: Colors.white38, fontSize: 13.sp),
+                style:
+                    GoogleFonts.dmSans(color: Colors.white38, fontSize: 13.sp),
               ),
             );
           }
@@ -68,7 +80,7 @@ class SharedMediaScreen extends StatelessWidget {
             ),
             itemCount: docs.length,
             itemBuilder: (context, index) {
-              final data = docs[index].data();
+              final data = docs[index];
               final type = data['type'] as String? ?? 'image';
               final mediaUrl = data['content'] as String? ?? '';
               final thumbnailUrl = data['videoThumbnail'] as String?;
@@ -77,7 +89,7 @@ class SharedMediaScreen extends StatelessWidget {
 
               final isVideo = type == 'video';
               final isFile = type == 'file';
-              
+
               // Check if file is audio by checking name
               final isAudio = isFile &&
                   (fileName.toLowerCase().endsWith('.mp3') ||
@@ -98,7 +110,7 @@ class SharedMediaScreen extends StatelessWidget {
                       'fileName': fileName,
                       'fileSize': fileSize,
                       'isAudio': isAudio,
-                      'mediaItems': docs.map((d) => d.data()).toList(),
+                      'mediaItems': docs,
                       'initialIndex': index,
                     },
                   );
@@ -121,7 +133,9 @@ class SharedMediaScreen extends StatelessWidget {
                                     child: Container(
                                       padding: EdgeInsets.all(10.r),
                                       decoration: BoxDecoration(
-                                        color: (isAudio ? AppColors.primaryPink : Colors.purple)
+                                        color: (isAudio
+                                                ? AppColors.primaryPink
+                                                : Colors.purple)
                                             .withValues(alpha: 0.1),
                                         shape: BoxShape.circle,
                                       ),
@@ -129,7 +143,9 @@ class SharedMediaScreen extends StatelessWidget {
                                         isAudio
                                             ? Icons.music_note_rounded
                                             : Icons.insert_drive_file_rounded,
-                                        color: isAudio ? AppColors.primaryPink : Colors.purpleAccent,
+                                        color: isAudio
+                                            ? AppColors.primaryPink
+                                            : Colors.purpleAccent,
                                         size: 26.sp,
                                       ),
                                     ),
@@ -137,12 +153,16 @@ class SharedMediaScreen extends StatelessWidget {
                                 )
                               else
                                 CachedNetworkImage(
-                                  imageUrl: isVideo ? (thumbnailUrl ?? mediaUrl) : mediaUrl,
+                                  imageUrl: isVideo
+                                      ? (thumbnailUrl ?? mediaUrl)
+                                      : mediaUrl,
                                   fit: BoxFit.cover,
-                                  placeholder: (context, url) => Container(color: Colors.white12),
+                                  placeholder: (context, url) =>
+                                      Container(color: Colors.white12),
                                   errorWidget: (context, url, err) => Container(
                                     color: Colors.white10,
-                                    child: const Icon(Icons.broken_image, color: Colors.white24),
+                                    child: const Icon(Icons.broken_image,
+                                        color: Colors.white24),
                                   ),
                                 ),
                               if (isVideo)
@@ -155,14 +175,16 @@ class SharedMediaScreen extends StatelessWidget {
                                       color: Colors.black45,
                                       shape: BoxShape.circle,
                                     ),
-                                    child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 14.sp),
+                                    child: Icon(Icons.play_arrow_rounded,
+                                        color: Colors.white, size: 14.sp),
                                   ),
                                 ),
                             ],
                           ),
                         ),
                         Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 8.w, vertical: 6.h),
                           child: Text(
                             isFile ? fileName : (isVideo ? "Video" : "Photo"),
                             style: GoogleFonts.dmSans(
@@ -336,8 +358,12 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        isAudio ? Icons.audiotrack_rounded : Icons.insert_drive_file_rounded,
-                        color: isAudio ? AppColors.primaryPink : Colors.purpleAccent,
+                        isAudio
+                            ? Icons.audiotrack_rounded
+                            : Icons.insert_drive_file_rounded,
+                        color: isAudio
+                            ? AppColors.primaryPink
+                            : Colors.purpleAccent,
                         size: 48.sp,
                       ),
                     ),
@@ -371,12 +397,16 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14.r),
                         ),
-                        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 24.w, vertical: 12.h),
                       ),
-                      icon: Icon(isAudio ? Icons.play_arrow_rounded : Icons.open_in_new_rounded),
+                      icon: Icon(isAudio
+                          ? Icons.play_arrow_rounded
+                          : Icons.open_in_new_rounded),
                       label: Text(
                         isAudio ? "Play Audio File" : "Open Document",
-                        style: GoogleFonts.dmSans(fontWeight: FontWeight.bold, fontSize: 14.sp),
+                        style: GoogleFonts.dmSans(
+                            fontWeight: FontWeight.bold, fontSize: 14.sp),
                       ),
                     ),
                   ],
@@ -389,9 +419,12 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
                   child: CachedNetworkImage(
                     imageUrl: url,
                     placeholder: (context, url) =>
-                        const CircularProgressIndicator(color: AppColors.primaryPink),
-                    errorWidget: (context, url, error) =>
-                        const Icon(Icons.broken_image, color: Colors.white30, size: 48),
+                        const CircularProgressIndicator(
+                            color: AppColors.primaryPink),
+                    errorWidget: (context, url, error) => const Icon(
+                        Icons.broken_image,
+                        color: Colors.white30,
+                        size: 48),
                   ),
                 )),
     );

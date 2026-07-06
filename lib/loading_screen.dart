@@ -12,6 +12,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'constants/app_constants.dart';
 import 'helpers/di.dart';
+import 'helpers/firestore_cache_service.dart';
 import 'helpers/helper_methods.dart';
 import 'helpers/post_login.dart';
 import 'networks/dio/dio.dart';
@@ -56,31 +57,20 @@ class _LoadingState extends State<Loading> {
       if (refreshedUser != null && !refreshedUser.emailVerified) {
         _initialScreen = const EmailVerificationScreen();
       } else if (refreshedUser != null) {
-        Map<String, dynamic>? data;
-        try {
-          final doc = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(refreshedUser.uid)
-              .get(const GetOptions(source: Source.server))
-              .timeout(const Duration(seconds: 4));
-          if (doc.exists && doc.data() != null) {
-            data = doc.data()!;
-          }
-        } catch (_) {
-          try {
-            final doc = await FirebaseFirestore.instance
-                .collection('users')
-                .doc(refreshedUser.uid)
-                .get(const GetOptions(source: Source.cache));
-            if (doc.exists && doc.data() != null) {
-              data = doc.data()!;
-            }
-          } catch (_) {}
-        }
+        final data = await FirestoreCacheService.instance
+            .getDocument(
+              ref: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(refreshedUser.uid),
+              cacheKey: 'users/${refreshedUser.uid}',
+              ttl: const Duration(minutes: 5),
+            )
+            .timeout(const Duration(seconds: 4), onTimeout: () => null);
 
         if (data != null) {
-          final isProfileComplete = (data['profileComplete'] as bool? ?? false) ||
-              (data['nickname'] as String? ?? '').isNotEmpty;
+          final isProfileComplete =
+              (data['profileComplete'] as bool? ?? false) ||
+                  (data['nickname'] as String? ?? '').isNotEmpty;
           if (!isProfileComplete) {
             _initialScreen = const ProfileSetupScreen();
           } else {

@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/common_widgets/bae_loader.dart';
 import 'package:bea_window_app/features/chat/models/message_model.dart';
+import 'package:bea_window_app/helpers/firestore_cache_service.dart';
 import 'package:intl/intl.dart';
 
 import 'package:bea_window_app/features/chat/models/user_model.dart';
@@ -23,14 +24,18 @@ class PinnedMessagesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final cache = FirestoreCacheService.instance;
 
-    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection('conversations')
-          .doc(conversationId)
-          .snapshots(),
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: cache.getDocument(
+        ref: FirebaseFirestore.instance
+            .collection('conversations')
+            .doc(conversationId),
+        cacheKey: 'conversations/$conversationId',
+        ttl: const Duration(minutes: 5),
+      ),
       builder: (context, convSnapshot) {
-        final convData = convSnapshot.data?.data() ?? {};
+        final convData = convSnapshot.data ?? {};
         final nicknames = convData['nicknames'] as Map<String, dynamic>? ?? {};
 
         final partnerNickname = nicknames[partnerUser.uid] as String? ?? '';
@@ -56,21 +61,23 @@ class PinnedMessagesScreen extends StatelessWidget {
                   fontWeight: FontWeight.bold),
             ),
           ),
-          body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: FirebaseFirestore.instance
-                .collection('conversations')
-                .doc(conversationId)
-                .collection('messages')
-                .orderBy('timestamp', descending: true)
-                .snapshots(),
+          body: FutureBuilder<List<Map<String, dynamic>>>(
+            future: cache.getCollection(
+              query: FirebaseFirestore.instance
+                  .collection('conversations')
+                  .doc(conversationId)
+                  .collection('messages')
+                  .where('isPinned', isEqualTo: true)
+                  .orderBy('timestamp', descending: true)
+                  .limit(50),
+              cacheKey: 'conversations/$conversationId/pinned_messages_50',
+              ttl: const Duration(minutes: 5),
+            ),
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
+              if (!snapshot.hasData) {
                 return const Center(child: BaeLoader());
               }
-              final allDocs = snapshot.data?.docs ?? [];
-              final docs = allDocs.where((doc) {
-                return doc.data()['isPinned'] as bool? ?? false;
-              }).toList();
+              final docs = snapshot.data!;
 
               if (docs.isEmpty) {
                 return Center(
@@ -86,8 +93,9 @@ class PinnedMessagesScreen extends StatelessWidget {
                 padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
                 itemCount: docs.length,
                 itemBuilder: (context, index) {
-                  final doc = docs[index];
-                  final msg = MessageModel.fromMap(doc.id, doc.data());
+                  final data = docs[index];
+                  final msg =
+                      MessageModel.fromMap(data['id'] as String? ?? '', data);
                   final isMe = msg.senderId == currentUserId;
 
                   return Container(
