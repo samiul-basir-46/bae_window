@@ -6,6 +6,7 @@ import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
 import '../models/special_day_model.dart';
 import 'package:bea_window_app/common_widgets/app_toast.dart';
+import 'package:bea_window_app/common_widgets/custom_date_picker.dart';
 
 class AddSpecialDayScreen extends StatefulWidget {
   final SpecialDayModel? existingDay;
@@ -30,8 +31,10 @@ class _AddSpecialDayScreenState extends State<AddSpecialDayScreen> {
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController(text: widget.existingDay?.title ?? '');
-    _descriptionController = TextEditingController(text: widget.existingDay?.description ?? '');
+    _titleController =
+        TextEditingController(text: widget.existingDay?.title ?? '');
+    _descriptionController =
+        TextEditingController(text: widget.existingDay?.description ?? '');
     _selectedDate = widget.existingDay?.date;
   }
 
@@ -44,30 +47,14 @@ class _AddSpecialDayScreenState extends State<AddSpecialDayScreen> {
 
   Future<void> _pickDate() async {
     final now = DateTime.now();
-    final firstDate = DateTime(now.year - 50);
+    final firstDate = DateTime(now.year);
     final lastDate = DateTime(now.year + 50);
 
-    final picked = await showDatePicker(
-      context: context,
+    final picked = await CustomDatePicker.show(
+      context,
       initialDate: _selectedDate ?? now,
       firstDate: firstDate,
       lastDate: lastDate,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: AppColors.primaryPink,
-              onPrimary: Colors.white,
-              surface: AppColors.navBgColor,
-              onSurface: Colors.white,
-            ),
-            dialogTheme: const DialogThemeData(
-              backgroundColor: AppColors.navBgColor,
-            ),
-          ),
-          child: child!,
-        );
-      },
     );
 
     if (picked != null) {
@@ -107,7 +94,8 @@ class _AddSpecialDayScreenState extends State<AddSpecialDayScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          icon:
+              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -144,17 +132,21 @@ class _AddSpecialDayScreenState extends State<AddSpecialDayScreen> {
                     cursorColor: AppColors.primaryPink,
                     decoration: InputDecoration(
                       hintText: "Anniversary, First Meet, Birthday...",
-                      hintStyle: GoogleFonts.dmSans(color: Colors.white24, fontSize: 13.sp),
+                      hintStyle: GoogleFonts.dmSans(
+                          color: Colors.white24, fontSize: 13.sp),
                       filled: true,
                       fillColor: Colors.white.withValues(alpha: 0.03),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+                      contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16.w, vertical: 14.h),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16.r),
-                        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
+                        borderSide: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.05)),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16.r),
-                        borderSide: const BorderSide(color: AppColors.primaryPink),
+                        borderSide:
+                            const BorderSide(color: AppColors.primaryPink),
                       ),
                       errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16.r),
@@ -188,18 +180,23 @@ class _AddSpecialDayScreenState extends State<AddSpecialDayScreen> {
                     cursorColor: AppColors.primaryPink,
                     maxLines: 4,
                     decoration: InputDecoration(
-                      hintText: "This was the day we first met and started our journey together...",
-                      hintStyle: GoogleFonts.dmSans(color: Colors.white24, fontSize: 13.sp),
+                      hintText:
+                          "This was the day we first met and started our journey together...",
+                      hintStyle: GoogleFonts.dmSans(
+                          color: Colors.white24, fontSize: 13.sp),
                       filled: true,
                       fillColor: Colors.white.withValues(alpha: 0.03),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+                      contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16.w, vertical: 14.h),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16.r),
-                        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
+                        borderSide: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.05)),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16.r),
-                        borderSide: const BorderSide(color: AppColors.primaryPink),
+                        borderSide:
+                            const BorderSide(color: AppColors.primaryPink),
                       ),
                     ),
                   ),
@@ -217,11 +214,13 @@ class _AddSpecialDayScreenState extends State<AddSpecialDayScreen> {
                     onTap: _pickDate,
                     borderRadius: BorderRadius.circular(16.r),
                     child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 16.w, vertical: 14.h),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.03),
                         borderRadius: BorderRadius.circular(16.r),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                        border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.05)),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -229,13 +228,17 @@ class _AddSpecialDayScreenState extends State<AddSpecialDayScreen> {
                           Text(
                             _selectedDate == null
                                 ? "Select Date"
-                                : DateFormat('MMMM d, yyyy').format(_selectedDate!),
+                                : DateFormat('MMMM d, yyyy')
+                                    .format(_selectedDate!),
                             style: GoogleFonts.dmSans(
-                              color: _selectedDate == null ? Colors.white24 : Colors.white,
+                              color: _selectedDate == null
+                                  ? Colors.white24
+                                  : Colors.white,
                               fontSize: 13.sp,
                             ),
                           ),
-                          const Icon(Icons.calendar_today_rounded, color: AppColors.primaryPink),
+                          const Icon(Icons.calendar_today_rounded,
+                              color: AppColors.primaryPink),
                         ],
                       ),
                     ),

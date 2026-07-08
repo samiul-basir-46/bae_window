@@ -232,13 +232,10 @@ class FirebaseAuthService {
       updates['gender'] = gender;
     }
 
-    // Write to local cache flag that profile setup is complete
     ProfileGateService.instance.markProfileComplete(uid);
 
     if (updates.isNotEmpty) {
-      // Fire-and-forget: Firestore offline persistence writes to local cache
-      // immediately, so we don't need to await the server confirmation.
-      // Awaiting can hang indefinitely if the device is offline.
+
       _firestore
           .collection('users')
           .doc(uid)
@@ -247,7 +244,6 @@ class FirebaseAuthService {
     }
   }
 
-  /// Keep the relationship start date identical for both paired users.
   Future<void> updateRelationshipStartDate(String uid, String date) async {
     final userRef = _firestore.collection('users').doc(uid);
     final userData = await getUserProfile(uid);
@@ -296,7 +292,6 @@ class FirebaseAuthService {
     }
   }
 
-  /// Returns a real-time stream of a user's Firestore document
   Stream<DocumentSnapshot<Map<String, dynamic>>> userStream(String uid) {
     return _firestore.collection('users').doc(uid).snapshots();
   }
@@ -307,12 +302,9 @@ class FirebaseAuthService {
   Stream<DocumentSnapshot<Map<String, dynamic>>> coupleStream(String pairId) =>
       _pairingService.coupleStream(pairId);
 
-  /// Get partner's UID from a couple document
-  /// The coupleId format is "{user1Uid}_{user2Uid}"
   Future<String?> getPartnerUid(String coupleId) =>
       _pairingService.getPartnerUid(coupleId);
 
-  /// Update current user's mood in Firestore
   Future<void> updateMood({required String emoji, required String text}) async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -345,15 +337,7 @@ class FirebaseAuthService {
           'senderName': senderName,
         },
       ));
-      /*
-      unawaited(PushNotificationService.sendSilentWidgetSyncToPartner(
-        extraData: {
-          'moodEmoji': emoji,
-          'moodText': text,
-          'senderName': senderName,
-        },
-      ));
-      */
+
     } catch (e) {
       dev.log('Error triggering mood FCM notification client-side: $e');
     }
@@ -423,8 +407,6 @@ class FirebaseAuthService {
     final existingData = (await userRef.get()).data();
     final updates = <String, dynamic>{};
 
-    // Preserve the last item written by older app versions before the shared
-    // legacy field is overwritten by a different content type.
     final legacyUrl = existingData?['latestSnapUrl'] as String? ?? '';
     final legacyType =
         (existingData?['latestSnapType'] as String? ?? 'Image').toLowerCase();

@@ -31,14 +31,39 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
   String? _errorMessage;
   String? _selectedGender; // 'male' or 'female'
 
-  final List<String> _predefinedAvatars = [
-    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-    'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150',
-    'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
-    'https://i.pravatar.cc/150?img=2',
-    'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150',
+// Male Avatars
+  final List<String> _maleAvatars = [
+    'https://api.dicebear.com/9.x/adventurer/png?seed=Sophie&backgroundColor=ffd5dc',
+    'https://api.dicebear.com/9.x/adventurer/png?seed=Ryan&backgroundColor=c0aede',
+    'https://api.dicebear.com/9.x/adventurer/png?seed=Charlie&backgroundColor=ffd5dc',
+    'https://api.dicebear.com/9.x/adventurer/png?seed=Mia&backgroundColor=d1f4d1',
+    'https://api.dicebear.com/9.x/adventurer/png?seed=Ethan&backgroundColor=d1f4d1',
   ];
+
+  // Female Avatars
+  final List<String> _femaleAvatars = [
+    'https://api.dicebear.com/9.x/adventurer/png?seed=Felix&backgroundColor=b6e3f4',
+    'https://api.dicebear.com/9.x/adventurer/png?seed=Emma&backgroundColor=b6e3f4',
+    'https://api.dicebear.com/9.x/adventurer/png?seed=Lily&backgroundColor=c0aede',
+    'https://api.dicebear.com/9.x/adventurer/png?seed=Jake&backgroundColor=d1f4d1',
+    'https://api.dicebear.com/9.x/adventurer/png?seed=Zoe&backgroundColor=ffdfbf',
+  ];
+
+  // Default Avatars
+  final List<String> _defaultAvatars = [
+    'https://api.dicebear.com/9.x/adventurer-neutral/png?seed=Boy&backgroundColor=b6e3f4',
+    'https://api.dicebear.com/9.x/adventurer-neutral/png?seed=Girl&backgroundColor=ffd5dc',
+  ];
+
+  List<String> get _currentAvatars {
+    if (_selectedGender == 'male') {
+      return _maleAvatars;
+    } else if (_selectedGender == 'female') {
+      return _femaleAvatars;
+    } else {
+      return _defaultAvatars;
+    }
+  }
 
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
@@ -58,7 +83,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
     ).animate(CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOutCubic));
 
     // Default selection
-    _selectedPredefinedUrl = _predefinedAvatars.first;
+    _selectedPredefinedUrl = _defaultAvatars.first;
   }
 
   @override
@@ -126,7 +151,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
       },
       builder: (context, state) {
         final isLoading = state is ProfileSetupLoading;
-
 
         return Scaffold(
           backgroundColor: const Color(0xFF0D0D10),
@@ -202,9 +226,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
     );
   }
 
-
-
-
   Widget _buildAvatarSelector() {
     return Column(
       children: [
@@ -267,10 +288,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             shrinkWrap: true,
-            itemCount: _predefinedAvatars.length,
+            itemCount: _currentAvatars.length,
             separatorBuilder: (context, index) => SizedBox(width: 12.w),
             itemBuilder: (context, index) {
-              final url = _predefinedAvatars[index];
+              final url = _currentAvatars[index];
               final isSelected = _selectedPredefinedUrl == url;
               return GestureDetector(
                 onTap: () {
@@ -335,6 +356,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                   setState(() {
                     _selectedGender = 'male';
                     _errorMessage = null;
+                    if (_selectedLocalFile == null) {
+                      _selectedPredefinedUrl = _maleAvatars.first;
+                    }
                   });
                 },
                 child: AnimatedContainer(
@@ -388,6 +412,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                   setState(() {
                     _selectedGender = 'female';
                     _errorMessage = null;
+                    if (_selectedLocalFile == null) {
+                      _selectedPredefinedUrl = _femaleAvatars.first;
+                    }
                   });
                 },
                 child: AnimatedContainer(

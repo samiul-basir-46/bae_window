@@ -72,16 +72,7 @@ class ProfileGateService {
     dev.log('[ProfileGate] Evaluating navigation for uid=$uid',
         name: 'ProfileGateService');
 
-    // ── Step 1: Check the local "profile complete" flag ──
-    final localProfileComplete = isProfileCompleteLocally(uid);
-    if (localProfileComplete) {
-      dev.log(
-          '[ProfileGate] Local flag says profile is complete — checking pair status.',
-          name: 'ProfileGateService');
-      return _decidePairStatus(uid);
-    }
-
-    // ── Step 2: Check Firestore (via cache service) ──
+    // ── Step 1: Check Firestore (cache first, then server) ──
     Map<String, dynamic>? userData;
     try {
       userData = await _cache.getDocument(
@@ -91,37 +82,48 @@ class ProfileGateService {
       );
     } catch (e) {
       dev.log(
-          '[ProfileGate] Firestore fetch failed: $e — falling back to local.',
+          '[ProfileGate] Firestore fetch failed: $e — trying local storage fallback.',
           name: 'ProfileGateService');
     }
 
     if (userData != null) {
-      final serverProfileComplete =
-          (userData['profileComplete'] as bool? ?? false) ||
-              (userData['nickname'] as String? ?? '').isNotEmpty;
+      final nickname = userData['nickname'] as String? ?? '';
+      final gender = userData['gender'] as String? ?? '';
+      final profileComplete = userData['profileComplete'] as bool? ?? false;
 
-      if (serverProfileComplete) {
-        // Server says complete → set local flag so we never re-check.
+      // Profile is complete only if nickname and gender are both set and profileComplete is true
+      final isComplete = profileComplete && nickname.isNotEmpty && gender.isNotEmpty;
+
+      if (isComplete) {
+        dev.log('[ProfileGate] Firestore data verified complete — saving local flags.',
+            name: 'ProfileGateService');
         markProfileComplete(uid);
 
-        // Also cache the pair status locally.
         final pairStatus = userData['pairStatus'] as String? ?? 'none';
         markPairStatus(uid, pairStatus);
 
         return _decidePairStatusFromValue(pairStatus);
       } else {
-        // Server has the document but profile is genuinely incomplete.
         dev.log(
-            '[ProfileGate] Server says profile is NOT complete (profileComplete=false, nickname empty).',
+            '[ProfileGate] Firestore says profile is INCOMPLETE: nickname="$nickname", gender="$gender", profileComplete=$profileComplete',
             name: 'ProfileGateService');
+        // Ensure local flag is cleared if it was set incorrectly
+        appData.write(_profileCompleteKey(uid), false);
         return NavigationDecision.goToProfileSetup;
       }
     }
 
-    // ── Step 3: Firestore returned null (doc missing or offline) ──
-    // This happens for genuinely new users or when offline with empty cache.
+    // ── Step 2: Offline fallback to local storage ──
+    final localProfileComplete = isProfileCompleteLocally(uid);
+    if (localProfileComplete) {
+      dev.log(
+          '[ProfileGate] Firestore offline, but local flag says profile is complete.',
+          name: 'ProfileGateService');
+      return _decidePairStatus(uid);
+    }
+
     dev.log(
-        '[ProfileGate] No Firestore data and no local flag — assuming profile setup required.',
+        '[ProfileGate] Offline and no local flag — assuming profile setup required.',
         name: 'ProfileGateService');
     return NavigationDecision.goToProfileSetup;
   }

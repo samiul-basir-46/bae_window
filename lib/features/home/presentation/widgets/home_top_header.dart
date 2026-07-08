@@ -8,6 +8,7 @@ import 'package:bea_window_app/helpers/ui_helpers.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
 import '../bloc/home_action_bloc.dart';
 import '../bloc/home_action_event.dart';
+import 'package:bea_window_app/common_widgets/custom_date_picker.dart';
 
 class HomeTopHeader extends StatelessWidget {
   final String userAvatarUrl;
@@ -28,24 +29,11 @@ class HomeTopHeader extends StatelessWidget {
   });
 
   Future<void> _selectRelationshipDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
+    final DateTime? picked = await CustomDatePicker.show(
+      context,
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: AppColors.primaryPink,
-              onPrimary: Colors.white,
-              surface: AppColors.navBgColor,
-              onSurface: Colors.white,
-            ),
-          ),
-          child: child!,
-        );
-      },
     );
     if (picked != null) {
       final formattedDate = DateFormat('MMM d, yyyy').format(picked);
