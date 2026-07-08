@@ -34,14 +34,15 @@ class StoryBloc extends Bloc<StoryEvent, StoryState> {
     _currentUserName = event.currentUserName;
     _partnerName = event.partnerName;
 
-    // Show loading state if we are loading for the first time or doing a force refresh
-    final currentFilter = (state is StoryLoaded)
-        ? (state as StoryLoaded).selectedFilter
-        : StoryFilter.all;
-
-    if (state is StoryInitial || state is StoryLoading || event.forceRefresh) {
-      emit(const StoryLoading());
+    // If we already have stories loaded or uploading and this is not a force refresh,
+    // we return instantly to avoid redundant reads!
+    if ((state is StoryLoaded || state is StoryUploading) && !event.forceRefresh) {
+      dev.log('[StoryBloc] Stories already loaded in state, skipping read operation to save Firestore reads.', name: 'StoryBloc');
+      return;
     }
+
+    // Show loading state if we are loading for the first time or doing a force refresh
+    emit(const StoryLoading());
 
     try {
       final docs = await _syncService.getStories(event.coupleId, forceRefresh: event.forceRefresh);
@@ -60,9 +61,16 @@ class StoryBloc extends Bloc<StoryEvent, StoryState> {
         final months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         final dateString = "${months[dateTime.month - 1]} ${dateTime.day}, ${dateTime.year}";
 
+        final mainUrl = data['imageUrl'] as String? ?? '';
+        final rawImages = data['images'] as List<dynamic>?;
+        final images = rawImages != null
+            ? rawImages.map((e) => e.toString()).toList()
+            : [mainUrl].where((url) => url.isNotEmpty).toList();
+
         return MemoryItem(
           id: docId,
-          imageUrl: data['imageUrl'] as String? ?? '',
+          imageUrl: mainUrl,
+          images: images,
           title: data['title'] as String? ?? '',
           note: data['note'] as String? ?? '',
           dateString: dateString,
@@ -72,6 +80,10 @@ class StoryBloc extends Bloc<StoryEvent, StoryState> {
           layoutType: data['layoutType'] as String? ?? 'full',
         );
       }).toList();
+
+      final currentFilter = (state is StoryLoaded)
+          ? (state as StoryLoaded).selectedFilter
+          : ((state is StoryUploading) ? (state as StoryUploading).selectedFilter : StoryFilter.all);
 
       emit(StoryLoaded(
         memories: memories,
@@ -90,6 +102,13 @@ class StoryBloc extends Bloc<StoryEvent, StoryState> {
     if (state is StoryLoaded) {
       final loadedState = state as StoryLoaded;
       emit(loadedState.copyWith(selectedFilter: event.filter));
+    } else if (state is StoryUploading) {
+      final uploadState = state as StoryUploading;
+      emit(StoryUploading(
+        memories: uploadState.memories,
+        selectedFilter: event.filter,
+        progressMessage: uploadState.progressMessage,
+      ));
     }
   }
 
@@ -99,26 +118,67 @@ class StoryBloc extends Bloc<StoryEvent, StoryState> {
   ) async {
     if (_coupleId == null || _currentUserUid == null) return;
 
-    try {
-      String imageUrl = event.imageUrl ?? '';
+    final List<MemoryItem> currentMemories = (state is StoryLoaded)
+        ? (state as StoryLoaded).memories
+        : ((state is StoryUploading) ? (state as StoryUploading).memories : []);
 
-      // Upload local image file if present
+    final StoryFilter currentFilter = (state is StoryLoaded)
+        ? (state as StoryLoaded).selectedFilter
+        : ((state is StoryUploading) ? (state as StoryUploading).selectedFilter : StoryFilter.all);
+
+    try {
+      final List<String> images = [];
+      String mainImageUrl = "";
+
+      // 1. Emit progress: Uploading primary cover image
+      emit(StoryUploading(
+        memories: currentMemories,
+        selectedFilter: currentFilter,
+        progressMessage: "Uploading cover photo... 📸",
+      ));
+
       if (event.imageFile != null) {
-        dev.log('[StoryBloc] Uploading memory image file to Cloudinary...', name: 'StoryBloc');
+        dev.log('[StoryBloc] Uploading primary memory image file to Cloudinary...', name: 'StoryBloc');
         final uploadedUrl = await CloudinaryService.uploadImage(event.imageFile!);
         if (uploadedUrl != null) {
-          imageUrl = uploadedUrl;
+          mainImageUrl = uploadedUrl;
+          images.add(uploadedUrl);
         } else {
-          dev.log('[StoryBloc] Cloudinary upload failed', name: 'StoryBloc');
-          return;
+          throw Exception("Primary image upload failed");
         }
       }
+
+      // 2. Upload additional images and emit progress for each
+      for (int i = 0; i < event.additionalImageFiles.length; i++) {
+        emit(StoryUploading(
+          memories: currentMemories,
+          selectedFilter: currentFilter,
+          progressMessage: "Uploading photo ${i + 1} of ${event.additionalImageFiles.length}... 🌸",
+        ));
+
+        final extraFile = event.additionalImageFiles[i];
+        dev.log('[StoryBloc] Uploading additional memory image file to Cloudinary...', name: 'StoryBloc');
+        final uploadedUrl = await CloudinaryService.uploadImage(extraFile);
+        if (uploadedUrl != null) {
+          images.add(uploadedUrl);
+        } else {
+          dev.log('[StoryBloc] Additional Cloudinary upload failed, skipping', name: 'StoryBloc');
+        }
+      }
+
+      // 3. Emit progress: Saving to Firestore
+      emit(StoryUploading(
+        memories: currentMemories,
+        selectedFilter: currentFilter,
+        progressMessage: "Saving memory lane... 💾",
+      ));
 
       await _syncService.addStory(
         coupleId: _coupleId!,
         title: event.title,
         note: event.note,
-        imageUrl: imageUrl,
+        imageUrl: mainImageUrl,
+        images: images,
         isMilestone: event.isMilestone,
         uploadedByUid: _currentUserUid!,
         layoutType: event.layoutType,
@@ -134,6 +194,7 @@ class StoryBloc extends Bloc<StoryEvent, StoryState> {
       ));
     } catch (e) {
       dev.log('[StoryBloc] Error adding memory: $e', name: 'StoryBloc');
+      emit(StoryLoaded(memories: currentMemories, selectedFilter: currentFilter));
     }
   }
 

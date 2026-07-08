@@ -35,6 +35,18 @@ class StoryLoaded extends StoryState {
   }
 }
 
+class StoryUploading extends StoryState {
+  final List<MemoryItem> memories;
+  final String progressMessage;
+  final StoryFilter selectedFilter;
+
+  const StoryUploading({
+    required this.memories,
+    required this.progressMessage,
+    required this.selectedFilter,
+  });
+}
+
 class StoryError extends StoryState {
   final String message;
   const StoryError(this.message);
@@ -43,6 +55,7 @@ class StoryError extends StoryState {
 class MemoryItem {
   final String id;
   final String imageUrl;
+  final List<String> images;
   final String title;
   final String note;
   final String dateString; // e.g. "June 22, 2026"
@@ -54,6 +67,7 @@ class MemoryItem {
   const MemoryItem({
     required this.id,
     required this.imageUrl,
+    this.images = const [],
     required this.title,
     required this.note,
     required this.dateString,
@@ -66,6 +80,7 @@ class MemoryItem {
   MemoryItem copyWith({
     String? id,
     String? imageUrl,
+    List<String>? images,
     String? title,
     String? note,
     String? dateString,
@@ -77,6 +92,7 @@ class MemoryItem {
     return MemoryItem(
       id: id ?? this.id,
       imageUrl: imageUrl ?? this.imageUrl,
+      images: images ?? this.images,
       title: title ?? this.title,
       note: note ?? this.note,
       dateString: dateString ?? this.dateString,

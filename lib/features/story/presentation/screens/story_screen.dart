@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -84,7 +85,8 @@ class _StoryScreenViewState extends State<StoryScreenView> {
               currentUserUid: _currentUserUid!,
               currentUserName: _myNickname,
               partnerName: _partnerNickname,
-              forceRefresh: false, // Reads from cache first to save database costs
+              forceRefresh:
+                  false, // Reads from cache first to save database costs
             ));
       }
     } catch (e) {
@@ -136,16 +138,16 @@ class _StoryScreenViewState extends State<StoryScreenView> {
         onAdd: ({
           required String title,
           required String note,
-          String? imageUrl,
-          dynamic imageFile,
+          File? imageFile,
+          required List<File> additionalImageFiles,
           required bool isMilestone,
           required String layoutType,
         }) {
           context.read<StoryBloc>().add(AddMemoryEvent(
                 title: title,
                 note: note,
-                imageUrl: imageUrl,
                 imageFile: imageFile,
+                additionalImageFiles: additionalImageFiles,
                 isMilestone: isMilestone,
                 layoutType: layoutType,
               ));
@@ -328,7 +330,7 @@ class _StoryScreenViewState extends State<StoryScreenView> {
               ),
             ),
           ),
-          
+
           // Content
           SafeArea(
             child: _loadingProfile
@@ -339,23 +341,34 @@ class _StoryScreenViewState extends State<StoryScreenView> {
                         builder: (context, state) {
                           if (state is StoryLoading) {
                             return const Center(child: BaeLoader());
-                          } else if (state is StoryLoaded) {
+                          } else if (state is StoryLoaded ||
+                              state is StoryUploading) {
+                            final memories = (state is StoryLoaded)
+                                ? state.memories
+                                : (state as StoryUploading).memories;
+                            final selectedFilter = (state is StoryLoaded)
+                                ? state.selectedFilter
+                                : (state as StoryUploading).selectedFilter;
+
                             List<MemoryItem> filteredMemories = [];
 
-                            if (state.selectedFilter == StoryFilter.all) {
-                              filteredMemories = state.memories.toList();
-                            } else if (state.selectedFilter == StoryFilter.milestones) {
-                              filteredMemories = state.memories
-                                  .where((m) => m.isMilestone)
-                                  .toList();
+                            if (selectedFilter == StoryFilter.all) {
+                              filteredMemories = memories.toList();
+                            } else if (selectedFilter ==
+                                StoryFilter.milestones) {
+                              filteredMemories =
+                                  memories.where((m) => m.isMilestone).toList();
                             }
 
                             // Search query filter
                             if (_searchQuery.isNotEmpty) {
                               filteredMemories = filteredMemories
                                   .where((m) =>
-                                      m.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                                      m.note.toLowerCase().contains(_searchQuery.toLowerCase()))
+                                      m.title.toLowerCase().contains(
+                                          _searchQuery.toLowerCase()) ||
+                                      m.note
+                                          .toLowerCase()
+                                          .contains(_searchQuery.toLowerCase()))
                                   .toList();
                             }
 
@@ -469,8 +482,10 @@ class _StoryScreenViewState extends State<StoryScreenView> {
                                               });
                                             }),
                                             SizedBox(width: 12.w),
-                                            _buildIconButton(Icons.add_rounded,
-                                                () => _openNewMemorySheet(context)),
+                                            _buildIconButton(
+                                                Icons.add_rounded,
+                                                () => _openNewMemorySheet(
+                                                    context)),
                                           ],
                                         ),
                                       ]
@@ -490,18 +505,64 @@ class _StoryScreenViewState extends State<StoryScreenView> {
                                         _buildFilterTab(
                                             "All Memories",
                                             StoryFilter.all,
-                                            state.selectedFilter,
+                                            selectedFilter,
                                             context),
                                         SizedBox(width: 10.w),
                                         _buildFilterTab(
                                             "Milestones",
                                             StoryFilter.milestones,
-                                            state.selectedFilter,
+                                            selectedFilter,
                                             context),
                                       ],
                                     ),
                                   ),
                                 ),
+
+                                // Subtle Upload Progress Banner
+                                if (state is StoryUploading)
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: 24.w, vertical: 8.h),
+                                    child: Container(
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 16.w, vertical: 12.h),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primaryPink
+                                            .withValues(alpha: 0.08),
+                                        borderRadius:
+                                            BorderRadius.circular(16.r),
+                                        border: Border.all(
+                                          color: AppColors.primaryPink
+                                              .withValues(alpha: 0.15),
+                                          width: 1.w,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          SizedBox(
+                                            width: 14.w,
+                                            height: 14.h,
+                                            child:
+                                                const CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: AppColors.primaryPink,
+                                            ),
+                                          ),
+                                          SizedBox(width: 12.w),
+                                          Expanded(
+                                            child: Text(
+                                              state.progressMessage,
+                                              style: GoogleFonts.dmSans(
+                                                color: Colors.white70,
+                                                fontSize: 12.sp,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
 
                                 // Feed list
                                 Expanded(
@@ -516,7 +577,7 @@ class _StoryScreenViewState extends State<StoryScreenView> {
                         },
                       )),
           ),
-          
+
           // Floating Action Button
           if (!_loadingProfile && _coupleId != null)
             Positioned(
@@ -688,7 +749,7 @@ class _StoryScreenViewState extends State<StoryScreenView> {
               UIHelper.verticalSpace(40.h),
               GestureDetector(
                 onTap: () {
-                  Navigator.pushNamed(context, Routes.accountPairingScreen);
+                  Navigator.pushNamed(context, Routes.pairingScreen);
                 },
                 child: Container(
                   width: double.infinity,
@@ -712,7 +773,8 @@ class _StoryScreenViewState extends State<StoryScreenView> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.link_rounded, color: Colors.white, size: 18.sp),
+                      Icon(Icons.link_rounded,
+                          color: Colors.white, size: 18.sp),
                       SizedBox(width: 8.w),
                       Text(
                         "Pair with Partner",
@@ -736,11 +798,8 @@ class _StoryScreenViewState extends State<StoryScreenView> {
   Widget _buildMemoriesList(Map<String, List<MemoryItem>> grouped) {
     return ListView.builder(
       physics: const BouncingScrollPhysics(),
-      padding: EdgeInsets.only(
-          left: 24.w,
-          right: 24.w,
-          top: 16.h,
-          bottom: 120.h),
+      padding:
+          EdgeInsets.only(left: 24.w, right: 24.w, top: 16.h, bottom: 120.h),
       itemCount: grouped.keys.length,
       itemBuilder: (context, index) {
         final key = grouped.keys.elementAt(index);
@@ -748,8 +807,7 @@ class _StoryScreenViewState extends State<StoryScreenView> {
         return MonthGroupFeed(
           month: key,
           items: items,
-          onCardLongPress: (memory) =>
-              _showContextMenu(context, memory),
+          onCardLongPress: (memory) => _showContextMenu(context, memory),
         );
       },
     );

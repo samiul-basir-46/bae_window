@@ -6,10 +6,34 @@ import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
 import '../bloc/story_state.dart';
 
-class MemoryDetailScreen extends StatelessWidget {
+class MemoryDetailScreen extends StatefulWidget {
   final MemoryItem memory;
 
   const MemoryDetailScreen({super.key, required this.memory});
+
+  @override
+  State<MemoryDetailScreen> createState() => _MemoryDetailScreenState();
+}
+
+class _MemoryDetailScreenState extends State<MemoryDetailScreen> {
+  late final PageController _pageController;
+  int _currentIndex = 0;
+  late final List<String> _imagesList;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+    _imagesList = widget.memory.images.isNotEmpty
+        ? widget.memory.images
+        : [widget.memory.imageUrl].where((url) => url.isNotEmpty).toList();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +47,6 @@ class MemoryDetailScreen extends StatelessWidget {
         },
         child: Stack(
           children: [
-            // Screen Background Glows
             Positioned(
               top: -50.h,
               right: -50.w,
@@ -41,41 +64,121 @@ class MemoryDetailScreen extends StatelessWidget {
                 ),
               ),
             ),
-            // Content
             SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Full-width Image Area with Hero
-                  Hero(
-                    tag: 'memory_img_${memory.id}',
-                    child: Container(
-                      height: 420.h,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        image: DecorationImage(
-                          image: NetworkImage(memory.imageUrl),
-                          fit: BoxFit.cover,
-                        ),
+                  Stack(
+                    children: [
+                      SizedBox(
+                        height: 420.h,
+                        width: double.infinity,
+                        child: _imagesList.isEmpty
+                            ? Container(color: Colors.grey[900])
+                            : PageView.builder(
+                                controller: _pageController,
+                                physics: const PageScrollPhysics(),
+                                onPageChanged: (index) {
+                                  setState(() {
+                                    _currentIndex = index;
+                                  });
+                                },
+                                itemCount: _imagesList.length,
+                                itemBuilder: (context, index) {
+                                  return Image.network(
+                                    _imagesList[index],
+                                    fit: BoxFit.cover,
+                                    loadingBuilder: (context, child,
+                                        loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Center(
+                                        child: CircularProgressIndicator(
+                                          value: loadingProgress
+                                                      .expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                      .cumulativeBytesLoaded /
+                                                  loadingProgress
+                                                      .expectedTotalBytes!
+                                              : null,
+                                          color: AppColors.primaryPink,
+                                        ),
+                                      );
+                                    },
+                                    errorBuilder:
+                                        (context, error, stackTrace) {
+                                      return const Center(
+                                        child: Icon(
+                                          Icons.broken_image_rounded,
+                                          color: Colors.white24,
+                                          size: 40,
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
                       ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.black.withValues(alpha: 0.4),
-                              Colors.transparent,
-                              AppColors.softBlack,
-                            ],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.black.withValues(alpha: 0.45),
+                                Colors.transparent,
+                                AppColors.softBlack,
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                      if (_imagesList.length > 1)
+                        Positioned(
+                          bottom: 24.h,
+                          left: 0,
+                          right: 0,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(
+                              _imagesList.length,
+                              (index) {
+                                final isSelected = _currentIndex == index;
+                                return AnimatedContainer(
+                                  duration:
+                                      const Duration(milliseconds: 250),
+                                  margin: EdgeInsets.symmetric(
+                                      horizontal: 4.w),
+                                  width: isSelected ? 18.w : 6.w,
+                                  height: 6.h,
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? AppColors.primaryPink
+                                        : Colors.white
+                                            .withValues(alpha: 0.4),
+                                    borderRadius:
+                                        BorderRadius.circular(3.r),
+                                    boxShadow: isSelected
+                                        ? [
+                                            BoxShadow(
+                                              color: AppColors.primaryPink
+                                                  .withValues(alpha: 0.5),
+                                              blurRadius: 6,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   UIHelper.verticalSpace(16.h),
-                  // Details
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 24.w),
                     child: Column(
@@ -85,7 +188,7 @@ class MemoryDetailScreen extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              memory.dateString,
+                              widget.memory.dateString,
                               style: GoogleFonts.dmSans(
                                 color: Colors.white38,
                                 fontSize: 13.sp,
@@ -93,10 +196,13 @@ class MemoryDetailScreen extends StatelessWidget {
                               ),
                             ),
                             Container(
-                              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 10.w, vertical: 4.h),
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.05),
-                                borderRadius: BorderRadius.circular(10.r),
+                                color:
+                                    Colors.white.withValues(alpha: 0.05),
+                                borderRadius:
+                                    BorderRadius.circular(10.r),
                               ),
                               child: Row(
                                 children: [
@@ -104,15 +210,16 @@ class MemoryDetailScreen extends StatelessWidget {
                                     width: 6.w,
                                     height: 6.h,
                                     decoration: BoxDecoration(
-                                      color: memory.uploadedBy == "You"
-                                          ? AppColors.primaryPurple
-                                          : AppColors.primaryPink,
+                                      color:
+                                          widget.memory.uploadedBy == "You"
+                                              ? AppColors.primaryPurple
+                                              : AppColors.primaryPink,
                                       shape: BoxShape.circle,
                                     ),
                                   ),
                                   SizedBox(width: 6.w),
                                   Text(
-                                    memory.uploadedBy,
+                                    widget.memory.uploadedBy,
                                     style: GoogleFonts.dmSans(
                                       color: Colors.white70,
                                       fontSize: 10.sp,
@@ -125,11 +232,13 @@ class MemoryDetailScreen extends StatelessWidget {
                           ],
                         ),
                         UIHelper.verticalSpace(12.h),
-                        if (memory.isMilestone) ...[
+                        if (widget.memory.isMilestone) ...[
                           Container(
-                            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 10.w, vertical: 4.h),
                             decoration: BoxDecoration(
-                              color: Colors.amber.withValues(alpha: 0.1),
+                              color:
+                                  Colors.amber.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8.r),
                               border: Border.all(
                                 color: Colors.amber.withValues(alpha: 0.3),
@@ -139,7 +248,8 @@ class MemoryDetailScreen extends StatelessWidget {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.star_rounded, color: Colors.amber, size: 12.sp),
+                                Icon(Icons.star_rounded,
+                                    color: Colors.amber, size: 12.sp),
                                 SizedBox(width: 4.w),
                                 Text(
                                   "Milestone",
@@ -155,7 +265,7 @@ class MemoryDetailScreen extends StatelessWidget {
                           UIHelper.verticalSpace(12.h),
                         ],
                         Text(
-                          memory.title,
+                          widget.memory.title,
                           style: GoogleFonts.dmSans(
                             color: Colors.white,
                             fontSize: 22.sp,
@@ -164,7 +274,7 @@ class MemoryDetailScreen extends StatelessWidget {
                         ),
                         UIHelper.verticalSpace(16.h),
                         Text(
-                          memory.note,
+                          widget.memory.note,
                           style: GoogleFonts.dmSans(
                             color: Colors.white70,
                             fontSize: 14.sp,
@@ -174,11 +284,10 @@ class MemoryDetailScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  UIHelper.verticalSpace(100.h), // Safe space at bottom
+                  UIHelper.verticalSpace(100.h),
                 ],
               ),
             ),
-            // Floating Close Button
             Positioned(
               top: MediaQuery.of(context).padding.top + 10.h,
               left: 20.w,

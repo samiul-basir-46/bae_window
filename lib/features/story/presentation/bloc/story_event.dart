@@ -31,16 +31,16 @@ class ChangeFilterEvent extends StoryEvent {
 class AddMemoryEvent extends StoryEvent {
   final String title;
   final String note;
-  final String? imageUrl;
   final File? imageFile;
+  final List<File> additionalImageFiles;
   final bool isMilestone;
   final String layoutType;
 
   const AddMemoryEvent({
     required this.title,
     required this.note,
-    this.imageUrl,
     this.imageFile,
+    this.additionalImageFiles = const [],
     required this.isMilestone,
     required this.layoutType,
   });

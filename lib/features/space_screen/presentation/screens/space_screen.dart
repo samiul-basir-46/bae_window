@@ -24,7 +24,8 @@ class SpaceScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<SpaceScreenBloc>(
-      create: (context) => SpaceScreenBloc()..add(const LoadSpaceScreenDataEvent()),
+      create: (context) =>
+          SpaceScreenBloc()..add(const LoadSpaceScreenDataEvent()),
       child: const SpaceScreenView(),
     );
   }
@@ -33,7 +34,8 @@ class SpaceScreen extends StatelessWidget {
 class SpaceScreenView extends StatelessWidget {
   const SpaceScreenView({super.key});
 
-  Future<void> _selectAnniversary(BuildContext context, DateTime? currentDate) async {
+  Future<void> _selectAnniversary(
+      BuildContext context, DateTime? currentDate) async {
     final now = DateTime.now();
     final pickedDate = await CustomDatePicker.show(
       context,
@@ -93,14 +95,16 @@ class SpaceScreenView extends StatelessWidget {
           SafeArea(
             child: BlocBuilder<SpaceScreenBloc, SpaceScreenState>(
               builder: (context, state) {
-                if (state is SpaceScreenLoading || state is SpaceScreenInitial) {
+                if (state is SpaceScreenLoading ||
+                    state is SpaceScreenInitial) {
                   return const Center(
                     child: BaeLoader(),
                   );
                 } else if (state is SpaceScreenLoaded) {
                   return SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
-                    padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -111,7 +115,8 @@ class SpaceScreenView extends StatelessWidget {
                         // Connection Center Card (with anniversary count down)
                         LoveConnectionCard(
                           anniversaryDate: state.anniversaryDate,
-                          onTapSelectAnniversary: () => _selectAnniversary(context, state.anniversaryDate),
+                          onTapSelectAnniversary: () => _selectAnniversary(
+                              context, state.anniversaryDate),
                         ),
                         UIHelper.verticalSpace(28.h),
 
@@ -126,16 +131,19 @@ class SpaceScreenView extends StatelessWidget {
                           ),
                         ),
                         UIHelper.verticalSpace(12.h),
-                         QuickActionGrid(
+                        QuickActionGrid(
                           taskProgress: state.taskProgress,
                           nextTaskTitle: state.nextTaskTitle,
                           partnerNickname: state.partnerNickname,
                           onSendLoveNote: (note) {
-                            context.read<SpaceScreenBloc>().add(SendSpaceLoveNoteEvent(note));
+                            context
+                                .read<SpaceScreenBloc>()
+                                .add(SendSpaceLoveNoteEvent(note));
                             AppToast.show(
                               context,
                               title: "Love Note Sent 💌",
-                              message: "Sent successfully to ${state.partnerNickname}!",
+                              message:
+                                  "Sent successfully to ${state.partnerNickname}!",
                               type: ToastType.success,
                             );
                           },
@@ -155,7 +163,8 @@ class SpaceScreenView extends StatelessWidget {
                                 letterSpacing: 1.2,
                               ),
                             ),
-                            Icon(Icons.swap_vert_rounded, color: Colors.white24, size: 14.sp),
+                            Icon(Icons.swap_vert_rounded,
+                                color: Colors.white24, size: 14.sp),
                           ],
                         ),
                         UIHelper.verticalSpace(12.h),
@@ -224,7 +233,7 @@ class SpaceScreenView extends StatelessWidget {
               UIHelper.verticalSpace(40.h),
               GestureDetector(
                 onTap: () {
-                  Navigator.pushNamed(context, Routes.accountPairingScreen);
+                  Navigator.pushNamed(context, Routes.pairingScreen);
                 },
                 child: Container(
                   width: double.infinity,
@@ -248,7 +257,8 @@ class SpaceScreenView extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.link_rounded, color: Colors.white, size: 18.sp),
+                      Icon(Icons.link_rounded,
+                          color: Colors.white, size: 18.sp),
                       SizedBox(width: 8.w),
                       Text(
                         "Pair with Partner",
