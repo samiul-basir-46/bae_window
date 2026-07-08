@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:developer' as dev;
-import 'dart:io';
+import 'package:bea_window_app/features/auth/presentation/bloc/auth_event.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:bea_window_app/features/auth/services/firebase_auth_service.dart';
 import 'package:bea_window_app/features/auth/services/cloudinary_service.dart';
+import 'package:bea_window_app/features/auth/services/profile_gate_service.dart';
 
-part 'auth_event.dart';
 part 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
@@ -83,38 +83,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           return;
         }
 
-        // Check if profile setup or pairing is pending
-        try {
-          final userDoc = await _authService.getUserProfile(
-            credential.user!.uid,
-          );
-          if (userDoc != null) {
-            final isProfileComplete =
-                (userDoc['profileComplete'] as bool? ?? false) ||
-                    (userDoc['nickname'] as String? ?? '').isNotEmpty;
-            if (!isProfileComplete) {
-              dev.log('User logged in but profile is not completed.',
-                  name: 'AuthBloc');
-              emit(ProfileSetupPendingState());
-              return;
-            }
-            final pairStatus = userDoc['pairStatus'] as String? ?? 'none';
-            if (pairStatus != 'paired' && pairStatus != 'unpaired') {
-              dev.log('User logged in but pairing is pending.',
-                  name: 'AuthBloc');
-              emit(PairingPendingState());
-              return;
-            }
-          } else {
-            dev.log('User logged in but Firestore document does not exist.',
-                name: 'AuthBloc');
+        // Use centralized ProfileGateService for navigation decision
+        final decision = await ProfileGateService.instance
+            .getNavigationDecision(credential.user!.uid);
+
+        switch (decision) {
+          case NavigationDecision.goToProfileSetup:
+            dev.log('ProfileGate → ProfileSetupPending', name: 'AuthBloc');
             emit(ProfileSetupPendingState());
             return;
-          }
-        } catch (firestoreError) {
-          dev.log(
-              'Firestore unavailable during login gating check, skipping: $firestoreError',
-              name: 'AuthBloc');
+          case NavigationDecision.goToPairing:
+            dev.log('ProfileGate → PairingPending', name: 'AuthBloc');
+            emit(PairingPendingState());
+            return;
+          case NavigationDecision.goToHome:
+            dev.log('ProfileGate → AuthSuccess (Home)', name: 'AuthBloc');
+            break; // fall through to AuthSuccess
         }
       }
       dev.log('Login successful, profile complete, and paired.',
@@ -247,29 +231,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             name: user.displayName ?? 'Google User',
             email: user.email ?? '',
           );
-          userDoc = await _authService.getUserProfile(user.uid);
         }
 
-        if (userDoc != null) {
-          final isProfileComplete =
-              (userDoc['profileComplete'] as bool? ?? false) ||
-                  (userDoc['nickname'] as String? ?? '').isNotEmpty;
-          if (!isProfileComplete) {
-            dev.log('Google User logged in but profile is not completed.',
+        // Use centralized ProfileGateService for navigation decision
+        final decision = await ProfileGateService.instance
+            .getNavigationDecision(user.uid);
+
+        switch (decision) {
+          case NavigationDecision.goToProfileSetup:
+            dev.log('ProfileGate → ProfileSetupPending (Google)',
                 name: 'AuthBloc');
             emit(ProfileSetupPendingState());
             return;
-          }
-          final pairStatus = userDoc['pairStatus'] as String? ?? 'none';
-          if (pairStatus != 'paired' && pairStatus != 'unpaired') {
-            dev.log('Google User logged in but pairing is pending.',
+          case NavigationDecision.goToPairing:
+            dev.log('ProfileGate → PairingPending (Google)',
                 name: 'AuthBloc');
             emit(PairingPendingState());
             return;
-          }
-        } else {
-          emit(ProfileSetupPendingState());
-          return;
+          case NavigationDecision.goToHome:
+            dev.log('ProfileGate → AuthSuccess (Google)', name: 'AuthBloc');
+            break; // fall through to AuthSuccess
         }
       }
 
@@ -327,6 +308,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       await _authService.saveProfileSetup(
         nickname: event.nickname,
         avatarUrl: avatarUrl,
+        gender: event.gender,
       );
       emit(ProfileSetupSuccess());
     } catch (e, stack) {

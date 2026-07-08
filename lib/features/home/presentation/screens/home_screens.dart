@@ -309,8 +309,8 @@ class HomeScreenView extends StatelessWidget {
                             ],
                           ],
 
-                          // Solo mode — Quick Action Dock still shown
-                          if (!state.isPaired) ...[
+                          // Paired mode — Quick Action Dock shown
+                          if (state.isPaired) ...[
                             UIHelper.verticalSpace(24.h),
                             const QuickActionDock(),
                           ],
@@ -337,12 +337,18 @@ class HomeScreenView extends StatelessWidget {
               bottom: 124.h,
               child: BlocBuilder<HomeBloc, HomeState>(
                 builder: (context, state) {
-                  if (state is HomeLoaded && state.isPaired && state.coupleId != null) {
+                  if (state is HomeLoaded &&
+                      state.isPaired &&
+                      state.coupleId != null) {
                     final parts = state.coupleId!.split('_');
-                    final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
-                    final partnerUid = parts.firstWhere((id) => id != currentUserId, orElse: () => '');
+                    final currentUserId =
+                        FirebaseAuth.instance.currentUser?.uid ?? '';
+                    final partnerUid = parts.firstWhere(
+                        (id) => id != currentUserId,
+                        orElse: () => '');
                     if (partnerUid.isNotEmpty) {
-                      return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                      return StreamBuilder<
+                          DocumentSnapshot<Map<String, dynamic>>>(
                         stream: FirebaseFirestore.instance
                             .collection('conversations')
                             .doc(state.coupleId)
@@ -351,9 +357,13 @@ class HomeScreenView extends StatelessWidget {
                           int unreadCount = 0;
                           if (snapshot.hasData && snapshot.data!.exists) {
                             final data = snapshot.data!.data();
-                            final unreadCounts = data?['unreadCounts'] as Map<String, dynamic>?;
+                            final unreadCounts =
+                                data?['unreadCounts'] as Map<String, dynamic>?;
                             if (unreadCounts != null) {
-                              unreadCount = (unreadCounts[currentUserId] as num?)?.toInt() ?? 0;
+                              unreadCount =
+                                  (unreadCounts[currentUserId] as num?)
+                                          ?.toInt() ??
+                                      0;
                             }
                           }
 
@@ -377,13 +387,17 @@ class HomeScreenView extends StatelessWidget {
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     gradient: const LinearGradient(
-                                      colors: [AppColors.primaryPink, AppColors.primaryPurple],
+                                      colors: [
+                                        AppColors.primaryPink,
+                                        AppColors.primaryPurple
+                                      ],
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: AppColors.primaryPink.withValues(alpha: 0.35),
+                                        color: AppColors.primaryPink
+                                            .withValues(alpha: 0.35),
                                         blurRadius: 16,
                                         offset: const Offset(0, 6),
                                       ),
@@ -414,7 +428,9 @@ class HomeScreenView extends StatelessWidget {
                                     ),
                                     child: Center(
                                       child: Text(
-                                        unreadCount > 99 ? '99+' : '$unreadCount',
+                                        unreadCount > 99
+                                            ? '99+'
+                                            : '$unreadCount',
                                         style: GoogleFonts.dmSans(
                                           color: Colors.white,
                                           fontSize: 10.sp,
@@ -475,7 +491,8 @@ class HomeScreenView extends StatelessWidget {
               child: RepaintBoundary(
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
-                  transitionBuilder: (Widget child, Animation<double> animation) {
+                  transitionBuilder:
+                      (Widget child, Animation<double> animation) {
                     return ScaleTransition(scale: animation, child: child);
                   },
                   child: Text(
@@ -504,7 +521,8 @@ class HomeScreenView extends StatelessWidget {
                 RepaintBoundary(
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 300),
-                    layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+                    layoutBuilder:
+                        (Widget? currentChild, List<Widget> previousChildren) {
                       return Stack(
                         alignment: Alignment.centerLeft,
                         children: <Widget>[
@@ -513,7 +531,8 @@ class HomeScreenView extends StatelessWidget {
                         ],
                       );
                     },
-                    transitionBuilder: (Widget child, Animation<double> animation) {
+                    transitionBuilder:
+                        (Widget child, Animation<double> animation) {
                       return FadeTransition(
                         opacity: animation,
                         child: SlideTransition(
@@ -596,7 +615,7 @@ class HomeScreenView extends StatelessWidget {
               ),
               UIHelper.verticalSpace(6.h),
               Text(
-                "Share your invite code or enter your partner's code from Settings → Account & Pairing",
+                "Tap here to share your invite code or enter your partner's code to pair up.",
                 textAlign: TextAlign.center,
                 style: GoogleFonts.dmSans(
                   color: Colors.white.withValues(alpha: 0.4),
@@ -607,13 +626,13 @@ class HomeScreenView extends StatelessWidget {
               if (inviteCode != null && inviteCode.isNotEmpty) ...[
                 UIHelper.verticalSpace(20.h),
                 Container(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: 20.w, vertical: 10.h),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.03),
                     borderRadius: BorderRadius.circular(16.r),
-                    border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.08)),
+                    border:
+                        Border.all(color: Colors.white.withValues(alpha: 0.08)),
                   ),
                   child: Text(
                     inviteCode,

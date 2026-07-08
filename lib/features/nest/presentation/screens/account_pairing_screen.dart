@@ -3,6 +3,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:bea_window_app/features/auth/services/firebase_auth_service.dart';
+import 'package:bea_window_app/common_widgets/bae_loader.dart';
+import 'package:bea_window_app/helpers/all_routes.dart';
 
 import '../widgets/unpair_dialog.dart';
 import '../widgets/delete_account_dialogs.dart';
@@ -18,17 +22,50 @@ class AccountPairingScreen extends StatefulWidget {
 }
 
 class _AccountPairingScreenState extends State<AccountPairingScreen> {
-  final String _userEmail = "rafiq@email.com";
+  final String _userEmail = FirebaseAuth.instance.currentUser?.email ?? '';
 
   void _showUnpairDialog() {
     showDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.85),
       builder: (context) => UnpairDialog(
-        onConfirm: (password) =>
-            _showDoneSnackbar("You have unpaired from Bae."),
+        onConfirm: (password) => _handleUnpair(password),
       ),
     );
+  }
+
+  Future<void> _handleUnpair(String password) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: BaeLoader()),
+    );
+
+    try {
+      await FirebaseAuthService().unpairCouple(password);
+      if (mounted) Navigator.pop(context); // Pop loading spinner
+
+      if (mounted) {
+        AppToast.show(
+          context,
+          title: "Account Action",
+          message: "You have unpaired from Bae.",
+          type: ToastType.success,
+        );
+        Navigator.pop(context); // Go back to NestScreen
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context); // Pop loading spinner
+
+      if (mounted) {
+        AppToast.show(
+          context,
+          title: "Verification Failed",
+          message: "Incorrect password. Please try again.",
+          type: ToastType.error,
+        );
+      }
+    }
   }
 
   void _showDeleteAccountFlow() {
@@ -37,29 +74,57 @@ class _AccountPairingScreenState extends State<AccountPairingScreen> {
       barrierColor: Colors.black.withValues(alpha: 0.85),
       builder: (context) => DeleteAccountVerifyDialog(
         email: _userEmail,
-        onVerify: (password) => _showDeleteAccountConfirmDialog(),
+        onVerify: (password) => _showDeleteAccountConfirmDialog(password),
       ),
     );
   }
 
-  void _showDeleteAccountConfirmDialog() {
+  void _showDeleteAccountConfirmDialog(String password) {
     showDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.85),
       builder: (context) => DeleteAccountConfirmDialog(
-        onDeleteForever: () =>
-            _showDoneSnackbar("Your account has been deleted."),
+        onDeleteForever: () => _handleDeleteAccount(password),
       ),
     );
   }
 
-  void _showDoneSnackbar(String text) {
-    AppToast.show(
-      context,
-      title: "Account Action",
-      message: text,
-      type: ToastType.error,
+  Future<void> _handleDeleteAccount(String password) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: BaeLoader()),
     );
+
+    try {
+      await FirebaseAuthService().deleteUserAccount(password);
+      if (mounted) Navigator.pop(context); // Pop loading spinner
+
+      if (mounted) {
+        AppToast.show(
+          context,
+          title: "Account Deleted",
+          message: "Your account has been deleted permanently.",
+          type: ToastType.success,
+        );
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          Routes.loginScreen,
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context); // Pop loading spinner
+
+      if (mounted) {
+        AppToast.show(
+          context,
+          title: "Action Failed",
+          message: "Incorrect password or failed to delete account. Please try again.",
+          type: ToastType.error,
+        );
+      }
+    }
   }
 
   @override

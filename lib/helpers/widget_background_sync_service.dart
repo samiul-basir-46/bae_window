@@ -53,6 +53,11 @@ class WidgetBackgroundSyncService {
       widgetBackgroundSyncDispatcher,
     );
 
+    // Cancel existing periodic sync task to stop background Firestore reads
+    await Workmanager().cancelByUniqueName(_widgetHourlySyncUniqueName);
+    dev.log('Cancelled widget hourly sync periodic task.', name: 'WidgetBackgroundSyncService');
+
+    /*
     await Workmanager().registerPeriodicTask(
       _widgetHourlySyncUniqueName,
       widgetHourlySyncTask,
@@ -61,5 +66,6 @@ class WidgetBackgroundSyncService {
       constraints: Constraints(networkType: NetworkType.connected),
       existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
     );
+    */
   }
 }

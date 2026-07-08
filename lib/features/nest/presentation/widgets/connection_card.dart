@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
+import 'package:bea_window_app/common_widgets/floating_bubbles_background.dart';
 import '../bloc/nest_bloc.dart';
 import '../bloc/nest_event.dart';
 
@@ -60,18 +61,11 @@ class _ConnectionCardState extends State<ConnectionCard>
     ]).animate(CurvedAnimation(parent: _controller, curve: Curves.linear));
 
     _controller.addListener(() {
-      // Swap z-index at the peak (0.5 progress) of separation
-      if (_controller.value >= 0.48 && _controller.value <= 0.52) {
-        if (_controller.status == AnimationStatus.forward && _isLeftOnTop) {
-          setState(() {
-            _isLeftOnTop = false;
-          });
-        } else if (_controller.status == AnimationStatus.reverse &&
-            !_isLeftOnTop) {
-          setState(() {
-            _isLeftOnTop = true;
-          });
-        }
+      final isPastHalfway = _controller.value >= 0.5;
+      if (isPastHalfway != !_isLeftOnTop) {
+        setState(() {
+          _isLeftOnTop = !isPastHalfway;
+        });
       }
     });
 
@@ -107,27 +101,17 @@ class _ConnectionCardState extends State<ConnectionCard>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: widget.onTap,
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.all(20.r),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.02),
-          borderRadius: BorderRadius.circular(24.r),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.05),
-            width: 1.w,
-          ),
-        ),
-        child: Row(
-          children: [
-            GestureDetector(
-              onTap: _triggerCircleSwap,
-              behavior: HitTestBehavior.opaque,
-              child: SizedBox(
-                width: 72.w,
-                height: 48.h,
+    final Widget cardContent = Padding(
+      padding: EdgeInsets.all(20.r),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: _triggerCircleSwap,
+            behavior: HitTestBehavior.opaque,
+            child: SizedBox(
+              width: 72.w,
+              height: 48.h,
+              child: RepaintBoundary(
                 child: AnimatedBuilder(
                   animation: _controller,
                   builder: (context, child) {
@@ -255,40 +239,74 @@ class _ConnectionCardState extends State<ConnectionCard>
                 ),
               ),
             ),
-            SizedBox(width: 16.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.isPaired
-                        ? "You & ${widget.partnerName}"
-                        : "Solo Mode",
-                    style: GoogleFonts.dmSans(
-                      color: Colors.white,
-                      fontSize: 15.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
+          ),
+          SizedBox(width: 16.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.isPaired
+                      ? "You & ${widget.partnerName}"
+                      : "Solo Mode",
+                  style: GoogleFonts.dmSans(
+                    color: Colors.white,
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.bold,
                   ),
-                  UIHelper.verticalSpace(4.h),
-                  Text(
-                    widget.isPaired
-                        ? "Tap circles to swap, tap card for profile"
-                        : "Connect with partner to share your space",
-                    style: GoogleFonts.dmSans(
-                      color: Colors.white38,
-                      fontSize: 11.sp,
-                    ),
+                ),
+                UIHelper.verticalSpace(4.h),
+                Text(
+                  widget.isPaired
+                      ? "Tap circles to swap, tap card for profile"
+                      : "Connect with partner to unlock your shared space ✦",
+                  style: GoogleFonts.dmSans(
+                    color: Colors.white38,
+                    fontSize: 11.sp,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: Colors.white24,
-              size: 20.sp,
-            ),
-          ],
+          ),
+          Icon(
+            Icons.chevron_right_rounded,
+            color: Colors.white24,
+            size: 20.sp,
+          ),
+        ],
+      ),
+    );
+
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: widget.isPaired
+              ? null
+              : LinearGradient(
+                  colors: [
+                    const Color(0xFF9868FF).withValues(alpha: 0.08),
+                    const Color(0xFFFF6E7F).withValues(alpha: 0.08),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+          color: widget.isPaired ? Colors.white.withValues(alpha: 0.02) : null,
+          borderRadius: BorderRadius.circular(24.r),
+          border: Border.all(
+            color: widget.isPaired
+                ? Colors.white.withValues(alpha: 0.05)
+                : const Color(0xFFFF6E7F).withValues(alpha: 0.15),
+            width: 1.w,
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24.r),
+          child: FloatingBubblesBackground(
+            bubbleColor: const Color(0xFFFF8FB8),
+            child: cardContent,
+          ),
         ),
       ),
     );

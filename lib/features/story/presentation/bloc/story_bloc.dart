@@ -1,203 +1,246 @@
+import 'dart:async';
+import 'dart:developer' as dev;
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:bea_window_app/features/space_screen/services/realtime_sync_service.dart';
+import 'package:bea_window_app/features/auth/services/cloudinary_service.dart';
 import 'story_event.dart';
 import 'story_state.dart';
 
 class StoryBloc extends Bloc<StoryEvent, StoryState> {
+  final RealtimeSyncService _syncService = RealtimeSyncService();
+
+  String? _coupleId;
+  String? _currentUserUid;
+  String? _currentUserName;
+  String? _partnerName;
+
   StoryBloc() : super(const StoryInitial()) {
-    on<LoadMemoriesEvent>((event, emit) {
-      emit(const StoryLoading());
-      emit(StoryLoaded(
-        memories: _mockMemories,
-        selectedFilter: StoryFilter.all,
-        isVaultUnlocked: false,
-        vaultPin: null, // initially null / not configured
-        isBiometricsEnabled: false,
-      ));
-    });
-
-    on<ChangeFilterEvent>((event, emit) {
-      if (state is StoryLoaded) {
-        final loadedState = state as StoryLoaded;
-        emit(loadedState.copyWith(selectedFilter: event.filter));
-      }
-    });
-
-    on<AddMemoryEvent>((event, emit) {
-      if (state is StoryLoaded) {
-        final loadedState = state as StoryLoaded;
-        final now = DateTime.now();
-        final months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        final dateString = "${months[now.month - 1]} ${now.day}, ${now.year}";
-
-        final newItem = MemoryItem(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          imageUrl: event.imageUrl,
-          title: event.title,
-          note: event.note,
-          dateString: dateString,
-          dateTime: now,
-          uploadedBy: "You",
-          isMilestone: event.isMilestone,
-          isPrivate: event.isPrivate,
-          layoutType: event.layoutType,
-        );
-
-        final updatedMemories = [newItem, ...loadedState.memories];
-        emit(loadedState.copyWith(memories: updatedMemories));
-      }
-    });
-
-    on<UnlockVaultEvent>((event, emit) {
-      if (state is StoryLoaded) {
-        final loadedState = state as StoryLoaded;
-        emit(loadedState.copyWith(isVaultUnlocked: true));
-      }
-    });
-
-    on<LockVaultEvent>((event, emit) {
-      if (state is StoryLoaded) {
-        final loadedState = state as StoryLoaded;
-        emit(loadedState.copyWith(isVaultUnlocked: false));
-      }
-    });
-
-    on<SetupVaultPinEvent>((event, emit) {
-      if (state is StoryLoaded) {
-        final loadedState = state as StoryLoaded;
-        emit(loadedState.copyWith(
-          vaultPin: event.pin,
-          isBiometricsEnabled: event.enableBiometrics,
-          isVaultUnlocked: true, // Auto unlock after setting up
-        ));
-      }
-    });
-
-    on<ToggleBiometricsEvent>((event, emit) {
-      if (state is StoryLoaded) {
-        final loadedState = state as StoryLoaded;
-        emit(loadedState.copyWith(isBiometricsEnabled: event.enabled));
-      }
-    });
-
-    on<DeleteMemoryEvent>((event, emit) {
-      if (state is StoryLoaded) {
-        final loadedState = state as StoryLoaded;
-        final updated = loadedState.memories.where((m) => m.id != event.id).toList();
-        emit(loadedState.copyWith(memories: updated));
-      }
-    });
-
-    on<EditMemoryNoteEvent>((event, emit) {
-      if (state is StoryLoaded) {
-        final loadedState = state as StoryLoaded;
-        final updated = loadedState.memories.map((m) {
-          if (m.id == event.id) {
-            return m.copyWith(note: event.newNote);
-          }
-          return m;
-        }).toList();
-        emit(loadedState.copyWith(memories: updated));
-      }
-    });
-
-    on<MoveToVaultEvent>((event, emit) {
-      if (state is StoryLoaded) {
-        final loadedState = state as StoryLoaded;
-        final updated = loadedState.memories.map((m) {
-          if (m.id == event.id) {
-            return m.copyWith(isPrivate: event.isPrivate);
-          }
-          return m;
-        }).toList();
-        emit(loadedState.copyWith(memories: updated));
-      }
-    });
+    on<LoadStoriesEvent>(_onLoadStories);
+    on<ChangeFilterEvent>(_onChangeFilter);
+    on<AddMemoryEvent>(_onAddMemory);
+    on<DeleteMemoryEvent>(_onDeleteMemory);
+    on<EditMemoryNoteEvent>(_onEditMemoryNote);
   }
 
-  static final List<MemoryItem> _mockMemories = [
-    MemoryItem(
-      id: "1",
-      imageUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&q=80&w=500",
-      title: "Sunset from the rooftop",
-      note: "Sunset from the rooftop — our spot forever",
-      dateString: "June 22, 2026",
-      dateTime: DateTime(2026, 6, 22),
-      uploadedBy: "You",
-      isMilestone: false,
-      isPrivate: false,
-      layoutType: "full",
-    ),
-    MemoryItem(
-      id: "2",
-      imageUrl: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&q=80&w=300",
-      title: "Morning coffee ritual",
-      note: "Morning coffee ritual",
-      dateString: "June 18, 2026",
-      dateTime: DateTime(2026, 6, 18),
-      uploadedBy: "You",
-      isMilestone: false,
-      isPrivate: false,
-      layoutType: "grid",
-    ),
-    MemoryItem(
-      id: "3",
-      imageUrl: "https://images.unsplash.com/photo-1534274988757-a28bf1a57c17?auto=format&fit=crop&q=80&w=300",
-      title: "Rainy day walks",
-      note: "Rainy day walks",
-      dateString: "June 15, 2026",
-      dateTime: DateTime(2026, 6, 15),
-      uploadedBy: "You",
-      isMilestone: false,
-      isPrivate: false,
-      layoutType: "grid",
-    ),
-    MemoryItem(
-      id: "4",
-      imageUrl: "https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&q=80&w=500",
-      title: "3rd Anniversary",
-      note: "Happy 3rd anniversary my love ❤️",
-      dateString: "Feb 14, 2026",
-      dateTime: DateTime(2026, 2, 14),
-      uploadedBy: "Bae",
-      isMilestone: true,
-      isPrivate: false,
-      layoutType: "full",
-    ),
-    MemoryItem(
-      id: "5",
-      imageUrl: "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=500",
-      title: "First Christmas together",
-      note: "First Christmas together",
-      dateString: "Dec 25, 2025",
-      dateTime: DateTime(2025, 12, 25),
-      uploadedBy: "You",
-      isMilestone: false,
-      isPrivate: true,
-      layoutType: "full",
-    ),
-    MemoryItem(
-      id: "6",
-      imageUrl: "https://images.unsplash.com/photo-1506929562872-bb421503ef21?auto=format&fit=crop&q=80&w=300",
-      title: "Beach day",
-      note: "Beach day",
-      dateString: "Dec 10, 2025",
-      dateTime: DateTime(2025, 12, 10),
-      uploadedBy: "You",
-      isMilestone: false,
-      isPrivate: false,
-      layoutType: "grid",
-    ),
-    MemoryItem(
-      id: "7",
-      imageUrl: "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&q=80&w=300",
-      title: "Late night pizza",
-      note: "Late night pizza",
-      dateString: "Dec 3, 2025",
-      dateTime: DateTime(2025, 12, 3),
-      uploadedBy: "You",
-      isMilestone: false,
-      isPrivate: false,
-      layoutType: "grid",
-    ),
-  ];
+  Future<void> _onLoadStories(
+    LoadStoriesEvent event,
+    Emitter<StoryState> emit,
+  ) async {
+    dev.log('[StoryBloc] Loading stories for coupleId=${event.coupleId}, forceRefresh=${event.forceRefresh}', name: 'StoryBloc');
+    
+    _coupleId = event.coupleId;
+    _currentUserUid = event.currentUserUid;
+    _currentUserName = event.currentUserName;
+    _partnerName = event.partnerName;
+
+    // If we already have stories loaded or uploading and this is not a force refresh,
+    // we return instantly to avoid redundant reads!
+    if ((state is StoryLoaded || state is StoryUploading) && !event.forceRefresh) {
+      dev.log('[StoryBloc] Stories already loaded in state, skipping read operation to save Firestore reads.', name: 'StoryBloc');
+      return;
+    }
+
+    // Show loading state if we are loading for the first time or doing a force refresh
+    emit(const StoryLoading());
+
+    try {
+      final docs = await _syncService.getStories(event.coupleId, forceRefresh: event.forceRefresh);
+      
+      final memories = docs.map((data) {
+        final docId = data['id'] as String? ?? '';
+        final creatorUid = data['uploadedByUid'] as String? ?? '';
+        
+        final uploadedBy = (creatorUid == _currentUserUid)
+            ? "You"
+            : _partnerName ?? "Bae";
+
+        final ts = data['dateTime'] as Timestamp?;
+        final dateTime = ts?.toDate() ?? DateTime.now();
+
+        final months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        final dateString = "${months[dateTime.month - 1]} ${dateTime.day}, ${dateTime.year}";
+
+        final mainUrl = data['imageUrl'] as String? ?? '';
+        final rawImages = data['images'] as List<dynamic>?;
+        final images = rawImages != null
+            ? rawImages.map((e) => e.toString()).toList()
+            : [mainUrl].where((url) => url.isNotEmpty).toList();
+
+        return MemoryItem(
+          id: docId,
+          imageUrl: mainUrl,
+          images: images,
+          title: data['title'] as String? ?? '',
+          note: data['note'] as String? ?? '',
+          dateString: dateString,
+          dateTime: dateTime,
+          uploadedBy: uploadedBy,
+          isMilestone: data['isMilestone'] as bool? ?? false,
+          layoutType: data['layoutType'] as String? ?? 'full',
+        );
+      }).toList();
+
+      final currentFilter = (state is StoryLoaded)
+          ? (state as StoryLoaded).selectedFilter
+          : ((state is StoryUploading) ? (state as StoryUploading).selectedFilter : StoryFilter.all);
+
+      emit(StoryLoaded(
+        memories: memories,
+        selectedFilter: currentFilter,
+      ));
+    } catch (e) {
+      dev.log('[StoryBloc] Error loading stories: $e', name: 'StoryBloc');
+      emit(StoryError("Failed to load stories: $e"));
+    }
+  }
+
+  void _onChangeFilter(
+    ChangeFilterEvent event,
+    Emitter<StoryState> emit,
+  ) {
+    if (state is StoryLoaded) {
+      final loadedState = state as StoryLoaded;
+      emit(loadedState.copyWith(selectedFilter: event.filter));
+    } else if (state is StoryUploading) {
+      final uploadState = state as StoryUploading;
+      emit(StoryUploading(
+        memories: uploadState.memories,
+        selectedFilter: event.filter,
+        progressMessage: uploadState.progressMessage,
+      ));
+    }
+  }
+
+  Future<void> _onAddMemory(
+    AddMemoryEvent event,
+    Emitter<StoryState> emit,
+  ) async {
+    if (_coupleId == null || _currentUserUid == null) return;
+
+    final List<MemoryItem> currentMemories = (state is StoryLoaded)
+        ? (state as StoryLoaded).memories
+        : ((state is StoryUploading) ? (state as StoryUploading).memories : []);
+
+    final StoryFilter currentFilter = (state is StoryLoaded)
+        ? (state as StoryLoaded).selectedFilter
+        : ((state is StoryUploading) ? (state as StoryUploading).selectedFilter : StoryFilter.all);
+
+    try {
+      final List<String> images = [];
+      String mainImageUrl = "";
+
+      // 1. Emit progress: Uploading primary cover image
+      emit(StoryUploading(
+        memories: currentMemories,
+        selectedFilter: currentFilter,
+        progressMessage: "Uploading cover photo... 📸",
+      ));
+
+      if (event.imageFile != null) {
+        dev.log('[StoryBloc] Uploading primary memory image file to Cloudinary...', name: 'StoryBloc');
+        final uploadedUrl = await CloudinaryService.uploadImage(event.imageFile!);
+        if (uploadedUrl != null) {
+          mainImageUrl = uploadedUrl;
+          images.add(uploadedUrl);
+        } else {
+          throw Exception("Primary image upload failed");
+        }
+      }
+
+      // 2. Upload additional images and emit progress for each
+      for (int i = 0; i < event.additionalImageFiles.length; i++) {
+        emit(StoryUploading(
+          memories: currentMemories,
+          selectedFilter: currentFilter,
+          progressMessage: "Uploading photo ${i + 1} of ${event.additionalImageFiles.length}... 🌸",
+        ));
+
+        final extraFile = event.additionalImageFiles[i];
+        dev.log('[StoryBloc] Uploading additional memory image file to Cloudinary...', name: 'StoryBloc');
+        final uploadedUrl = await CloudinaryService.uploadImage(extraFile);
+        if (uploadedUrl != null) {
+          images.add(uploadedUrl);
+        } else {
+          dev.log('[StoryBloc] Additional Cloudinary upload failed, skipping', name: 'StoryBloc');
+        }
+      }
+
+      // 3. Emit progress: Saving to Firestore
+      emit(StoryUploading(
+        memories: currentMemories,
+        selectedFilter: currentFilter,
+        progressMessage: "Saving memory lane... 💾",
+      ));
+
+      await _syncService.addStory(
+        coupleId: _coupleId!,
+        title: event.title,
+        note: event.note,
+        imageUrl: mainImageUrl,
+        images: images,
+        isMilestone: event.isMilestone,
+        uploadedByUid: _currentUserUid!,
+        layoutType: event.layoutType,
+      );
+
+      // Force refresh feed to display the newly added memory instantly
+      add(LoadStoriesEvent(
+        coupleId: _coupleId!,
+        currentUserUid: _currentUserUid!,
+        currentUserName: _currentUserName ?? "You",
+        partnerName: _partnerName ?? "Bae",
+        forceRefresh: true,
+      ));
+    } catch (e) {
+      dev.log('[StoryBloc] Error adding memory: $e', name: 'StoryBloc');
+      emit(StoryLoaded(memories: currentMemories, selectedFilter: currentFilter));
+    }
+  }
+
+  Future<void> _onDeleteMemory(
+    DeleteMemoryEvent event,
+    Emitter<StoryState> emit,
+  ) async {
+    if (_coupleId == null || _currentUserUid == null) return;
+    try {
+      await _syncService.deleteStory(_coupleId!, event.id);
+
+      // Force refresh feed to instantly reflect changes
+      add(LoadStoriesEvent(
+        coupleId: _coupleId!,
+        currentUserUid: _currentUserUid!,
+        currentUserName: _currentUserName ?? "You",
+        partnerName: _partnerName ?? "Bae",
+        forceRefresh: true,
+      ));
+    } catch (e) {
+      dev.log('[StoryBloc] Error deleting memory: $e', name: 'StoryBloc');
+    }
+  }
+
+  Future<void> _onEditMemoryNote(
+    EditMemoryNoteEvent event,
+    Emitter<StoryState> emit,
+  ) async {
+    if (_coupleId == null || _currentUserUid == null) return;
+    try {
+      await _syncService.updateStoryNote(
+        coupleId: _coupleId!,
+        storyId: event.id,
+        newNote: event.newNote,
+      );
+
+      // Force refresh feed to instantly reflect edits
+      add(LoadStoriesEvent(
+        coupleId: _coupleId!,
+        currentUserUid: _currentUserUid!,
+        currentUserName: _currentUserName ?? "You",
+        partnerName: _partnerName ?? "Bae",
+        forceRefresh: true,
+      ));
+    } catch (e) {
+      dev.log('[StoryBloc] Error updating memory note: $e', name: 'StoryBloc');
+    }
+  }
 }

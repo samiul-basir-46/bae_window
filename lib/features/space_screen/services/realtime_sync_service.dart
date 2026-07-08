@@ -203,9 +203,83 @@ class RealtimeSyncService {
     await _cache.remove(_momentsCacheKey(coupleId));
   }
 
+  Future<List<Map<String, dynamic>>> getStories(String coupleId, {bool forceRefresh = false}) {
+    final query = _firestore
+        .collection('couples')
+        .doc(coupleId)
+        .collection('stories')
+        .orderBy('dateTime', descending: true)
+        .limit(50);
+
+    return _cache.getCollection(
+      query: query,
+      cacheKey: _storiesCacheKey(coupleId),
+      ttl: const Duration(minutes: 10), // Cache for 10 minutes to save reads
+      forceRefresh: forceRefresh,
+    );
+  }
+
+  Future<void> addStory({
+    required String coupleId,
+    required String title,
+    required String note,
+    required String imageUrl,
+    required List<String> images,
+    required bool isMilestone,
+    required String uploadedByUid,
+    required String layoutType,
+  }) async {
+    final docRef = _firestore
+        .collection('couples')
+        .doc(coupleId)
+        .collection('stories')
+        .doc();
+
+    await docRef.set({
+      'id': docRef.id,
+      'title': title,
+      'note': note,
+      'imageUrl': imageUrl,
+      'images': images,
+      'isMilestone': isMilestone,
+      'uploadedByUid': uploadedByUid,
+      'layoutType': layoutType,
+      'dateTime': FieldValue.serverTimestamp(),
+    });
+    await _cache.remove(_storiesCacheKey(coupleId));
+  }
+
+  Future<void> updateStoryNote({
+    required String coupleId,
+    required String storyId,
+    required String newNote,
+  }) async {
+    await _firestore
+        .collection('couples')
+        .doc(coupleId)
+        .collection('stories')
+        .doc(storyId)
+        .update({
+      'note': newNote,
+    });
+    await _cache.remove(_storiesCacheKey(coupleId));
+  }
+
+  Future<void> deleteStory(String coupleId, String storyId) async {
+    await _firestore
+        .collection('couples')
+        .doc(coupleId)
+        .collection('stories')
+        .doc(storyId)
+        .delete();
+    await _cache.remove(_storiesCacheKey(coupleId));
+  }
+
   String _bucketCacheKey(String coupleId) => 'couples/$coupleId/bucket_list';
 
   String _tasksCacheKey(String coupleId) => 'couples/$coupleId/tasks';
 
   String _momentsCacheKey(String coupleId) => 'couples/$coupleId/moments';
+
+  String _storiesCacheKey(String coupleId) => 'couples/$coupleId/stories';
 }

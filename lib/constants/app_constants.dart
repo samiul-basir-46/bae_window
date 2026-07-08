@@ -51,4 +51,5 @@ const String kKeyUserID = 'user_id';
 const String kKeyIsExploring = 'exploring';
 //kKeyFCMToken
 const String kKeyFCMToken = 'firebase_token';
-//order statuses
+
+const String kKeyUnreadMessages = 'unread_msgs_';

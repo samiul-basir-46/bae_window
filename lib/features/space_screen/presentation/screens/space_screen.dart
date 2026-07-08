@@ -15,6 +15,8 @@ import '../widgets/activity_feed.dart';
 import 'package:bea_window_app/common_widgets/custom_date_picker.dart';
 import 'package:bea_window_app/common_widgets/bae_loader.dart';
 import 'package:bea_window_app/common_widgets/app_toast.dart';
+import 'package:bea_window_app/common_widgets/floating_bubbles_background.dart';
+import 'package:bea_window_app/helpers/all_routes.dart';
 
 class SpaceScreen extends StatelessWidget {
   const SpaceScreen({super.key});
@@ -22,7 +24,8 @@ class SpaceScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<SpaceScreenBloc>(
-      create: (context) => SpaceScreenBloc()..add(const LoadSpaceScreenDataEvent()),
+      create: (context) =>
+          SpaceScreenBloc()..add(const LoadSpaceScreenDataEvent()),
       child: const SpaceScreenView(),
     );
   }
@@ -31,7 +34,8 @@ class SpaceScreen extends StatelessWidget {
 class SpaceScreenView extends StatelessWidget {
   const SpaceScreenView({super.key});
 
-  Future<void> _selectAnniversary(BuildContext context, DateTime? currentDate) async {
+  Future<void> _selectAnniversary(
+      BuildContext context, DateTime? currentDate) async {
     final now = DateTime.now();
     final pickedDate = await CustomDatePicker.show(
       context,
@@ -91,14 +95,16 @@ class SpaceScreenView extends StatelessWidget {
           SafeArea(
             child: BlocBuilder<SpaceScreenBloc, SpaceScreenState>(
               builder: (context, state) {
-                if (state is SpaceScreenLoading || state is SpaceScreenInitial) {
+                if (state is SpaceScreenLoading ||
+                    state is SpaceScreenInitial) {
                   return const Center(
                     child: BaeLoader(),
                   );
                 } else if (state is SpaceScreenLoaded) {
                   return SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
-                    padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -109,7 +115,8 @@ class SpaceScreenView extends StatelessWidget {
                         // Connection Center Card (with anniversary count down)
                         LoveConnectionCard(
                           anniversaryDate: state.anniversaryDate,
-                          onTapSelectAnniversary: () => _selectAnniversary(context, state.anniversaryDate),
+                          onTapSelectAnniversary: () => _selectAnniversary(
+                              context, state.anniversaryDate),
                         ),
                         UIHelper.verticalSpace(28.h),
 
@@ -124,16 +131,19 @@ class SpaceScreenView extends StatelessWidget {
                           ),
                         ),
                         UIHelper.verticalSpace(12.h),
-                         QuickActionGrid(
+                        QuickActionGrid(
                           taskProgress: state.taskProgress,
                           nextTaskTitle: state.nextTaskTitle,
                           partnerNickname: state.partnerNickname,
                           onSendLoveNote: (note) {
-                            context.read<SpaceScreenBloc>().add(SendSpaceLoveNoteEvent(note));
+                            context
+                                .read<SpaceScreenBloc>()
+                                .add(SendSpaceLoveNoteEvent(note));
                             AppToast.show(
                               context,
                               title: "Love Note Sent 💌",
-                              message: "Sent successfully to ${state.partnerNickname}!",
+                              message:
+                                  "Sent successfully to ${state.partnerNickname}!",
                               type: ToastType.success,
                             );
                           },
@@ -153,7 +163,8 @@ class SpaceScreenView extends StatelessWidget {
                                 letterSpacing: 1.2,
                               ),
                             ),
-                            Icon(Icons.swap_vert_rounded, color: Colors.white24, size: 14.sp),
+                            Icon(Icons.swap_vert_rounded,
+                                color: Colors.white24, size: 14.sp),
                           ],
                         ),
                         UIHelper.verticalSpace(12.h),
@@ -163,18 +174,107 @@ class SpaceScreenView extends StatelessWidget {
                     ),
                   );
                 } else if (state is SpaceScreenError) {
-                  return Center(
-                    child: Text(
-                      state.message,
-                      style: GoogleFonts.dmSans(color: Colors.redAccent, fontSize: 14.sp),
-                    ),
-                  );
+                  return _buildUnpairedView(context, state.message);
                 }
                 return const SizedBox.shrink();
               },
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildUnpairedView(BuildContext context, String message) {
+    return FloatingBubblesBackground(
+      bubbleColor: AppColors.primaryPink,
+      child: Center(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: EdgeInsets.symmetric(horizontal: 32.w),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: EdgeInsets.all(24.r),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryPink.withValues(alpha: 0.08),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.primaryPink.withValues(alpha: 0.15),
+                    width: 2.w,
+                  ),
+                ),
+                child: Icon(
+                  Icons.favorite_rounded,
+                  color: AppColors.primaryPink,
+                  size: 48.sp,
+                ),
+              ),
+              UIHelper.verticalSpace(32.h),
+              Text(
+                "Your Space Awaits",
+                style: GoogleFonts.dmSans(
+                  color: Colors.white,
+                  fontSize: 24.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              UIHelper.verticalSpace(12.h),
+              Text(
+                "Connect with your partner to share live photos, send love notes, list your bucket list, and count down your special days together.",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.dmSans(
+                  color: Colors.white54,
+                  fontSize: 13.sp,
+                  height: 1.5,
+                ),
+              ),
+              UIHelper.verticalSpace(40.h),
+              GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(context, Routes.pairingScreen);
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(vertical: 16.h),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppColors.primaryPurple, AppColors.primaryPink],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primaryPink.withValues(alpha: 0.25),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.link_rounded,
+                          color: Colors.white, size: 18.sp),
+                      SizedBox(width: 8.w),
+                      Text(
+                        "Pair with Partner",
+                        style: GoogleFonts.dmSans(
+                          color: Colors.white,
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

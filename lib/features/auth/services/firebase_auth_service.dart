@@ -1,16 +1,18 @@
 import 'dart:async';
 import 'dart:developer' as dev;
-import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:bea_window_app/helpers/firestore_cache_service.dart';
 import 'package:intl/intl.dart';
 import '../../../helpers/notification_service.dart';
+import 'firebase_pairing_service.dart';
+import 'profile_gate_service.dart';
 
 class FirebaseAuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirestoreCacheService _cache = FirestoreCacheService.instance;
+  final FirebasePairingService _pairingService = FirebasePairingService();
 
   User? get currentUser => _auth.currentUser;
 
@@ -93,16 +95,41 @@ class FirebaseAuthService {
   Future<void> saveProfileSetup({
     required String nickname,
     required String avatarUrl,
+    required String gender,
   }) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception('No authenticated user found.');
 
-    await _firestore.collection('users').doc(user.uid).set({
+    final updateData = {
       'nickname': nickname,
       'profilePicture': avatarUrl,
       'profileComplete': true,
-    }, SetOptions(merge: true));
-    await _cache.remove(_userCacheKey(user.uid));
+      'gender': gender,
+    };
+
+    await _firestore.collection('users').doc(user.uid).set(
+      updateData,
+      SetOptions(merge: true),
+    );
+
+    // Pre-seed the cache with the merged document instead of just invalidating.
+    // This ensures the next getDocument() call returns the updated data
+    // even if the server is temporarily unreachable.
+    try {
+      final freshDoc = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .get(const GetOptions(source: Source.cache));
+      if (freshDoc.exists && freshDoc.data() != null) {
+        await _cache.write(_userCacheKey(user.uid), freshDoc.data()!);
+      }
+    } catch (_) {
+      // If cache read fails, just remove. The local flag will protect us.
+      await _cache.remove(_userCacheKey(user.uid));
+    }
+
+    // Mark as complete via centralized ProfileGateService — the definitive flag
+    ProfileGateService.instance.markProfileComplete(user.uid);
 
     if (avatarUrl.isNotEmpty) {
       await user.updatePhotoURL(avatarUrl);
@@ -110,92 +137,52 @@ class FirebaseAuthService {
   }
 
   /// Generate a unique 6-character invite code
-  Future<String> generateInviteCode() async {
-    final user = _auth.currentUser;
-    if (user == null) throw Exception('No authenticated user found.');
-
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    final random = Random();
-    String code;
-    bool codeExists = true;
-
-    do {
-      code = List.generate(6, (index) => chars[random.nextInt(chars.length)])
-          .join();
-      final doc = await _firestore.collection('pairing_codes').doc(code).get();
-      codeExists = doc.exists;
-    } while (codeExists);
-
-    await _firestore.collection('pairing_codes').doc(code).set({
-      'createdBy': user.uid,
-      'createdAt': FieldValue.serverTimestamp(),
-      'used': false,
-    });
-
-    await _firestore.collection('users').doc(user.uid).set({
-      'inviteCode': code,
-    }, SetOptions(merge: true));
-    await _cache.remove(_userCacheKey(user.uid));
-
-    return code;
-  }
+  Future<String> generateInviteCode() => _pairingService.generateInviteCode();
 
   /// Join with partner's invite code
-  Future<void> joinWithCode(String code) async {
-    final user = _auth.currentUser;
-    if (user == null) throw Exception('No authenticated user found.');
-
-    final codeDoc =
-        await _firestore.collection('pairing_codes').doc(code).get();
-    if (!codeDoc.exists) {
-      throw Exception('Invalid verification code.');
-    }
-
-    final data = codeDoc.data()!;
-    if (data['used'] == true) {
-      throw Exception('This code has already been used.');
-    }
-
-    final partnerUid = data['createdBy'] as String;
-    if (partnerUid == user.uid) {
-      throw Exception('You cannot pair with your own invite code.');
-    }
-
-    final coupleId = '${partnerUid}_${user.uid}';
-
-    await _firestore.collection('couples').doc(coupleId).set({
-      'user1Uid': partnerUid,
-      'user2Uid': user.uid,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-
-    await _firestore.collection('pairing_codes').doc(code).set({
-      'used': true,
-    }, SetOptions(merge: true));
-
-    await _firestore.collection('users').doc(user.uid).set({
-      'pairId': coupleId,
-      'pairStatus': 'paired',
-    }, SetOptions(merge: true));
-
-    await _firestore.collection('users').doc(partnerUid).set({
-      'pairId': coupleId,
-      'pairStatus': 'paired',
-    }, SetOptions(merge: true));
-    await _cache.remove(_userCacheKey(user.uid));
-    await _cache.remove(_userCacheKey(partnerUid));
-    await _cache.remove(_coupleCacheKey(coupleId));
-  }
+  Future<void> joinWithCode(String code) => _pairingService.joinWithCode(code);
 
   /// Skip pairing step
-  Future<void> skipPairing() async {
+  Future<void> skipPairing() => _pairingService.skipPairing();
+
+  /// Unpair from the partner. Requires reauthentication with current user's password.
+  Future<void> unpairCouple(String password) => _pairingService.unpairCouple(password);
+
+  /// Delete user account permanently after reauthentication.
+  /// If the user is currently paired, they will be unpaired first.
+  Future<void> deleteUserAccount(String password) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception('No authenticated user found.');
 
-    await _firestore.collection('users').doc(user.uid).set({
-      'pairStatus': 'unpaired',
-    }, SetOptions(merge: true));
-    await _cache.remove(_userCacheKey(user.uid));
+    final email = user.email;
+    if (email == null) throw Exception('User email is missing.');
+
+    // 1. Reauthenticate
+    final credential = EmailAuthProvider.credential(
+      email: email,
+      password: password,
+    );
+    await user.reauthenticateWithCredential(credential);
+
+    final uid = user.uid;
+    final userDoc = await _firestore.collection('users').doc(uid).get();
+    if (userDoc.exists && userDoc.data() != null) {
+      final data = userDoc.data()!;
+      final pairStatus = data['pairStatus'] as String? ?? 'none';
+      final pairId = data['pairId'] as String?;
+
+      // 2. If paired, unpair them first
+      if (pairStatus == 'paired' && pairId != null) {
+        await _pairingService.unpairCouple(password);
+      }
+    }
+
+    // 3. Delete Firestore user document and clear cache
+    await _firestore.collection('users').doc(uid).delete();
+    await _cache.remove(_userCacheKey(uid));
+
+    // 4. Delete user permanently from Firebase Auth
+    await user.delete();
   }
 
   /// Retrieve user profile details from Firestore
@@ -212,14 +199,13 @@ class FirebaseAuthService {
     final doc = await _firestore.collection('users').doc(uid).get(options);
     return doc.exists ? doc.data() : null;
   }
-
-  /// Update user profile details in Firestore & Firebase Auth
   Future<void> updateUserProfile(
     String uid, {
     String? name,
     String? nickname,
     String? relationshipStartDate,
     String? avatarUrl,
+    String? gender,
   }) async {
     final updates = <String, dynamic>{};
     if (name != null) {
@@ -242,11 +228,14 @@ class FirebaseAuthService {
         await user.updatePhotoURL(avatarUrl);
       }
     }
+    if (gender != null) {
+      updates['gender'] = gender;
+    }
+
+    ProfileGateService.instance.markProfileComplete(uid);
 
     if (updates.isNotEmpty) {
-      // Fire-and-forget: Firestore offline persistence writes to local cache
-      // immediately, so we don't need to await the server confirmation.
-      // Awaiting can hang indefinitely if the device is offline.
+
       _firestore
           .collection('users')
           .doc(uid)
@@ -255,7 +244,6 @@ class FirebaseAuthService {
     }
   }
 
-  /// Keep the relationship start date identical for both paired users.
   Future<void> updateRelationshipStartDate(String uid, String date) async {
     final userRef = _firestore.collection('users').doc(uid);
     final userData = await getUserProfile(uid);
@@ -304,45 +292,19 @@ class FirebaseAuthService {
     }
   }
 
-  /// Returns a real-time stream of a user's Firestore document
   Stream<DocumentSnapshot<Map<String, dynamic>>> userStream(String uid) {
     return _firestore.collection('users').doc(uid).snapshots();
   }
 
-  Future<Map<String, dynamic>?> getCoupleData(String pairId) async {
-    return _cache.getDocument(
-      ref: _firestore.collection('couples').doc(pairId),
-      cacheKey: _coupleCacheKey(pairId),
-      ttl: const Duration(minutes: 5),
-    );
-  }
+  Future<Map<String, dynamic>?> getCoupleData(String pairId) =>
+      _pairingService.getCoupleData(pairId);
 
-  Stream<DocumentSnapshot<Map<String, dynamic>>> coupleStream(String pairId) {
-    return _firestore.collection('couples').doc(pairId).snapshots();
-  }
+  Stream<DocumentSnapshot<Map<String, dynamic>>> coupleStream(String pairId) =>
+      _pairingService.coupleStream(pairId);
 
-  /// Get partner's UID from a couple document
-  /// The coupleId format is "{user1Uid}_{user2Uid}"
-  Future<String?> getPartnerUid(String coupleId) async {
-    final user = _auth.currentUser;
-    if (user == null) return null;
+  Future<String?> getPartnerUid(String coupleId) =>
+      _pairingService.getPartnerUid(coupleId);
 
-    try {
-      final data = await getCoupleData(coupleId);
-      if (data == null) return null;
-      final user1 = data['user1Uid'] as String?;
-      final user2 = data['user2Uid'] as String?;
-
-      // Return the UID that is NOT the current user
-      if (user1 == user.uid) return user2;
-      if (user2 == user.uid) return user1;
-      return null;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  /// Update current user's mood in Firestore
   Future<void> updateMood({required String emoji, required String text}) async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -375,13 +337,7 @@ class FirebaseAuthService {
           'senderName': senderName,
         },
       ));
-      unawaited(PushNotificationService.sendSilentWidgetSyncToPartner(
-        extraData: {
-          'moodEmoji': emoji,
-          'moodText': text,
-          'senderName': senderName,
-        },
-      ));
+
     } catch (e) {
       dev.log('Error triggering mood FCM notification client-side: $e');
     }
@@ -451,8 +407,6 @@ class FirebaseAuthService {
     final existingData = (await userRef.get()).data();
     final updates = <String, dynamic>{};
 
-    // Preserve the last item written by older app versions before the shared
-    // legacy field is overwritten by a different content type.
     final legacyUrl = existingData?['latestSnapUrl'] as String? ?? '';
     final legacyType =
         (existingData?['latestSnapType'] as String? ?? 'Image').toLowerCase();
@@ -551,6 +505,7 @@ class FirebaseAuthService {
           'senderName': senderName,
         },
       ));
+      /*
       unawaited(PushNotificationService.sendSilentWidgetSyncToPartner(
         extraData: {
           'latestSnapUrl': snapUrl,
@@ -558,6 +513,7 @@ class FirebaseAuthService {
           'senderName': senderName,
         },
       ));
+      */
     } catch (e) {
       dev.log('Error triggering snap FCM notification client-side: $e');
     }

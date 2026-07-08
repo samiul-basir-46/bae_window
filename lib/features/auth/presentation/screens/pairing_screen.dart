@@ -11,6 +11,7 @@ import 'package:bea_window_app/common_widgets/custom_auth_button.dart';
 import 'package:bea_window_app/common_widgets/custom_auth_text_field.dart';
 import 'package:bea_window_app/helpers/all_routes.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
+import '../bloc/auth_event.dart';
 import '../widgets/auth_background_blobs.dart';
 import '../widgets/auth_header.dart';
 import '../bloc/auth_bloc.dart';
