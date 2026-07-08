@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:bea_window_app/helpers/firestore_cache_service.dart';
+import 'package:bea_window_app/features/auth/services/profile_gate_service.dart';
 
 class FirebasePairingService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -88,6 +89,9 @@ class FirebasePairingService {
     await _cache.remove(_userCacheKey(user.uid));
     await _cache.remove(_userCacheKey(partnerUid));
     await _cache.remove(_coupleCacheKey(coupleId));
+
+    // Mark pair status locally for both users
+    ProfileGateService.instance.markPairStatus(user.uid, 'paired');
   }
 
   /// Skip pairing step
@@ -99,6 +103,9 @@ class FirebasePairingService {
       'pairStatus': 'unpaired',
     }, SetOptions(merge: true));
     await _cache.remove(_userCacheKey(user.uid));
+
+    // Mark pair status locally so next app launch goes to Home, not Pairing
+    ProfileGateService.instance.markPairStatus(user.uid, 'unpaired');
   }
 
   /// Unpair from the partner. Requires reauthentication with current user's password.

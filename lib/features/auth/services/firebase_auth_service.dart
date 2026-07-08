@@ -3,10 +3,10 @@ import 'dart:developer' as dev;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:bea_window_app/helpers/firestore_cache_service.dart';
-import 'package:bea_window_app/helpers/di.dart';
 import 'package:intl/intl.dart';
 import '../../../helpers/notification_service.dart';
 import 'firebase_pairing_service.dart';
+import 'profile_gate_service.dart';
 
 class FirebaseAuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -100,16 +100,36 @@ class FirebaseAuthService {
     final user = _auth.currentUser;
     if (user == null) throw Exception('No authenticated user found.');
 
-    await _firestore.collection('users').doc(user.uid).set({
+    final updateData = {
       'nickname': nickname,
       'profilePicture': avatarUrl,
       'profileComplete': true,
       'gender': gender,
-    }, SetOptions(merge: true));
-    await _cache.remove(_userCacheKey(user.uid));
+    };
 
-    // Save to local storage as complete
-    appData.write('profile_complete_${user.uid}', true);
+    await _firestore.collection('users').doc(user.uid).set(
+      updateData,
+      SetOptions(merge: true),
+    );
+
+    // Pre-seed the cache with the merged document instead of just invalidating.
+    // This ensures the next getDocument() call returns the updated data
+    // even if the server is temporarily unreachable.
+    try {
+      final freshDoc = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .get(const GetOptions(source: Source.cache));
+      if (freshDoc.exists && freshDoc.data() != null) {
+        await _cache.write(_userCacheKey(user.uid), freshDoc.data()!);
+      }
+    } catch (_) {
+      // If cache read fails, just remove. The local flag will protect us.
+      await _cache.remove(_userCacheKey(user.uid));
+    }
+
+    // Mark as complete via centralized ProfileGateService — the definitive flag
+    ProfileGateService.instance.markProfileComplete(user.uid);
 
     if (avatarUrl.isNotEmpty) {
       await user.updatePhotoURL(avatarUrl);
@@ -213,7 +233,7 @@ class FirebaseAuthService {
     }
 
     // Write to local cache flag that profile setup is complete
-    appData.write('profile_complete_$uid', true);
+    ProfileGateService.instance.markProfileComplete(uid);
 
     if (updates.isNotEmpty) {
       // Fire-and-forget: Firestore offline persistence writes to local cache

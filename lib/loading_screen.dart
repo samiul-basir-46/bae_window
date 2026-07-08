@@ -6,13 +6,12 @@ import 'package:bea_window_app/features/splash/presentation/screens/splash_scree
 import 'package:bea_window_app/features/auth/presentation/screens/email_verification_screen.dart';
 import 'package:bea_window_app/features/auth/presentation/screens/profile_setup_screen.dart';
 import 'package:bea_window_app/features/auth/presentation/screens/pairing_screen.dart';
+import 'package:bea_window_app/features/auth/services/profile_gate_service.dart';
 import 'package:bea_window_app/navigation_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'constants/app_constants.dart';
 import 'helpers/di.dart';
-import 'helpers/firestore_cache_service.dart';
 import 'helpers/helper_methods.dart';
 import 'helpers/post_login.dart';
 import 'networks/dio/dio.dart';
@@ -57,50 +56,15 @@ class _LoadingState extends State<Loading> {
       if (refreshedUser != null && !refreshedUser.emailVerified) {
         _initialScreen = const EmailVerificationScreen();
       } else if (refreshedUser != null) {
-        final data = await FirestoreCacheService.instance
-            .getDocument(
-              ref: FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(refreshedUser.uid),
-              cacheKey: 'users/${refreshedUser.uid}',
-              ttl: const Duration(minutes: 5),
-            )
-            .timeout(const Duration(seconds: 4), onTimeout: () => null);
+        // Use centralized ProfileGateService — single source of truth
+        final decision = await ProfileGateService.instance
+            .getNavigationDecision(refreshedUser.uid);
 
-        final isProfileCompleteLocal = appData.read<bool>('profile_complete_${refreshedUser.uid}') ?? false;
-
-        if (data != null) {
-          final isProfileComplete =
-              (data['profileComplete'] as bool? ?? false) ||
-                  (data['nickname'] as String? ?? '').isNotEmpty ||
-                  isProfileCompleteLocal;
-          if (isProfileComplete) {
-            appData.write('profile_complete_${refreshedUser.uid}', true);
-            final pairStatus = data['pairStatus'] as String? ?? 'none';
-            appData.write('pair_status_${refreshedUser.uid}', pairStatus);
-
-            if (pairStatus == 'paired' || pairStatus == 'unpaired') {
-              _initialScreen = const NavigationScreen();
-            } else {
-              _initialScreen = const PairingScreen();
-            }
-          } else {
-            _initialScreen = const ProfileSetupScreen();
-          }
-        } else {
-          if (isProfileCompleteLocal) {
-            final pairStatus = appData.read<String>('pair_status_${refreshedUser.uid}') ?? 'none';
-            if (pairStatus == 'paired' || pairStatus == 'unpaired') {
-              _initialScreen = const NavigationScreen();
-            } else {
-              _initialScreen = const PairingScreen();
-            }
-          } else if (appData.read(kKeyIsLoggedIn) == true) {
-            _initialScreen = const NavigationScreen();
-          } else {
-            _initialScreen = const ProfileSetupScreen();
-          }
-        }
+        _initialScreen = switch (decision) {
+          NavigationDecision.goToProfileSetup => const ProfileSetupScreen(),
+          NavigationDecision.goToPairing => const PairingScreen(),
+          NavigationDecision.goToHome => const NavigationScreen(),
+        };
       }
     } else {
       _initialScreen = appData.read(kKeyfirstTime)
