@@ -3,6 +3,7 @@ import 'dart:developer' as dev;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:bea_window_app/helpers/firestore_cache_service.dart';
+import 'package:bea_window_app/helpers/di.dart';
 import 'package:intl/intl.dart';
 import '../../../helpers/notification_service.dart';
 import 'firebase_pairing_service.dart';
@@ -94,6 +95,7 @@ class FirebaseAuthService {
   Future<void> saveProfileSetup({
     required String nickname,
     required String avatarUrl,
+    required String gender,
   }) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception('No authenticated user found.');
@@ -102,8 +104,12 @@ class FirebaseAuthService {
       'nickname': nickname,
       'profilePicture': avatarUrl,
       'profileComplete': true,
+      'gender': gender,
     }, SetOptions(merge: true));
     await _cache.remove(_userCacheKey(user.uid));
+
+    // Save to local storage as complete
+    appData.write('profile_complete_${user.uid}', true);
 
     if (avatarUrl.isNotEmpty) {
       await user.updatePhotoURL(avatarUrl);
@@ -179,6 +185,7 @@ class FirebaseAuthService {
     String? nickname,
     String? relationshipStartDate,
     String? avatarUrl,
+    String? gender,
   }) async {
     final updates = <String, dynamic>{};
     if (name != null) {
@@ -201,6 +208,12 @@ class FirebaseAuthService {
         await user.updatePhotoURL(avatarUrl);
       }
     }
+    if (gender != null) {
+      updates['gender'] = gender;
+    }
+
+    // Write to local cache flag that profile setup is complete
+    appData.write('profile_complete_$uid', true);
 
     if (updates.isNotEmpty) {
       // Fire-and-forget: Firestore offline persistence writes to local cache

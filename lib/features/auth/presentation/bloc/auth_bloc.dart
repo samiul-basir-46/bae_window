@@ -1,13 +1,14 @@
 import 'dart:async';
 import 'dart:developer' as dev;
 import 'dart:io';
+import 'package:bea_window_app/features/auth/presentation/bloc/auth_event.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:bea_window_app/features/auth/services/firebase_auth_service.dart';
 import 'package:bea_window_app/features/auth/services/cloudinary_service.dart';
+import 'package:bea_window_app/helpers/di.dart';
 
-part 'auth_event.dart';
 part 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
@@ -88,17 +89,23 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           final userDoc = await _authService.getUserProfile(
             credential.user!.uid,
           );
+          final localComplete = appData.read<bool>('profile_complete_${credential.user!.uid}') ?? false;
           if (userDoc != null) {
             final isProfileComplete =
                 (userDoc['profileComplete'] as bool? ?? false) ||
-                    (userDoc['nickname'] as String? ?? '').isNotEmpty;
+                    (userDoc['nickname'] as String? ?? '').isNotEmpty ||
+                    localComplete;
             if (!isProfileComplete) {
               dev.log('User logged in but profile is not completed.',
                   name: 'AuthBloc');
               emit(ProfileSetupPendingState());
               return;
             }
+            
+            appData.write('profile_complete_${credential.user!.uid}', true);
             final pairStatus = userDoc['pairStatus'] as String? ?? 'none';
+            appData.write('pair_status_${credential.user!.uid}', pairStatus);
+
             if (pairStatus != 'paired' && pairStatus != 'unpaired') {
               dev.log('User logged in but pairing is pending.',
                   name: 'AuthBloc');
@@ -106,10 +113,19 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
               return;
             }
           } else {
-            dev.log('User logged in but Firestore document does not exist.',
-                name: 'AuthBloc');
-            emit(ProfileSetupPendingState());
-            return;
+            if (localComplete) {
+              dev.log('User logged in, profile doc null but local flag says complete. Skipping setup.', name: 'AuthBloc');
+              final pairStatus = appData.read<String>('pair_status_${credential.user!.uid}') ?? 'none';
+              if (pairStatus != 'paired' && pairStatus != 'unpaired') {
+                emit(PairingPendingState());
+                return;
+              }
+            } else {
+              dev.log('User logged in but Firestore document does not exist.',
+                  name: 'AuthBloc');
+              emit(ProfileSetupPendingState());
+              return;
+            }
           }
         } catch (firestoreError) {
           dev.log(
@@ -251,16 +267,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         }
 
         if (userDoc != null) {
+          final localComplete = appData.read<bool>('profile_complete_${user.uid}') ?? false;
           final isProfileComplete =
               (userDoc['profileComplete'] as bool? ?? false) ||
-                  (userDoc['nickname'] as String? ?? '').isNotEmpty;
+                  (userDoc['nickname'] as String? ?? '').isNotEmpty ||
+                  localComplete;
           if (!isProfileComplete) {
             dev.log('Google User logged in but profile is not completed.',
                 name: 'AuthBloc');
             emit(ProfileSetupPendingState());
             return;
           }
+          
+          appData.write('profile_complete_${user.uid}', true);
           final pairStatus = userDoc['pairStatus'] as String? ?? 'none';
+          appData.write('pair_status_${user.uid}', pairStatus);
+
           if (pairStatus != 'paired' && pairStatus != 'unpaired') {
             dev.log('Google User logged in but pairing is pending.',
                 name: 'AuthBloc');
@@ -268,8 +290,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             return;
           }
         } else {
-          emit(ProfileSetupPendingState());
-          return;
+          final localComplete = appData.read<bool>('profile_complete_${user.uid}') ?? false;
+          if (localComplete) {
+            dev.log('Google User logged in, profile doc null but local flag says complete. Skipping setup.', name: 'AuthBloc');
+            final pairStatus = appData.read<String>('pair_status_${user.uid}') ?? 'none';
+            if (pairStatus != 'paired' && pairStatus != 'unpaired') {
+              emit(PairingPendingState());
+              return;
+            }
+          } else {
+            emit(ProfileSetupPendingState());
+            return;
+          }
         }
       }
 
@@ -327,6 +359,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       await _authService.saveProfileSetup(
         nickname: event.nickname,
         avatarUrl: avatarUrl,
+        gender: event.gender,
       );
       emit(ProfileSetupSuccess());
     } catch (e, stack) {

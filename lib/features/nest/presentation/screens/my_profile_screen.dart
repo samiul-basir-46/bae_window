@@ -33,6 +33,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   final _dateController = TextEditingController();
 
   String? _avatarUrl;
+  String? _gender;
   bool _isLoading = true;
   bool _isUploadingAvatar = false;
   bool _isSaving = false;
@@ -57,6 +58,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
           _nicknameController.text = data['nickname'] ?? '';
           _dateController.text = data['relationshipStartDate'] ?? '';
           _avatarUrl = data['profilePicture'];
+          _gender = data['gender'];
         } else {
           _nameController.text = user.displayName ?? '';
         }
@@ -214,6 +216,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
         name: _nameController.text.trim(),
         nickname: _nicknameController.text.trim(),
         relationshipStartDate: _dateController.text.trim(),
+        gender: _gender,
       );
 
       if (mounted) {
@@ -293,6 +296,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                             label: "NICKNAME (your partner sees this)",
                             controller: _nicknameController,
                             hint: "Enter nickname"),
+                        UIHelper.verticalSpace(16.h),
+                        _buildGenderSelector(),
                         UIHelper.verticalSpace(16.h),
                         ProfileFormField(
                             label: "EMAIL",
@@ -415,6 +420,134 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                   fontWeight: FontWeight.bold)),
         ],
       ),
+    );
+  }
+
+  Widget _buildGenderSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.only(left: 4.w, bottom: 8.h),
+          child: Text(
+            "GENDER",
+            style: GoogleFonts.dmSans(
+              color: Colors.white38,
+              fontSize: 10.sp,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.8,
+            ),
+          ),
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Male Card
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _gender = 'male';
+                  });
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  height: 52.h,
+                  decoration: BoxDecoration(
+                    color: _gender == 'male'
+                        ? const Color(0xFF8060C8).withValues(alpha: 0.15)
+                        : Colors.white.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(16.r),
+                    border: Border.all(
+                      color: _gender == 'male'
+                          ? const Color(0xFF8060C8)
+                          : Colors.white.withValues(alpha: 0.05),
+                      width: 1.w,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.male_rounded,
+                        color: _gender == 'male'
+                            ? const Color(0xFFA58DE3)
+                            : Colors.white38,
+                        size: 20.sp,
+                      ),
+                      SizedBox(width: 8.w),
+                      Text(
+                        'Male',
+                        style: GoogleFonts.dmSans(
+                          color: _gender == 'male'
+                              ? Colors.white
+                              : Colors.white38,
+                          fontSize: 13.sp,
+                          fontWeight: _gender == 'male'
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(width: 16.w),
+            // Female Card
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _gender = 'female';
+                  });
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  height: 52.h,
+                  decoration: BoxDecoration(
+                    color: _gender == 'female'
+                        ? const Color(0xFFFF8FB8).withValues(alpha: 0.15)
+                        : Colors.white.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(16.r),
+                    border: Border.all(
+                      color: _gender == 'female'
+                          ? const Color(0xFFFF8FB8)
+                          : Colors.white.withValues(alpha: 0.05),
+                      width: 1.w,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.female_rounded,
+                        color: _gender == 'female'
+                            ? const Color(0xFFFF8FB8)
+                            : Colors.white38,
+                        size: 20.sp,
+                      ),
+                      SizedBox(width: 8.w),
+                      Text(
+                        'Female',
+                        style: GoogleFonts.dmSans(
+                          color: _gender == 'female'
+                              ? Colors.white
+                              : Colors.white38,
+                          fontSize: 13.sp,
+                          fontWeight: _gender == 'female'
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

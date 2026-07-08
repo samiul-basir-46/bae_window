@@ -67,22 +67,35 @@ class _LoadingState extends State<Loading> {
             )
             .timeout(const Duration(seconds: 4), onTimeout: () => null);
 
+        final isProfileCompleteLocal = appData.read<bool>('profile_complete_${refreshedUser.uid}') ?? false;
+
         if (data != null) {
           final isProfileComplete =
               (data['profileComplete'] as bool? ?? false) ||
-                  (data['nickname'] as String? ?? '').isNotEmpty;
-          if (!isProfileComplete) {
-            _initialScreen = const ProfileSetupScreen();
-          } else {
+                  (data['nickname'] as String? ?? '').isNotEmpty ||
+                  isProfileCompleteLocal;
+          if (isProfileComplete) {
+            appData.write('profile_complete_${refreshedUser.uid}', true);
             final pairStatus = data['pairStatus'] as String? ?? 'none';
+            appData.write('pair_status_${refreshedUser.uid}', pairStatus);
+
             if (pairStatus == 'paired' || pairStatus == 'unpaired') {
               _initialScreen = const NavigationScreen();
             } else {
               _initialScreen = const PairingScreen();
             }
+          } else {
+            _initialScreen = const ProfileSetupScreen();
           }
         } else {
-          if (appData.read(kKeyIsLoggedIn) == true) {
+          if (isProfileCompleteLocal) {
+            final pairStatus = appData.read<String>('pair_status_${refreshedUser.uid}') ?? 'none';
+            if (pairStatus == 'paired' || pairStatus == 'unpaired') {
+              _initialScreen = const NavigationScreen();
+            } else {
+              _initialScreen = const PairingScreen();
+            }
+          } else if (appData.read(kKeyIsLoggedIn) == true) {
             _initialScreen = const NavigationScreen();
           } else {
             _initialScreen = const ProfileSetupScreen();

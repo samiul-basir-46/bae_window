@@ -1,4 +1,5 @@
-part of 'auth_bloc.dart';
+      import 'dart:io';
+
 
 abstract class AuthEvent {
   const AuthEvent();  // const add
@@ -49,10 +50,12 @@ class SaveProfileRequested extends AuthEvent {
   final String nickname;
   final String? avatarUrl;
   final File? avatarFile;
+  final String gender;
   const SaveProfileRequested({
     required this.nickname,
     this.avatarUrl,
     this.avatarFile,
+    required this.gender,
   });
 }
 
