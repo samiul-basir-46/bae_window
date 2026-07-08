@@ -154,35 +154,6 @@ class MemoryDetailScreen extends StatelessWidget {
                           ),
                           UIHelper.verticalSpace(12.h),
                         ],
-                        if (memory.isPrivate) ...[
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryPurple.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8.r),
-                              border: Border.all(
-                                color: AppColors.primaryPurple.withValues(alpha: 0.3),
-                                width: 1.w,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.lock_rounded, color: AppColors.primaryPurple, size: 12.sp),
-                                SizedBox(width: 4.w),
-                                Text(
-                                  "Private Vault",
-                                  style: GoogleFonts.dmSans(
-                                    color: AppColors.primaryPurple,
-                                    fontSize: 10.sp,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          UIHelper.verticalSpace(12.h),
-                        ],
                         Text(
                           memory.title,
                           style: GoogleFonts.dmSans(

@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:bea_window_app/gen/colors.gen.dart';
 import 'package:bea_window_app/helpers/ui_helpers.dart';
 import 'package:bea_window_app/common_widgets/app_toast.dart';
@@ -9,9 +11,9 @@ class NewMemorySheet extends StatefulWidget {
   final Function({
     required String title,
     required String note,
-    required String imageUrl,
+    String? imageUrl,
+    File? imageFile,
     required bool isMilestone,
-    required bool isPrivate,
     required String layoutType,
   }) onAdd;
 
@@ -24,23 +26,39 @@ class NewMemorySheet extends StatefulWidget {
 class _NewMemorySheetState extends State<NewMemorySheet> {
   final _titleController = TextEditingController();
   final _noteController = TextEditingController();
-  String _imageUrl = "https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&q=80&w=500";
+  File? _selectedImageFile;
   bool _isMilestone = false;
-  bool _isPrivate = false;
   String _layoutType = "full";
-
-  final List<String> _mockImages = [
-    "https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&q=80&w=500",
-    "https://images.unsplash.com/photo-1490730141103-6cac27aaab94?auto=format&fit=crop&q=80&w=500",
-    "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&q=80&w=500",
-    "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?auto=format&fit=crop&q=80&w=500",
-  ];
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void dispose() {
     _titleController.dispose();
     _noteController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
+      if (pickedFile != null) {
+        setState(() {
+          _selectedImageFile = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        AppToast.show(
+          context,
+          title: "Error",
+          message: "Failed to pick image: $e",
+          type: ToastType.error,
+        );
+      }
+    }
   }
 
   @override
@@ -85,6 +103,93 @@ class _NewMemorySheetState extends State<NewMemorySheet> {
                   ),
                 ),
                 UIHelper.verticalSpace(20.h),
+                
+                // Image Picker Container
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: Container(
+                    width: double.infinity,
+                    height: 180.h,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.02),
+                      borderRadius: BorderRadius.circular(20.r),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        width: 1.w,
+                      ),
+                      image: _selectedImageFile != null
+                          ? DecorationImage(
+                              image: FileImage(_selectedImageFile!),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                    ),
+                    child: _selectedImageFile == null
+                        ? Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: EdgeInsets.all(12.w),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryPink.withValues(alpha: 0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.add_photo_alternate_rounded,
+                                  color: AppColors.primaryPink,
+                                  size: 28.sp,
+                                ),
+                              ),
+                              UIHelper.verticalSpace(12.h),
+                              Text(
+                                "Add Memory Picture",
+                                style: GoogleFonts.dmSans(
+                                  color: Colors.white,
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              UIHelper.verticalSpace(4.h),
+                              Text(
+                                "Tap to browse gallery",
+                                style: GoogleFonts.dmSans(
+                                  color: Colors.white30,
+                                  fontSize: 11.sp,
+                                ),
+                              ),
+                            ],
+                          )
+                        : Stack(
+                            children: [
+                              Positioned(
+                                top: 12.h,
+                                right: 12.w,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedImageFile = null;
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: EdgeInsets.all(6.w),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.black54,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.close_rounded,
+                                      color: Colors.white,
+                                      size: 16.sp,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+                UIHelper.verticalSpace(20.h),
+                
                 // Title Input
                 _buildTextField(
                   controller: _titleController,
@@ -92,6 +197,7 @@ class _NewMemorySheetState extends State<NewMemorySheet> {
                   hint: "Rooftop sunset, Coffee date...",
                 ),
                 UIHelper.verticalSpace(16.h),
+                
                 // Note Input
                 _buildTextField(
                   controller: _noteController,
@@ -100,50 +206,7 @@ class _NewMemorySheetState extends State<NewMemorySheet> {
                   maxLines: 3,
                 ),
                 UIHelper.verticalSpace(16.h),
-                // Image selection (Mock)
-                Text(
-                  "Select Cover Image",
-                  style: GoogleFonts.dmSans(
-                    color: Colors.white70,
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                UIHelper.verticalSpace(8.h),
-                SizedBox(
-                  height: 80.h,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _mockImages.length,
-                    itemBuilder: (context, index) {
-                      final img = _mockImages[index];
-                      final isSelected = _imageUrl == img;
-                      return GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _imageUrl = img;
-                          });
-                        },
-                        child: Container(
-                          margin: EdgeInsets.only(right: 12.w),
-                          width: 80.w,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12.r),
-                            border: Border.all(
-                              color: isSelected ? AppColors.primaryPink : Colors.transparent,
-                              width: 2.w,
-                            ),
-                            image: DecorationImage(
-                              image: NetworkImage(img),
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                UIHelper.verticalSpace(20.h),
+
                 // Options Switches
                 _buildSwitchOption(
                   title: "Mark as Milestone",
@@ -152,23 +215,11 @@ class _NewMemorySheetState extends State<NewMemorySheet> {
                   onChanged: (val) {
                     setState(() {
                       _isMilestone = val;
-                      if (val) _isPrivate = false; // Cannot be milestone and private at same time
                     });
                   },
                 ),
-                UIHelper.verticalSpace(12.h),
-                _buildSwitchOption(
-                  title: "Add to Private Vault",
-                  subtitle: "Requires biometric or PIN authentication to view",
-                  value: _isPrivate,
-                  onChanged: (val) {
-                    setState(() {
-                      _isPrivate = val;
-                      if (val) _isMilestone = false;
-                    });
-                  },
-                ),
-                UIHelper.verticalSpace(12.h),
+                UIHelper.verticalSpace(16.h),
+                
                 // Layout selector
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -202,7 +253,7 @@ class _NewMemorySheetState extends State<NewMemorySheet> {
                     ),
                   ],
                 ),
-                UIHelper.verticalSpace(90.h), // Spacing for action button
+                UIHelper.verticalSpace(100.h), // Spacing for action button
               ],
             ),
           ),
@@ -231,12 +282,20 @@ class _NewMemorySheetState extends State<NewMemorySheet> {
                     );
                     return;
                   }
+                  if (_selectedImageFile == null) {
+                    AppToast.show(
+                      context,
+                      title: "Required",
+                      message: "Please select an image for this memory",
+                      type: ToastType.error,
+                    );
+                    return;
+                  }
                   widget.onAdd(
                     title: _titleController.text.trim(),
                     note: _noteController.text.trim(),
-                    imageUrl: _imageUrl,
+                    imageFile: _selectedImageFile,
                     isMilestone: _isMilestone,
-                    isPrivate: _isPrivate,
                     layoutType: _layoutType,
                   );
                   Navigator.pop(context);
@@ -281,7 +340,7 @@ class _NewMemorySheetState extends State<NewMemorySheet> {
           style: GoogleFonts.dmSans(color: Colors.white, fontSize: 14.sp),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: GoogleFonts.dmSans(color: Colors.white24, fontSize: 14.sp),
+            hintStyle: GoogleFonts.dmSans(color: Colors.white24),
             filled: true,
             fillColor: Colors.white.withValues(alpha: 0.03),
             contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
@@ -340,28 +399,30 @@ class _NewMemorySheetState extends State<NewMemorySheet> {
     );
   }
 
-  Widget _buildLayoutButton(String type, IconData icon) {
-    final isSelected = _layoutType == type;
+  Widget _buildLayoutButton(String style, IconData icon) {
+    final isSelected = _layoutType == style;
     return GestureDetector(
       onTap: () {
         setState(() {
-          _layoutType = type;
+          _layoutType = style;
         });
       },
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryPink.withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.02),
+          color: isSelected
+              ? AppColors.primaryPink.withValues(alpha: 0.15)
+              : Colors.white.withValues(alpha: 0.02),
           borderRadius: BorderRadius.circular(12.r),
           border: Border.all(
-            color: isSelected ? AppColors.primaryPink.withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.05),
+            color: isSelected ? AppColors.primaryPink : Colors.white.withValues(alpha: 0.05),
             width: 1.w,
           ),
         ),
         child: Icon(
           icon,
           color: isSelected ? AppColors.primaryPink : Colors.white54,
-          size: 18.sp,
+          size: 20.sp,
         ),
       ),
     );

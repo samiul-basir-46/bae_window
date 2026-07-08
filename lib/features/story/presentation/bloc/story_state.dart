@@ -13,36 +13,24 @@ class StoryLoading extends StoryState {
   const StoryLoading();
 }
 
-enum StoryFilter { all, milestones, vault }
+enum StoryFilter { all, milestones }
 
 class StoryLoaded extends StoryState {
   final List<MemoryItem> memories;
   final StoryFilter selectedFilter;
-  final bool isVaultUnlocked;
-  final String? vaultPin;
-  final bool isBiometricsEnabled;
 
   const StoryLoaded({
     required this.memories,
     required this.selectedFilter,
-    required this.isVaultUnlocked,
-    this.vaultPin,
-    this.isBiometricsEnabled = false,
   });
 
   StoryLoaded copyWith({
     List<MemoryItem>? memories,
     StoryFilter? selectedFilter,
-    bool? isVaultUnlocked,
-    String? vaultPin,
-    bool? isBiometricsEnabled,
   }) {
     return StoryLoaded(
       memories: memories ?? this.memories,
       selectedFilter: selectedFilter ?? this.selectedFilter,
-      isVaultUnlocked: isVaultUnlocked ?? this.isVaultUnlocked,
-      vaultPin: vaultPin ?? this.vaultPin,
-      isBiometricsEnabled: isBiometricsEnabled ?? this.isBiometricsEnabled,
     );
   }
 }
@@ -59,9 +47,8 @@ class MemoryItem {
   final String note;
   final String dateString; // e.g. "June 22, 2026"
   final DateTime dateTime;
-  final String uploadedBy; // "You" or "Bae"
+  final String uploadedBy; // "You" or "Bae" / PartnerName
   final bool isMilestone;
-  final bool isPrivate;
   final String layoutType; // "full" or "grid"
 
   const MemoryItem({
@@ -73,7 +60,6 @@ class MemoryItem {
     required this.dateTime,
     required this.uploadedBy,
     required this.isMilestone,
-    required this.isPrivate,
     required this.layoutType,
   });
 
@@ -86,7 +72,6 @@ class MemoryItem {
     DateTime? dateTime,
     String? uploadedBy,
     bool? isMilestone,
-    bool? isPrivate,
     String? layoutType,
   }) {
     return MemoryItem(
@@ -98,7 +83,6 @@ class MemoryItem {
       dateTime: dateTime ?? this.dateTime,
       uploadedBy: uploadedBy ?? this.uploadedBy,
       isMilestone: isMilestone ?? this.isMilestone,
-      isPrivate: isPrivate ?? this.isPrivate,
       layoutType: layoutType ?? this.layoutType,
     );
   }
