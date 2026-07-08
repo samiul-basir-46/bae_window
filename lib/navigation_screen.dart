@@ -25,7 +25,8 @@ class NavigationScreen extends StatefulWidget {
   State<NavigationScreen> createState() => _NavigationScreenState();
 }
 
-class _NavigationScreenState extends State<NavigationScreen> with WidgetsBindingObserver {
+class _NavigationScreenState extends State<NavigationScreen>
+    with WidgetsBindingObserver {
   int _currentIndex = 0;
   bool _isNavbarVisible = true;
 
@@ -70,7 +71,6 @@ class _NavigationScreenState extends State<NavigationScreen> with WidgetsBinding
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return NotificationListener<SwitchTabNotification>(
@@ -88,6 +88,8 @@ class _NavigationScreenState extends State<NavigationScreen> with WidgetsBinding
         },
         child: Scaffold(
           backgroundColor: AppColors.softBlack,
+          resizeToAvoidBottomInset:
+              false, // Prevents keyboard from pushing up the custom bottom navigation bar
           body: Stack(
             children: [
               Positioned(

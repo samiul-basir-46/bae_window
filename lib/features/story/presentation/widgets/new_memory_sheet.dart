@@ -43,7 +43,7 @@ class _NewMemorySheetState extends State<NewMemorySheet> {
     try {
       final pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 35, // native compression to guarantee absolutely no lag
+        imageQuality: 80, // high compression quality for beautiful crisp images without massive file sizes
       );
       if (pickedFile != null) {
         setState(() {
@@ -65,7 +65,7 @@ class _NewMemorySheetState extends State<NewMemorySheet> {
   Future<void> _pickAdditionalImages() async {
     try {
       final pickedFiles = await _picker.pickMultiImage(
-        imageQuality: 35, // native compression to guarantee absolutely no lag
+        imageQuality: 80, // high compression quality for beautiful crisp images without massive file sizes
       );
       if (pickedFiles.isNotEmpty) {
         setState(() {
@@ -142,7 +142,6 @@ class _NewMemorySheetState extends State<NewMemorySheet> {
                   ),
                   UIHelper.verticalSpace(20.h),
 
-                  // Image Picker Container (Optimized with ResizeImage preview to eliminate lag)
                   GestureDetector(
                     onTap: _pickImage,
                     child: Container(
@@ -159,8 +158,8 @@ class _NewMemorySheetState extends State<NewMemorySheet> {
                             ? DecorationImage(
                                 image: ResizeImage(
                                     FileImage(_selectedImageFile!),
-                                    width: 250,
-                                    height: 250),
+                                    width: 600,
+                                    height: 600),
                                 fit: BoxFit.cover,
                               )
                             : null,
@@ -288,9 +287,9 @@ class _NewMemorySheetState extends State<NewMemorySheet> {
                                     color: Colors.white.withValues(alpha: 0.08),
                                     width: 1.w,
                                   ),
-                                  image: DecorationImage(
-                                    image: ResizeImage(FileImage(file),
-                                        width: 100, height: 100),
+                                    image: DecorationImage(
+                                      image: ResizeImage(FileImage(file),
+                                          width: 180, height: 180),
                                     fit: BoxFit.cover,
                                   ),
                                 ),

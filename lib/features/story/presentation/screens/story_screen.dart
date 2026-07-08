@@ -293,6 +293,7 @@ class _StoryScreenViewState extends State<StoryScreenView> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.softBlack,
+      resizeToAvoidBottomInset: false, // Prevent keyboard from shifting the tab bar and navigation up
       body: Stack(
         children: [
           // Background Glows
@@ -425,6 +426,7 @@ class _StoryScreenViewState extends State<StoryScreenView> {
                                                 Expanded(
                                                   child: TextField(
                                                     autofocus: true,
+                                                    cursorColor: AppColors.primaryPink,
                                                     style: GoogleFonts.dmSans(
                                                         color: Colors.white,
                                                         fontSize: 14.sp),
