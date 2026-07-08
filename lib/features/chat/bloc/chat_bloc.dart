@@ -483,6 +483,8 @@ void _uploadMessageInBackground({
         messageId: message.id,
       );
 
+      // Notification is already triggered by MessageService.sendMessage, commenting this out to avoid double notifications.
+      /*
       final senderName = await PushNotificationService.getSenderName();
       final notifBody = switch (message.type) {
         ChatMessageType.image => '📷 Photo',
@@ -502,6 +504,7 @@ void _uploadMessageInBackground({
           'senderName': senderName,
         },
       ));
+      */
 
       add(_UpdatePendingMessageStatusEvent(
         messageId: message.id,

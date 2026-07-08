@@ -408,6 +408,16 @@ class _TasksViewState extends State<_TasksView>
               return false;
             }
 
+            final bool? shouldDelete = await showDialog<bool>(
+              context: context,
+              barrierColor: Colors.black.withValues(alpha: 0.8),
+              builder: (dialogContext) => const _DeleteTaskConfirmDialog(),
+            );
+
+            if (shouldDelete != true) {
+              return false;
+            }
+
             await _syncService.deleteTask(_coupleId!, id);
             unawaited(PushNotificationService.sendNotificationToPartner(
               title: "Task Deleted ✗",
@@ -446,6 +456,109 @@ class _TasksViewState extends State<_TasksView>
         borderRadius: BorderRadius.circular(20.r),
       ),
       child: Icon(icon, color: color, size: 22.sp),
+    );
+  }
+}
+
+class _DeleteTaskConfirmDialog extends StatelessWidget {
+  const _DeleteTaskConfirmDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SingleChildScrollView(
+        child: AlertDialog(
+          backgroundColor: const Color(0xFF1B1B1E),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24.r),
+          ),
+          contentPadding: EdgeInsets.all(24.r),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: EdgeInsets.all(16.r),
+                decoration: BoxDecoration(
+                  color: Colors.redAccent.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.delete_sweep_rounded,
+                  color: Colors.redAccent,
+                  size: 32.sp,
+                ),
+              ),
+              UIHelper.verticalSpace(16.h),
+              Text(
+                "Delete Task?",
+                style: GoogleFonts.dmSans(
+                  color: Colors.white,
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              UIHelper.verticalSpace(8.h),
+              Text(
+                "Are you sure you want to delete this task? This will remove it permanently for both you and your partner.",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.dmSans(
+                  color: Colors.white54,
+                  fontSize: 12.sp,
+                  height: 1.4,
+                ),
+              ),
+              UIHelper.verticalSpace(24.h),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context, false),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(vertical: 14.h),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(14.r),
+                        ),
+                        child: Text(
+                          "Cancel",
+                          style: GoogleFonts.dmSans(
+                            color: Colors.white70,
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context, true),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(vertical: 14.h),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent,
+                          borderRadius: BorderRadius.circular(14.r),
+                        ),
+                        child: Text(
+                          "Delete",
+                          style: GoogleFonts.dmSans(
+                            color: Colors.white,
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

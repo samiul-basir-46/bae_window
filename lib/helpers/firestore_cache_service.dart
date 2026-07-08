@@ -23,16 +23,20 @@ class FirestoreCacheService {
     final cached = _read<Map<String, dynamic>>(cacheKey, null);
     if (cached != null) yield cached;
 
-    await for (final snapshot in ref.snapshots()) {
-      if (!snapshot.exists || snapshot.data() == null) {
-        await remove(cacheKey);
-        yield null;
-        continue;
-      }
+    try {
+      await for (final snapshot in ref.snapshots()) {
+        if (!snapshot.exists || snapshot.data() == null) {
+          await remove(cacheKey);
+          yield null;
+          continue;
+        }
 
-      final data = snapshot.data()!;
-      await write(cacheKey, data);
-      yield data;
+        final data = snapshot.data()!;
+        await write(cacheKey, data);
+        yield data;
+      }
+    } catch (_) {
+      yield null;
     }
   }
 
@@ -48,16 +52,18 @@ class FirestoreCacheService {
         <Map<String, dynamic>>[];
     if (cached.isNotEmpty) yield cached;
 
-    await for (final snapshot in query.snapshots()) {
-      final docs = snapshot.docs.map((doc) {
-        return {
-          _docIdKey: doc.id,
-          ...doc.data(),
-        };
-      }).toList();
-      await write(cacheKey, docs);
-      yield docs;
-    }
+    try {
+      await for (final snapshot in query.snapshots()) {
+        final docs = snapshot.docs.map((doc) {
+          return {
+            _docIdKey: doc.id,
+            ...doc.data(),
+          };
+        }).toList();
+        await write(cacheKey, docs);
+        yield docs;
+      }
+    } catch (_) {}
   }
 
   Future<Map<String, dynamic>?> getDocument({

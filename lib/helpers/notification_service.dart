@@ -113,6 +113,27 @@ Future<void> _sendQuickReply({
 
     await PushNotificationService.clearConversationNotifications(
         conversationId);
+
+    try {
+      final senderName = await PushNotificationService.getSenderName();
+      await PushNotificationService.sendNotificationToPartner(
+        title: senderName,
+        body: text,
+        type: 'chat',
+        route: 'chat',
+        extraData: {
+          'conversationId': conversationId,
+          'partnerUid': user.uid,
+          'senderName': senderName,
+        },
+      );
+    } catch (e) {
+      dev.log(
+        'Failed to send FCM notification for inline reply',
+        name: 'PushNotificationService',
+        error: e,
+      );
+    }
   } catch (_) {}
 }
 
@@ -184,7 +205,7 @@ class PushNotificationService {
         body: body,
         scheduledDate: tz.TZDateTime.from(scheduledDate, tz.local),
         notificationDetails: platformChannelSpecifics,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       );
 
       dev.log('Scheduled notification: "$title" at $scheduledDate',
@@ -236,12 +257,28 @@ class PushNotificationService {
   static Future<void> initializeLocalNotifications() async {
     if (_localNotificationsInitialized) return;
 
-    const initializationSettings = InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+    final DarwinNotificationCategory chatCategory = DarwinNotificationCategory(
+      'chat_reply_category',
+      actions: <DarwinNotificationAction>[
+        DarwinNotificationAction.text(
+          'reply_action',
+          'Reply',
+          buttonTitle: 'Send',
+          placeholder: 'Type a message...',
+        ),
+      ],
+      options: <DarwinNotificationCategoryOption>{
+        DarwinNotificationCategoryOption.customDismissAction,
+      },
+    );
+
+    final initializationSettings = InitializationSettings(
+      android: const AndroidInitializationSettings('@mipmap/ic_launcher'),
       iOS: DarwinInitializationSettings(
         requestAlertPermission: false,
         requestBadgePermission: false,
         requestSoundPermission: false,
+        notificationCategories: [chatCategory],
       ),
     );
 
@@ -444,7 +481,7 @@ class PushNotificationService {
     for (int i = 1; i <= 50; i++) {
       await _localNotifications.cancel(id: notificationId + i);
     }
-    await GetStorage().remove('unread_msgs_$conversationId');
+    await GetStorage().remove('$kKeyUnreadMessages$conversationId');
     _unreadMessages.remove(conversationId);
   }
 
@@ -475,11 +512,16 @@ class PushNotificationService {
           }
         }
 
-        _unreadMessages[conversationId] ??= [];
+        final storage = GetStorage();
+        final cached =
+            storage.read<List<dynamic>>('$kKeyUnreadMessages$conversationId');
+        final list = cached != null ? List<String>.from(cached) : <String>[];
+
         if (messageText.isNotEmpty) {
-          _unreadMessages[conversationId]!.add(messageText);
+          list.add(messageText);
+          await storage.write('$kKeyUnreadMessages$conversationId', list);
         }
-        final list = List<String>.from(_unreadMessages[conversationId]!);
+        _unreadMessages[conversationId] = list;
 
         final notificationId = conversationId.isNotEmpty
             ? conversationId.hashCode.abs()
@@ -491,6 +533,7 @@ class PushNotificationService {
           presentBadge: true,
           presentSound: true,
           threadIdentifier: conversationId.isNotEmpty ? conversationId : 'chat',
+          categoryIdentifier: 'chat_reply_category',
         );
 
         final inboxStyle = InboxStyleInformation(
@@ -697,13 +740,18 @@ class PushNotificationService {
         return true;
       }
 
-      final coupleDoc = await _firestore.collection('couples').doc(pairId).get();
+      final coupleDoc =
+          await _firestore.collection('couples').doc(pairId).get();
       final coupleData = coupleDoc.data();
       if (coupleData == null) return false;
 
       final user1 = coupleData['user1Uid'] as String?;
       final user2 = coupleData['user2Uid'] as String?;
-      final partnerUid = user1 == user.uid ? user2 : user2 == user.uid ? user1 : null;
+      final partnerUid = user1 == user.uid
+          ? user2
+          : user2 == user.uid
+              ? user1
+              : null;
       if (partnerUid == null || partnerUid.isEmpty) return false;
 
       final partnerDoc =
@@ -718,12 +766,9 @@ class PushNotificationService {
       final latestSnapType = partnerData['latestSnapType'] as String?;
       final normalizedType = latestSnapType?.toLowerCase();
 
-      final latestImageUrl =
-          partnerData['latestImageUrl'] as String? ?? '';
-      final latestDrawingUrl =
-          partnerData['latestDrawingUrl'] as String? ?? '';
-      final latestVoiceUrl =
-          partnerData['latestVoiceUrl'] as String? ?? '';
+      final latestImageUrl = partnerData['latestImageUrl'] as String? ?? '';
+      final latestDrawingUrl = partnerData['latestDrawingUrl'] as String? ?? '';
+      final latestVoiceUrl = partnerData['latestVoiceUrl'] as String? ?? '';
       final partnerMood = partnerData['mood'] as Map<String, dynamic>?;
       final rawBattery = partnerData['batteryLevel'];
       final partnerBatteryLevel =
@@ -748,14 +793,15 @@ class PushNotificationService {
       await WidgetHelper.updateWidget(
         isPaired: true,
         partnerName: partnerName,
-        daysTogether:
-            _calculateDaysTogether(userData) ?? _calculateDaysTogether(partnerData),
+        daysTogether: _calculateDaysTogether(userData) ??
+            _calculateDaysTogether(partnerData),
         latestSnapUrl: latestSnapUrl,
         latestSnapType: latestSnapType,
         latestImageUrl: resolvedImageUrl,
         latestDrawingUrl: resolvedDrawingUrl,
         latestVoiceUrl: resolvedVoiceUrl,
-        avatarLetter: partnerName.isNotEmpty ? partnerName[0].toUpperCase() : 'B',
+        avatarLetter:
+            partnerName.isNotEmpty ? partnerName[0].toUpperCase() : 'B',
         partnerMoodEmoji: partnerMood?['emoji'] as String?,
         partnerMoodText: partnerMood?['text'] as String?,
         partnerBatteryLevel: partnerBatteryLevel,
