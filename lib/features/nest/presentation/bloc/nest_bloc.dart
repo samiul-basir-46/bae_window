@@ -23,7 +23,8 @@ class NestBloc extends Bloc<NestEvent, NestState> {
     on<NestPartnerDataUpdated>(_onPartnerDataUpdated);
   }
 
-  Future<void> _onLoadNest(LoadNestEvent event, Emitter<NestState> emit) async {
+  Future<void> _onLoadNest(
+      LoadNestEvent event, Emitter<NestState> emit) async {
     emit(const NestLoading());
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -47,7 +48,8 @@ class NestBloc extends Bloc<NestEvent, NestState> {
             partnerName = partnerData?['nickname'] as String? ??
                 partnerData?['name'] as String? ??
                 "Bae";
-            partnerAvatarUrl = partnerData?['profilePicture'] as String? ?? "";
+            partnerAvatarUrl =
+                partnerData?['profilePicture'] as String? ?? "";
             _startPartnerListener(partnerUid);
           }
         }
@@ -56,6 +58,8 @@ class NestBloc extends Bloc<NestEvent, NestState> {
         await _partnerSubscription?.cancel();
         _partnerSubscription = null;
       }
+
+      if (isClosed) return;
 
       emit(NestLoaded(
         isVaultLocked: true,
@@ -70,13 +74,15 @@ class NestBloc extends Bloc<NestEvent, NestState> {
 
       _startUserListener(user.uid);
     } catch (e) {
-      emit(NestError(e.toString()));
+      if (!isClosed) emit(NestError(e.toString()));
     }
   }
 
   void _startUserListener(String uid) {
     _userSubscription?.cancel();
     _userSubscription = _authService.userStream(uid).listen((snapshot) {
+      // ── Guard: don't add events to a closed bloc ──────────────────────
+      if (isClosed) return;
       final data = snapshot.data();
       if (snapshot.exists && data != null) {
         add(NestUserDataUpdated(data));
@@ -88,6 +94,8 @@ class NestBloc extends Bloc<NestEvent, NestState> {
     _partnerSubscription?.cancel();
     _partnerSubscription =
         _authService.userStream(partnerUid).listen((snapshot) {
+      // ── Guard: don't add events to a closed bloc ──────────────────────
+      if (isClosed) return;
       final data = snapshot.data();
       if (snapshot.exists && data != null) {
         add(NestPartnerDataUpdated(data));
@@ -103,7 +111,8 @@ class NestBloc extends Bloc<NestEvent, NestState> {
     if (currentState is! NestLoaded) return;
 
     final newPairId = event.data['pairId'] as String?;
-    final isPaired = event.data['pairStatus'] == 'paired' && newPairId != null;
+    final isPaired =
+        event.data['pairStatus'] == 'paired' && newPairId != null;
 
     String partnerName = currentState.partnerName;
     String partnerAvatarUrl = currentState.partnerAvatarUrl;
@@ -117,12 +126,18 @@ class NestBloc extends Bloc<NestEvent, NestState> {
     } else if (newPairId != _pairId || _partnerSubscription == null) {
       _pairId = newPairId;
       final partnerUid = await _authService.getPartnerUid(newPairId);
+
+      if (isClosed) return;
+
       if (partnerUid != null) {
         final partnerData = await _authService.getUserProfile(partnerUid);
+        if (isClosed) return;
+
         partnerName = partnerData?['nickname'] as String? ??
             partnerData?['name'] as String? ??
             'Bae';
-        partnerAvatarUrl = partnerData?['profilePicture'] as String? ?? '';
+        partnerAvatarUrl =
+            partnerData?['profilePicture'] as String? ?? '';
         _startPartnerListener(partnerUid);
       }
     }
@@ -150,14 +165,16 @@ class NestBloc extends Bloc<NestEvent, NestState> {
     ));
   }
 
-  void _onToggleVaultLock(ToggleVaultLockEvent event, Emitter<NestState> emit) {
+  void _onToggleVaultLock(
+      ToggleVaultLockEvent event, Emitter<NestState> emit) {
     final currentState = state;
     if (currentState is NestLoaded) {
       emit(currentState.copyWith(isVaultLocked: event.isLocked));
     }
   }
 
-  void _onToggleFocusMode(ToggleFocusModeEvent event, Emitter<NestState> emit) {
+  void _onToggleFocusMode(
+      ToggleFocusModeEvent event, Emitter<NestState> emit) {
     final currentState = state;
     if (currentState is NestLoaded) {
       emit(currentState.copyWith(isFocusMode: event.isFocus));

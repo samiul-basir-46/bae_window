@@ -52,7 +52,7 @@ class MessageService {
     String? messageId,
   }) async {
     final convRef = _firestore.collection('conversations').doc(conversationId);
-    
+
     // Ensure conversation exists first
     final convDoc = await convRef.get();
     if (!convDoc.exists) {
@@ -91,7 +91,8 @@ class MessageService {
       final freshConvDoc = await transaction.get(convRef);
       if (!freshConvDoc.exists) return;
 
-      final participants = List<String>.from(freshConvDoc.data()?['participants'] ?? []);
+      final participants =
+          List<String>.from(freshConvDoc.data()?['participants'] ?? []);
       final recipients = participants.where((uid) => uid != senderId).toList();
 
       final updates = <String, dynamic>{
@@ -100,7 +101,8 @@ class MessageService {
       };
 
       for (final recipientId in recipients) {
-        final currentCount = (freshConvDoc.data()?['unreadCounts']?[recipientId] as int?) ?? 0;
+        final currentCount =
+            (freshConvDoc.data()?['unreadCounts']?[recipientId] as int?) ?? 0;
         updates['unreadCounts.$recipientId'] = currentCount + 1;
       }
 
@@ -140,7 +142,8 @@ class MessageService {
           },
         );
       } catch (e) {
-        dev.log('Failed to send message notification: $e', name: 'MessageService');
+        dev.log('Failed to send message notification: $e',
+            name: 'MessageService');
       }
     }());
   }
@@ -175,9 +178,12 @@ class MessageService {
         .doc(conversationId)
         .collection('messages')
         .where('senderId', isNotEqualTo: currentUserId)
+        .limit(100)
         .get();
 
-    final unreadDocs = unreadQuery.docs.where((doc) => doc.data()['status'] != 'seen').toList();
+    final unreadDocs = unreadQuery.docs
+        .where((doc) => doc.data()['status'] != 'seen')
+        .toList();
 
     if (unreadDocs.isNotEmpty) {
       final batch = _firestore.batch();
@@ -263,7 +269,8 @@ class MessageService {
       });
 
       // Update lastMessage if it matches the deleted message
-      final convRef = _firestore.collection('conversations').doc(conversationId);
+      final convRef =
+          _firestore.collection('conversations').doc(conversationId);
       final convDoc = await convRef.get();
       final lastMsgData = convDoc.data()?['lastMessage'];
       if (lastMsgData != null && lastMsgData['id'] == messageId) {
