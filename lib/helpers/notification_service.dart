@@ -52,7 +52,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 @pragma('vm:entry-point')
-void notificationBackgroundHandler(NotificationResponse response) {
+Future<void> notificationBackgroundHandler(NotificationResponse response) async {
   if (response.actionId == 'reply_action') {
     final replyText = response.input?.trim() ?? '';
     if (replyText.isEmpty) return;
@@ -65,12 +65,17 @@ void notificationBackgroundHandler(NotificationResponse response) {
       final partnerUid = data['partnerUid']?.toString() ?? '';
       if (conversationId.isEmpty || partnerUid.isEmpty) return;
 
-      _sendQuickReply(
+      await _sendQuickReply(
         conversationId: conversationId,
         partnerUid: partnerUid,
         text: replyText,
       );
-    } catch (_) {}
+    } catch (e) {
+      dev.log(
+        'Error handling notification background response: $e',
+        name: 'PushNotificationService',
+      );
+    }
   }
 }
 
@@ -80,12 +85,28 @@ Future<void> _sendQuickReply({
   required String text,
 }) async {
   try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
 
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    var user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      try {
+        user = await FirebaseAuth.instance
+            .authStateChanges()
+            .firstWhere((u) => u != null)
+            .timeout(const Duration(seconds: 4));
+      } catch (e) {
+        dev.log('Failed to restore user session in isolate: $e', name: 'PushNotificationService');
+      }
+    }
+
+    if (user == null) {
+      dev.log('User is null in _sendQuickReply background isolate, aborting', name: 'PushNotificationService');
+      return;
+    }
 
     final msgId = FirebaseFirestore.instance
         .collection('conversations')
@@ -94,12 +115,7 @@ Future<void> _sendQuickReply({
         .doc()
         .id;
 
-    await FirebaseFirestore.instance
-        .collection('conversations')
-        .doc(conversationId)
-        .collection('messages')
-        .doc(msgId)
-        .set({
+    final messageData = {
       'id': msgId,
       'senderId': user.uid,
       'content': text,
@@ -109,7 +125,46 @@ Future<void> _sendQuickReply({
       'isDeleted': false,
       'deletedFor': [],
       'reactions': {},
-    });
+    };
+
+    final batch = FirebaseFirestore.instance.batch();
+    
+    final messageRef = FirebaseFirestore.instance
+        .collection('conversations')
+        .doc(conversationId)
+        .collection('messages')
+        .doc(msgId);
+        
+    final convRef = FirebaseFirestore.instance
+        .collection('conversations')
+        .doc(conversationId);
+
+    batch.set(messageRef, messageData);
+    batch.set(convRef, {
+      'lastMessage': messageData,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    await batch.commit();
+
+    // Update unread counts asynchronously
+    try {
+      final freshConvDoc = await convRef.get();
+      if (freshConvDoc.exists) {
+        final participants = List<String>.from(freshConvDoc.data()?['participants'] ?? []);
+        final recipients = participants.where((uid) => uid != user!.uid).toList();
+        final updates = <String, dynamic>{};
+        for (final recipientId in recipients) {
+          final currentCount = (freshConvDoc.data()?['unreadCounts']?[recipientId] as int?) ?? 0;
+          updates['unreadCounts.$recipientId'] = currentCount + 1;
+        }
+        if (updates.isNotEmpty) {
+          await convRef.update(updates);
+        }
+      }
+    } catch (e) {
+      dev.log('Failed to update unread counts: $e', name: 'PushNotificationService');
+    }
 
     await PushNotificationService.clearConversationNotifications(
         conversationId);
@@ -134,7 +189,13 @@ Future<void> _sendQuickReply({
         error: e,
       );
     }
-  } catch (_) {}
+  } catch (e) {
+    dev.log(
+      'Error in _sendQuickReply: $e',
+      name: 'PushNotificationService',
+      error: e,
+    );
+  }
 }
 
 class PushNotificationService {

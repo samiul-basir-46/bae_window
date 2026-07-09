@@ -18,35 +18,66 @@ class SupportService {
             }).toList());
   }
 
-  /// Send a message from the user to support and update parent chat document.
   Future<void> sendSupportMessage({
     required String userId,
     required String text,
     required String userName,
     required String userEmail,
   }) async {
-    final messageRef = _firestore
-        .collection('support_chats')
-        .doc(userId)
-        .collection('messages')
-        .doc();
+    final chatDocRef = _firestore.collection('support_chats').doc(userId);
+    final docSnap = await chatDocRef.get();
 
+    final bool isNewOrRead = !docSnap.exists ||
+        docSnap.data()?['lastMessage'] == null ||
+        docSnap.data()?['unreadByAdmin'] == false;
+
+    final userMessageRef = chatDocRef.collection('messages').doc();
     final batch = _firestore.batch();
 
-    batch.set(messageRef, {
+    // 1. Save user's message
+    batch.set(userMessageRef, {
       'senderId': userId,
       'text': text,
       'timestamp': FieldValue.serverTimestamp(),
     });
 
-    batch.set(_firestore.collection('support_chats').doc(userId), {
-      'lastMessage': text,
-      'lastMessageTime': FieldValue.serverTimestamp(),
-      'unreadByUser': false,
-      'unreadByAdmin': true,
-      'userName': userName,
-      'userEmail': userEmail,
-    }, SetOptions(merge: true));
+    if (isNewOrRead) {
+      // 2. If it's a new or previously read session, append automated support message
+      final autoReplyRef = chatDocRef.collection('messages').doc();
+      const autoReplyText =
+          "Thank you for your message! Our support team has received it and will get back to you shortly.";
+
+      batch.set(autoReplyRef, {
+        'senderId': 'admin',
+        'text': autoReplyText,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      batch.set(
+          chatDocRef,
+          {
+            'lastMessage': autoReplyText,
+            'lastMessageTime': FieldValue.serverTimestamp(),
+            'unreadByUser': true,
+            'unreadByAdmin': true,
+            'userName': userName,
+            'userEmail': userEmail,
+          },
+          SetOptions(merge: true));
+    } else {
+      // 3. Normal follow-up message: just update lastMessage snippet
+      batch.set(
+          chatDocRef,
+          {
+            'lastMessage': text,
+            'lastMessageTime': FieldValue.serverTimestamp(),
+            'unreadByUser': false,
+            'unreadByAdmin': true,
+            'userName': userName,
+            'userEmail': userEmail,
+          },
+          SetOptions(merge: true));
+    }
 
     await batch.commit();
   }

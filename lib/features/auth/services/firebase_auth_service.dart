@@ -81,7 +81,6 @@ class FirebaseAuthService {
       'name': name,
       'email': email,
       'createdAt': FieldValue.serverTimestamp(),
-      'bio': 'Hey there! I am using Bloom.',
       'profilePicture': '',
       'profileComplete': false,
       'pairStatus': 'none',
