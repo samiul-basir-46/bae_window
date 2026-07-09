@@ -89,7 +89,7 @@ class _NavigationScreenState extends State<NavigationScreen>
         child: Scaffold(
           backgroundColor: AppColors.softBlack,
           resizeToAvoidBottomInset:
-              false, // Prevents keyboard from pushing up the custom bottom navigation bar
+              false,
           body: Stack(
             children: [
               Positioned(

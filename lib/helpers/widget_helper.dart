@@ -153,7 +153,8 @@ class WidgetHelper {
     try {
       final cachedUrlKey = '${preferenceKey}Url';
       final previousUrl = await HomeWidget.getWidgetData<String>(cachedUrlKey);
-      final previousPath = await HomeWidget.getWidgetData<String>(preferenceKey);
+      final previousPath =
+          await HomeWidget.getWidgetData<String>(preferenceKey);
       if (previousUrl == url &&
           previousPath != null &&
           previousPath.isNotEmpty &&

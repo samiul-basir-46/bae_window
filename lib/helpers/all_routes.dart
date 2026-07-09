@@ -26,6 +26,7 @@ import 'package:bea_window_app/features/nest/presentation/screens/export_memorie
 import 'package:bea_window_app/features/nest/presentation/screens/account_pairing_screen.dart';
 import 'package:bea_window_app/features/change_password/presentation/screens/change_password_screen.dart';
 import 'package:bea_window_app/features/notification_settings/presentation/screens/notification_settings_screen.dart';
+import 'package:bea_window_app/features/nest/presentation/screens/support_chat_screen.dart';
 import 'package:bea_window_app/features/chat/presentation/screens/inbox_screen.dart';
 import 'package:bea_window_app/features/chat/presentation/screens/chat_screen.dart';
 import 'package:bea_window_app/features/chat/presentation/screens/chat_details_screen.dart';
@@ -63,6 +64,7 @@ final class Routes {
   static const String accountPairingScreen = '/accountPairing';
   static const String changePasswordScreen = '/changePassword';
   static const String notificationSettingsScreen = '/notificationSettings';
+  static const String supportChatScreen = '/supportChat';
 
   // Chat Routes
   static const String inboxScreen = '/inbox';
@@ -223,6 +225,12 @@ final class RouteGenerator {
                 builder: (context) => const NotificationSettingsScreen())
             : _FadedTransitionRoute(
                 widget: const NotificationSettingsScreen(), settings: settings);
+
+      case Routes.supportChatScreen:
+        return defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(builder: (context) => const SupportChatScreen())
+            : _FadedTransitionRoute(
+                widget: const SupportChatScreen(), settings: settings);
 
       case Routes.inboxScreen:
         return defaultTargetPlatform == TargetPlatform.iOS
