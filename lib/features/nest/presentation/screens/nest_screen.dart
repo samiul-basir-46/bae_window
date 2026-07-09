@@ -29,7 +29,6 @@ class NestScreen extends StatelessWidget {
         backgroundColor: AppColors.softBlack,
         body: Stack(
           children: [
-            // Background glow highlights
             Positioned(
               top: -50.h,
               right: -50.w,
@@ -172,6 +171,23 @@ class NestScreen extends StatelessWidget {
                                 onTap: () {
                                   Navigator.pushNamed(
                                       context, Routes.exportMemoriesScreen);
+                                },
+                              ),
+                            ],
+                          ),
+                          UIHelper.verticalSpace(24.h),
+
+                          _buildSectionHeader("HELP & SUPPORT"),
+                          SettingsGroup(
+                            children: [
+                              SettingsMenuTile(
+                                icon: Icons.contact_support_rounded,
+                                iconColor: Colors.tealAccent,
+                                title: "Help & Support",
+                                subtitle: "Chat with our support team",
+                                onTap: () {
+                                  Navigator.pushNamed(
+                                      context, Routes.supportChatScreen);
                                 },
                               ),
                             ],
